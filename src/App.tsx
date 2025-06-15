@@ -24,12 +24,14 @@ const wagmiConfig = createConfig({
   },
 });
 
+const PRIVY_APP_ID = "REPLACE_THIS_WITH_YOUR_PRIVY_APP_ID"; // <-- Insert your ID here!
+
 const App = () => {
   console.log("App.tsx: Inside App() function.");
 
   return (
     <PrivyProvider
-      appId="your-privy-app-id"
+      appId={PRIVY_APP_ID}
       config={{
         appearance: {
           theme: "light",
