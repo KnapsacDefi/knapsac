@@ -1,36 +1,51 @@
 
-import { Banknote } from "lucide-react";
+import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePrivy } from "@privy-io/react-auth";
+import { useState } from "react";
 
-const WalletOverview = () => (
-  <section className="bg-card p-8 rounded-2xl shadow-lg grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div className="flex flex-col items-center col-span-1 md:items-start">
-      <span className="text-sm text-muted-foreground mb-1">Wallet Balance</span>
-      <div className="flex items-center mt-1 mb-4 md:mb-0">
-        <Banknote className="w-10 h-10 mr-3 text-green-500" />
-        <span className="text-3xl font-bold tracking-tight">$12,000</span>
+const WalletOverview = () => {
+  const { user } = usePrivy();
+  const [showBalance, setShowBalance] = useState(true);
+
+  return (
+    <section className="bg-card p-6 rounded-2xl shadow-lg border">
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <span className="text-sm text-muted-foreground">Total Balance</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => setShowBalance(!showBalance)}
+          >
+            {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </Button>
+        </div>
+        <div className="flex items-center justify-center mb-2">
+          <Banknote className="w-8 h-8 mr-2 text-green-500" />
+          <span className="text-3xl font-bold">
+            {showBalance ? "$12,000.00" : "••••••"}
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          Powered by <span className="font-medium text-primary">Privy</span>
+        </span>
       </div>
-      <span className="text-xs text-muted-foreground">
-        Powered by <span className="font-medium text-primary">Privy</span>
-      </span>
-    </div>
-    <div className="flex flex-col justify-center items-center md:col-span-2">
-      <div className="flex gap-4 w-full justify-end">
-        <Button className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/80">
-          Deposit
+
+      <div className="grid grid-cols-3 gap-3">
+        <Button className="h-12 flex flex-col gap-1 bg-primary text-white">
+          <span className="text-xs">Deposit</span>
         </Button>
-        <Button className="bg-secondary px-6 py-2 rounded-lg hover:bg-secondary/90 text-primary">
-          Withdraw
+        <Button variant="secondary" className="h-12 flex flex-col gap-1">
+          <span className="text-xs">Withdraw</span>
         </Button>
-        <Button className="bg-muted px-6 py-2 rounded-lg hover:bg-muted/80 text-primary">
-          Buy Crypto
+        <Button variant="outline" className="h-12 flex flex-col gap-1">
+          <span className="text-xs">Buy Crypto</span>
         </Button>
       </div>
-      <div className="w-full text-xs text-muted-foreground text-right pt-2">
-        Privy wallet integration coming soon
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export default WalletOverview;
