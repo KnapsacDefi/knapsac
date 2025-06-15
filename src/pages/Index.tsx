@@ -8,7 +8,10 @@ import AuthScreen from "@/components/AuthScreen";
 const Index = () => {
   const { ready, authenticated } = usePrivy();
 
+  console.log("Index.tsx: rendered, ready:", ready, "authenticated:", authenticated);
+
   if (!ready) {
+    console.log("Index.tsx: Privy is not ready.");
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -20,8 +23,11 @@ const Index = () => {
   }
 
   if (!authenticated) {
+    console.log("Index.tsx: user NOT authenticated");
     return <AuthScreen />;
   }
+
+  console.log("Index.tsx: user authenticated, rendering dashboard");
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

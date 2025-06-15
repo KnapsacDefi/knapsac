@@ -11,6 +11,8 @@ import { mainnet, polygon, base } from "wagmi/chains";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
+console.log("App.tsx: Top-level entry");
+
 const queryClient = new QueryClient();
 
 const wagmiConfig = createConfig({
@@ -22,34 +24,38 @@ const wagmiConfig = createConfig({
   },
 });
 
-const App = () => (
-  <PrivyProvider
-    appId="your-privy-app-id"
-    config={{
-      appearance: {
-        theme: "light",
-        accentColor: "#676FFF",
-      },
-      embeddedWallets: {
-        createOnLogin: "users-without-wallets",
-      },
-    }}
-  >
-    <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={wagmiConfig}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </WagmiProvider>
-    </QueryClientProvider>
-  </PrivyProvider>
-);
+const App = () => {
+  console.log("App.tsx: Inside App() function.");
+
+  return (
+    <PrivyProvider
+      appId="your-privy-app-id"
+      config={{
+        appearance: {
+          theme: "light",
+          accentColor: "#676FFF",
+        },
+        embeddedWallets: {
+          createOnLogin: "users-without-wallets",
+        },
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </WagmiProvider>
+      </QueryClientProvider>
+    </PrivyProvider>
+  );
+};
 
 export default App;
