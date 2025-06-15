@@ -24,10 +24,26 @@ const wagmiConfig = createConfig({
   },
 });
 
-const PRIVY_APP_ID = "REPLACE_THIS_WITH_YOUR_PRIVY_APP_ID"; // <-- Insert your ID here!
+// Read PRIVY_APP_ID from secrets injected by Lovable
+const PRIVY_APP_ID =
+  typeof window !== "undefined" && (window as any).lovableSecrets
+    ? (window as any).lovableSecrets["PRIVY_APP_ID"]
+    : undefined;
 
 const App = () => {
   console.log("App.tsx: Inside App() function.");
+
+  // Show a helpful UI if no Privy App ID is present
+  if (!PRIVY_APP_ID) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Missing PRIVY_APP_ID secret</div>
+          <div className="mb-2 text-muted-foreground">You must set the <b>PRIVY_APP_ID</b> secret in Lovable before this app will work.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PrivyProvider
@@ -61,3 +77,4 @@ const App = () => {
 };
 
 export default App;
+
