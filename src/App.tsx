@@ -8,6 +8,8 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { WagmiProvider } from "@privy-io/wagmi";
 import { createConfig, http } from "wagmi";
 import { mainnet, polygon, base } from "wagmi/chains";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -24,22 +26,54 @@ const wagmiConfig = createConfig({
   },
 });
 
-// Read PRIVY_APP_ID from secrets injected by Lovable
-const PRIVY_APP_ID =
-  typeof window !== "undefined" && (window as any).lovableSecrets
-    ? (window as any).lovableSecrets["PRIVY_APP_ID"]
-    : undefined;
-
 const App = () => {
+  const [privyAppId, setPrivyAppId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
   console.log("App.tsx: Inside App() function.");
 
+  useEffect(() => {
+    const fetchPrivyAppId = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-secret', {
+          body: { secret_name: 'PRIVY_APP_ID' }
+        });
+        
+        if (error) {
+          console.error('Error fetching PRIVY_APP_ID:', error);
+          setPrivyAppId(null);
+        } else {
+          setPrivyAppId(data?.secret_value || null);
+        }
+      } catch (error) {
+        console.error('Error fetching PRIVY_APP_ID:', error);
+        setPrivyAppId(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrivyAppId();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show a helpful UI if no Privy App ID is present
-  if (!PRIVY_APP_ID) {
+  if (!privyAppId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="text-red-600 mb-4 text-xl font-bold">Missing PRIVY_APP_ID secret</div>
-          <div className="mb-2 text-muted-foreground">You must set the <b>PRIVY_APP_ID</b> secret in Lovable before this app will work.</div>
+          <div className="mb-2 text-muted-foreground">You must set the <b>PRIVY_APP_ID</b> secret in Supabase before this app will work.</div>
         </div>
       </div>
     );
@@ -47,7 +81,7 @@ const App = () => {
 
   return (
     <PrivyProvider
-      appId={PRIVY_APP_ID}
+      appId={privyAppId}
       config={{
         appearance: {
           theme: "light",
@@ -77,4 +111,3 @@ const App = () => {
 };
 
 export default App;
-
