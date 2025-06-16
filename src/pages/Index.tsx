@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import WalletOverview from "@/components/WalletOverview";
 import EmbeddedServices from "@/components/EmbeddedServices";
 import AuthScreen from "@/components/AuthScreen";
+import UserAddressDisplay from "@/components/UserAddressDisplay";
 
 const Index = () => {
   const { ready, authenticated } = usePrivy();
@@ -34,6 +35,7 @@ const Index = () => {
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         <WalletOverview />
+        <UserAddressDisplay />
         <div>
           <h2 className="text-xl font-bold mb-4">Services</h2>
           <EmbeddedServices />
