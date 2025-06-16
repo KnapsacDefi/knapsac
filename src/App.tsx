@@ -49,8 +49,12 @@ const App = () => {
           setError(`Error fetching PRIVY_APP_ID: ${error.message || 'Unknown error'}`);
           setPrivyAppId(null);
         } else if (data?.secret_value) {
+          // Trim whitespace from the secret value
+          const trimmedSecret = data.secret_value.trim();
           console.log("App.tsx: Successfully retrieved PRIVY_APP_ID");
-          setPrivyAppId(data.secret_value);
+          console.log("App.tsx: Original value:", JSON.stringify(data.secret_value));
+          console.log("App.tsx: Trimmed value:", JSON.stringify(trimmedSecret));
+          setPrivyAppId(trimmedSecret);
           setError(null);
         } else {
           console.error('No secret value returned from get-secret function');
