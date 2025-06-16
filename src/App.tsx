@@ -29,24 +29,37 @@ const wagmiConfig = createConfig({
 const App = () => {
   const [privyAppId, setPrivyAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   console.log("App.tsx: Inside App() function.");
 
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
+        console.log("App.tsx: Fetching PRIVY_APP_ID from Supabase...");
+        
         const { data, error } = await supabase.functions.invoke('get-secret', {
           body: { secret_name: 'PRIVY_APP_ID' }
         });
         
+        console.log("App.tsx: Supabase response:", { data, error });
+        
         if (error) {
           console.error('Error fetching PRIVY_APP_ID:', error);
+          setError(`Error fetching PRIVY_APP_ID: ${error.message || 'Unknown error'}`);
           setPrivyAppId(null);
+        } else if (data?.secret_value) {
+          console.log("App.tsx: Successfully retrieved PRIVY_APP_ID");
+          setPrivyAppId(data.secret_value);
+          setError(null);
         } else {
-          setPrivyAppId(data?.secret_value || null);
+          console.error('No secret value returned from get-secret function');
+          setError('No secret value returned from get-secret function');
+          setPrivyAppId(null);
         }
-      } catch (error) {
-        console.error('Error fetching PRIVY_APP_ID:', error);
+      } catch (err) {
+        console.error('Error fetching PRIVY_APP_ID:', err);
+        setError(`Error fetching PRIVY_APP_ID: ${err instanceof Error ? err.message : 'Unknown error'}`);
         setPrivyAppId(null);
       } finally {
         setLoading(false);
@@ -67,6 +80,21 @@ const App = () => {
     );
   }
 
+  // Show error if there's an issue fetching the secret
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Configuration Error</div>
+          <div className="mb-2 text-muted-foreground">{error}</div>
+          <div className="text-sm text-muted-foreground mt-4">
+            Please check that the <b>PRIVY_APP_ID</b> secret is properly set in Supabase.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show a helpful UI if no Privy App ID is present
   if (!privyAppId) {
     return (
@@ -78,6 +106,21 @@ const App = () => {
       </div>
     );
   }
+
+  // Validate that privyAppId looks like a valid Privy App ID
+  if (typeof privyAppId !== 'string' || privyAppId.trim().length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Invalid PRIVY_APP_ID</div>
+          <div className="mb-2 text-muted-foreground">The PRIVY_APP_ID secret appears to be empty or invalid.</div>
+          <div className="text-sm text-muted-foreground">Current value: "{privyAppId}"</div>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("App.tsx: Initializing PrivyProvider with app ID:", privyAppId);
 
   return (
     <PrivyProvider
