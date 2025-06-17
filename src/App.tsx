@@ -11,6 +11,7 @@ import { mainnet, polygon, base } from "wagmi/chains";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import Index from "./pages/Index";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 console.log("App.tsx: Top-level entry");

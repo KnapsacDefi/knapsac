@@ -1,5 +1,6 @@
-
 import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
 import WalletOverview from "@/components/WalletOverview";
 import EmbeddedServices from "@/components/EmbeddedServices";
@@ -8,8 +9,16 @@ import UserAddressDisplay from "@/components/UserAddressDisplay";
 
 const Index = () => {
   const { ready, authenticated } = usePrivy();
+  const navigate = useNavigate();
 
   console.log("Index.tsx: rendered, ready:", ready, "authenticated:", authenticated);
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      console.log("Index.tsx: user authenticated, redirecting to profile");
+      navigate('/profile');
+    }
+  }, [ready, authenticated, navigate]);
 
   if (!ready) {
     console.log("Index.tsx: Privy is not ready.");
@@ -28,6 +37,7 @@ const Index = () => {
     return <AuthScreen />;
   }
 
+  // This should not be reached due to the useEffect redirect, but keeping as fallback
   console.log("Index.tsx: user authenticated, rendering dashboard");
 
   return (
