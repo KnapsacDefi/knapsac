@@ -130,7 +130,7 @@ const Profile = () => {
     const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
     
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-background pb-20">
         <div className="flex-1 flex items-center justify-center px-4">
           <Card className="max-w-md w-full">
             <CardHeader className="text-center">
@@ -158,12 +158,13 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
+        <BottomNavigation />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background pb-20">
       <div className="flex-1 flex items-center justify-center px-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
@@ -204,6 +205,7 @@ const Profile = () => {
           </CardContent>
         </Card>
       </div>
+      <BottomNavigation />
     </div>
   );
 };
