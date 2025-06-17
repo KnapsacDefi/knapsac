@@ -1,11 +1,21 @@
 
 import { usePrivy } from "@privy-io/react-auth";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import AuthScreen from "@/components/AuthScreen";
 
 const Index = () => {
   const { ready, authenticated } = usePrivy();
+  const navigate = useNavigate();
 
   console.log("Index.tsx: rendered, ready:", ready, "authenticated:", authenticated);
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      console.log("Index.tsx: user authenticated, redirecting to profile");
+      navigate('/profile');
+    }
+  }, [ready, authenticated, navigate]);
 
   if (!ready) {
     console.log("Index.tsx: Privy is not ready.");
@@ -20,13 +30,12 @@ const Index = () => {
   }
 
   if (!authenticated) {
-    console.log("Index.tsx: user NOT authenticated");
+    console.log("Index.tsx: user NOT authenticated, showing auth screen");
     return <AuthScreen />;
   }
 
-  // For authenticated users, show the auth screen which will handle navigation
-  console.log("Index.tsx: user authenticated, showing auth screen");
-  return <AuthScreen />;
+  // This should not be reached due to useEffect redirect, but just in case
+  return null;
 };
 
 export default Index;

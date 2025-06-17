@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const slides = [
 
 const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { authenticated } = usePrivy();
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -47,9 +49,11 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
             Knapsac
           </span>
         </div>
-        <Button variant="outline" onClick={onGetStarted}>
-          Sign In
-        </Button>
+        {!authenticated && (
+          <Button variant="outline" onClick={onGetStarted}>
+            Sign In
+          </Button>
+        )}
       </header>
 
       {/* Main Content */}
@@ -86,16 +90,18 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
           ))}
         </div>
 
-        {/* Get Started Button */}
-        <div className="px-4 pb-8">
-          <Button
-            onClick={onGetStarted}
-            className="w-full h-12 text-lg font-semibold"
-            size="lg"
-          >
-            Get Started
-          </Button>
-        </div>
+        {/* Get Started Button - only show for unauthenticated users */}
+        {!authenticated && (
+          <div className="px-4 pb-8">
+            <Button
+              onClick={onGetStarted}
+              className="w-full h-12 text-lg font-semibold"
+              size="lg"
+            >
+              Get Started
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
