@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Quote } from "lucide-react";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const profileOptions = [
   {
