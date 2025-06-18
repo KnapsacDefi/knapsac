@@ -11,19 +11,24 @@ interface LandingSlidesProps {
 
 const slides = [
   {
-    title: "Welcome to Knapsac",
-    description: "Your gateway to the decentralized world. Connect, explore, and build with ease.",
+    title: "Welcome to Knapsac !",
+    description: "Easy Startup Lending",
     image: "/images/slide1.svg",
   },
   {
-    title: "Seamless Authentication",
-    description: "Securely access your favorite web3 apps with just a few taps. No more seed phrases!",
+    title: "Get Credit to bootstrap your vision",
+    description: "Let's take care of your essentials",
     image: "/images/slide2.svg",
   },
   {
-    title: "Discover New Opportunities",
-    description: "Explore a curated list of innovative projects and services. The future of web3 is at your fingertips.",
+    title: "Lend impactfully with lower risk",
+    description: "Earn up to 60% APR",
     image: "/images/slide3.svg",
+  },
+  {
+    title: "Provide essential services to startups",
+    description: "Sell more while you support startups to win",
+    image: "/images/slide4.svg",
   },
 ];
 
@@ -44,10 +49,11 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <Wallet className="text-primary w-8 h-8" />
-          <span className="text-xl font-bold text-primary">
-            Knapsac
-          </span>
+          <img 
+            src="https://jxfqfrfpaiijyvciclrw.supabase.co/storage/v1/object/public/images//Knapsac%20logo%20horizontal.png" 
+            alt="Knapsac Logo" 
+            className="h-8"
+          />
         </div>
         {!authenticated && (
           <Button variant="outline" onClick={onGetStarted}>
