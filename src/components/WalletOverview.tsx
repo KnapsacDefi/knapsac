@@ -38,10 +38,10 @@ const WalletOverview = () => {
           <span className="text-xs">Deposit</span>
         </Button>
         <Button variant="secondary" className="h-12 flex flex-col gap-1">
-          <span className="text-xs">Withdraw</span>
+          <span className="text-xs">Lend</span>
         </Button>
         <Button variant="outline" className="h-12 flex flex-col gap-1">
-          <span className="text-xs">Buy Crypto</span>
+          <span className="text-xs">Credit</span>
         </Button>
       </div>
     </section>

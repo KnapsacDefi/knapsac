@@ -1,27 +1,27 @@
 
-import { Wallet, LogOut, Settings } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 const DashboardHeader = () => {
-  const { logout, user } = usePrivy();
+  const { logout } = usePrivy();
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
-    <header className="flex items-center justify-between px-4 py-4 border-b bg-background sticky top-0 z-10">
+    <header className="flex items-center justify-between px-4 py-4 bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10">
       <div className="flex items-center gap-2">
-        <Wallet className="text-primary w-8 h-8" />
-        <span className="text-xl font-bold text-primary">
-          Privy Crypto
-        </span>
+        <img 
+          src="https://jxfqfrfpaiijyvciclrw.supabase.co/storage/v1/object/public/images//Knapsac%20logo%20horizontal.png" 
+          alt="Knapsac Logo" 
+          className="h-8"
+        />
       </div>
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <Settings className="w-5 h-5" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={logout}>
-          <LogOut className="w-5 h-5" />
-        </Button>
-      </div>
+      <Button variant="ghost" size="icon" onClick={handleLogout}>
+        <LogOut className="w-5 h-5" />
+      </Button>
     </header>
   );
 };
