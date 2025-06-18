@@ -1,9 +1,9 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselApi } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface LandingSlidesProps {
   onGetStarted: () => void;
@@ -30,7 +30,26 @@ const slides = [
 
 const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [api, setApi] = useState<CarouselApi>();
   const { authenticated } = usePrivy();
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCurrentSlide(api.selectedScrollSnap());
+
+    api.on("select", () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    });
+  }, [api]);
+
+  const scrollToSlide = (index: number) => {
+    if (api) {
+      api.scrollTo(index);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
@@ -59,11 +78,7 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
               align: "start",
               loop: true,
             }}
-            onSelect={(api) => {
-              if (api) {
-                setCurrentSlide(api.selectedScrollSnap());
-              }
-            }}
+            setApi={setApi}
           >
             <CarouselContent>
               {slides.map((slide, index) => (
@@ -87,7 +102,7 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
           {slides.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentSlide(index)}
+              onClick={() => scrollToSlide(index)}
               className={cn(
                 "w-2 h-2 rounded-full transition-all duration-300",
                 currentSlide === index 
