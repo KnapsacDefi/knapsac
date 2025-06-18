@@ -1,8 +1,8 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
-import { Wallet } from "lucide-react";
 import { useState } from "react";
 
 interface LandingSlidesProps {
@@ -13,36 +13,24 @@ const slides = [
   {
     title: "Welcome to Knapsac !",
     description: "Easy Startup Lending",
-    image: "/images/slide1.svg",
   },
   {
     title: "Get Credit to bootstrap your vision",
     description: "Let's take care of your essentials",
-    image: "/images/slide2.svg",
   },
   {
     title: "Lend impactfully with lower risk",
     description: "Earn up to 60% APR",
-    image: "/images/slide3.svg",
   },
   {
     title: "Provide essential services to startups",
     description: "Sell more while you support startups to win",
-    image: "/images/slide4.svg",
   },
 ];
 
 const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { authenticated } = usePrivy();
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
@@ -64,20 +52,34 @@ const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="max-w-md px-4 text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              {slides[currentSlide].title}
-            </h1>
-            <p className="text-gray-700 mb-8">
-              {slides[currentSlide].description}
-            </p>
-            <img
-              src={slides[currentSlide].image}
-              alt={`Slide ${currentSlide + 1}`}
-              className="mx-auto rounded-lg shadow-md"
-            />
-          </div>
+        <div className="flex-1 flex items-center justify-center px-4">
+          <Carousel 
+            className="w-full max-w-md"
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            onSelect={(api) => {
+              if (api) {
+                setCurrentSlide(api.selectedScrollSnap());
+              }
+            }}
+          >
+            <CarouselContent>
+              {slides.map((slide, index) => (
+                <CarouselItem key={index}>
+                  <div className="text-center p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                      {slide.title}
+                    </h1>
+                    <p className="text-gray-700 text-lg">
+                      {slide.description}
+                    </p>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         </div>
 
         {/* Bottom Navigation Dots */}
