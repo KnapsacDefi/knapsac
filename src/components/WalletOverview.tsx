@@ -1,12 +1,50 @@
 
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePrivy } from "@privy-io/react-auth";
-import { useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useState, useEffect } from "react";
+import { formatEther } from "viem";
 
 const WalletOverview = () => {
   const { user } = usePrivy();
+  const { wallets } = useWallets();
   const [showBalance, setShowBalance] = useState(true);
+  const [balance, setBalance] = useState("0.00");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (wallets.length > 0) {
+        try {
+          setIsLoading(true);
+          const wallet = wallets[0]; // Use the first wallet
+          const provider = await wallet.getEthereumProvider();
+          
+          // Get balance in wei
+          const balanceWei = await provider.request({
+            method: 'eth_getBalance',
+            params: [wallet.address, 'latest']
+          });
+          
+          // Convert from wei to ether and format
+          const balanceEth = formatEther(BigInt(balanceWei));
+          const formattedBalance = parseFloat(balanceEth).toFixed(4);
+          setBalance(formattedBalance);
+        } catch (error) {
+          console.error('Error fetching balance:', error);
+          setBalance("0.00");
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBalance();
+  }, [wallets]);
+
+  const displayBalance = isLoading ? "Loading..." : `${balance} ETH`;
 
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
@@ -25,7 +63,7 @@ const WalletOverview = () => {
         <div className="flex items-center justify-center mb-2">
           <Banknote className="w-8 h-8 mr-2 text-green-500" />
           <span className="text-3xl font-bold">
-            {showBalance ? "$12,000.00" : "••••••"}
+            {showBalance ? displayBalance : "••••••"}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
