@@ -135,7 +135,7 @@ const TermsAndConditions = ({ profileType, onAccept }: TermsAndConditionsProps) 
       const termsText = getTermsContent();
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsText}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      const signature = await signMessage(message);
+      const signature = await signMessage({ message });
       
       // Create hash of the signed message
       const encoder = new TextEncoder();

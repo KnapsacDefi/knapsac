@@ -97,15 +97,9 @@ const Subscription = () => {
       if (!plan) throw new Error("Invalid plan selected");
 
       // Send USDT transaction
-      const txHash = await sendTransaction({
+      const txResult = await sendTransaction({
         to: "TR5y2Eoh6ZAqyHEdgZ4HNJb9Ekncnh2gSA",
-        value: "0", // USDT transfer, not ETH
-        data: {
-          // USDT transfer data would go here
-          contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-          amount: plan.discountedPrice.toString(),
-          token: "USDT"
-        }
+        value: `${plan.discountedPrice}`
       });
 
       // Calculate end date
@@ -124,7 +118,7 @@ const Subscription = () => {
           user_id: user.id,
           subscription_type: selectedPlan,
           amount_paid: plan.discountedPrice,
-          transaction_hash: txHash,
+          transaction_hash: txResult.hash,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           status: 'active'
