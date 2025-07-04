@@ -9,12 +9,43 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      deposit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          status: string | null
+          transaction_hash: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string | null
+          transaction_hash: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: string | null
+          transaction_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           crypto_address: string
           id: string
           profile_type: string
+          signed_terms_hash: string | null
           updated_at: string
           user_email: string
         }
@@ -23,6 +54,7 @@ export type Database = {
           crypto_address: string
           id?: string
           profile_type: string
+          signed_terms_hash?: string | null
           updated_at?: string
           user_email: string
         }
@@ -31,8 +63,72 @@ export type Database = {
           crypto_address?: string
           id?: string
           profile_type?: string
+          signed_terms_hash?: string | null
           updated_at?: string
           user_email?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string | null
+          subscription_type: string
+          transaction_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date?: string
+          status?: string | null
+          subscription_type: string
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string | null
+          subscription_type?: string
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_balances: {
+        Row: {
+          balance: number
+          currency: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

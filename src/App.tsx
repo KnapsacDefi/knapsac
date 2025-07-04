@@ -13,6 +13,8 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Wallet from "./pages/Wallet";
+import Subscription from "./pages/Subscription";
+import ServiceProviderMotivation from "./pages/ServiceProviderMotivation";
 
 console.log("App.tsx: Top-level entry");
 
@@ -150,6 +152,8 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/wallet" element={<Wallet />} />
+                <Route path="/subscription" element={<Subscription />} />
+                <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -8,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Quote } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
+import TermsAndConditions from "@/components/TermsAndConditions";
 
 const profileOptions = [
   {
@@ -35,11 +38,13 @@ const inspirationalQuotes = {
 
 const Profile = () => {
   const { user } = usePrivy();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showTerms, setShowTerms] = useState(false);
 
   const userEmail = user?.email?.address;
   const walletAddress = user?.wallet?.address;
@@ -80,6 +85,10 @@ const Profile = () => {
       return;
     }
 
+    setShowTerms(true);
+  };
+
+  const handleTermsAccepted = async (signedHash: string) => {
     setIsSubmitting(true);
 
     try {
@@ -89,6 +98,7 @@ const Profile = () => {
           user_email: userEmail,
           crypto_address: walletAddress,
           profile_type: selectedProfile,
+          signed_terms_hash: signedHash,
         });
 
       if (error) {
@@ -100,8 +110,14 @@ const Profile = () => {
         description: "Your profile has been successfully created.",
       });
 
-      // Refresh to show the inspiration message
-      window.location.reload();
+      // Handle different profile types
+      if (selectedProfile === "Service Provider") {
+        navigate('/service-provider-motivation');
+      } else if (selectedProfile === "Startup") {
+        navigate('/subscription');
+      } else {
+        navigate('/wallet');
+      }
     } catch (error: any) {
       console.error('Error creating profile:', error);
       toast({
@@ -122,6 +138,15 @@ const Profile = () => {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  if (showTerms && selectedProfile) {
+    return (
+      <TermsAndConditions
+        profileType={selectedProfile as "Startup" | "Lender" | "Service Provider"}
+        onAccept={handleTermsAccepted}
+      />
     );
   }
 
@@ -200,7 +225,7 @@ const Profile = () => {
               className="w-full"
               size="lg"
             >
-              {isSubmitting ? "Creating Profile..." : "Complete Profile"}
+              {isSubmitting ? "Creating Profile..." : "Continue to Terms & Conditions"}
             </Button>
           </CardContent>
         </Card>

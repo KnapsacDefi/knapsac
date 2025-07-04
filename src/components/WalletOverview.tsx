@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
+import { supabase } from "@/integrations/supabase/client";
 
 const WalletOverview = () => {
   const { user } = usePrivy();
@@ -11,6 +12,31 @@ const WalletOverview = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [balance, setBalance] = useState("0.00");
   const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.email?.address) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_email', user.email.address)
+          .single();
+
+        if (error) {
+          console.error('Error fetching profile:', error);
+        } else {
+          setUserProfile(data);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user?.email?.address]);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -46,6 +72,10 @@ const WalletOverview = () => {
 
   const displayBalance = isLoading ? "Loading..." : `${balance} ETH`;
 
+  const isStartup = userProfile?.profile_type === 'Startup';
+  const isLender = userProfile?.profile_type === 'Lender';
+  const isServiceProvider = userProfile?.profile_type === 'Service Provider';
+
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
@@ -72,13 +102,24 @@ const WalletOverview = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Button className="h-12 flex flex-col gap-1 bg-primary text-white">
+        <Button 
+          className="h-12 flex flex-col gap-1 bg-primary text-white"
+          disabled={isServiceProvider}
+        >
           <span className="text-xs">Deposit</span>
         </Button>
-        <Button variant="secondary" className="h-12 flex flex-col gap-1">
+        <Button 
+          variant="secondary" 
+          className="h-12 flex flex-col gap-1"
+          disabled={isStartup || isServiceProvider}
+        >
           <span className="text-xs">Lend</span>
         </Button>
-        <Button variant="outline" className="h-12 flex flex-col gap-1">
+        <Button 
+          variant="outline" 
+          className="h-12 flex flex-col gap-1"
+          disabled={isLender || isServiceProvider}
+        >
           <span className="text-xs">Credit</span>
         </Button>
       </div>
