@@ -9,18 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle, Clock, Wallet } from "lucide-react";
 
 const Subscription = () => {
-  const { user, sendTransaction } = usePrivy();
+  const { user, sendTransaction, createWallet } = usePrivy();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [creatingWallet, setCreatingWallet] = useState(false);
 
   const userEmail = user?.email?.address;
+  const hasWallet = !!user?.wallet?.address;
 
   const subscriptionPlans = [
     {
@@ -80,11 +82,40 @@ const Subscription = () => {
     checkSubscription();
   }, [userEmail, user?.id]);
 
+  const handleCreateWallet = async () => {
+    setCreatingWallet(true);
+    try {
+      await createWallet();
+      toast({
+        title: "Wallet Created!",
+        description: "Your wallet has been created successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error creating wallet:', error);
+      toast({
+        title: "Wallet Creation Failed",
+        description: error.message || "Failed to create wallet. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingWallet(false);
+    }
+  };
+
   const handleSubscribe = async () => {
     if (!selectedPlan || !user?.id) {
       toast({
         title: "Selection Required",
         description: "Please select a subscription plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!hasWallet) {
+      toast({
+        title: "Wallet Required",
+        description: "Please create a wallet first to proceed with payment.",
         variant: "destructive",
       });
       return;
@@ -173,6 +204,42 @@ const Subscription = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Show wallet creation step if user doesn't have a wallet
+  if (!hasWallet) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2">Create Your Wallet</h1>
+            <p className="text-muted-foreground">
+              You need a wallet to subscribe and make payments
+            </p>
+          </div>
+
+          <Card className="max-w-md mx-auto">
+            <CardHeader className="text-center">
+              <Wallet className="w-16 h-16 text-primary mx-auto mb-4" />
+              <CardTitle>Wallet Required</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                To proceed with your subscription, you'll need to create a secure wallet first.
+              </p>
+              <Button
+                onClick={handleCreateWallet}
+                disabled={creatingWallet}
+                className="w-full"
+                size="lg"
+              >
+                {creatingWallet ? "Creating Wallet..." : "Create Wallet"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

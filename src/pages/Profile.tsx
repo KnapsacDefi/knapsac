@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -110,7 +109,7 @@ const Profile = () => {
         description: "Your profile has been successfully created.",
       });
 
-      // Handle different profile types
+      // Handle different profile types - Startups go to subscription after T&C
       if (selectedProfile === "Service Provider") {
         navigate('/service-provider-motivation');
       } else if (selectedProfile === "Startup") {
