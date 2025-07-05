@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -13,7 +14,6 @@ const Wallet = () => {
   const { ready, authenticated, user } = usePrivy();
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,29 +41,6 @@ const Wallet = () => {
         }
 
         setUserProfile(profile);
-
-        // Check subscription for startups
-        if (profile.profile_type === 'Startup') {
-          const { data: subscription, error: subError } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('status', 'active')
-            .maybeSingle();
-
-          if (subError && subError.code !== 'PGRST116') {
-            console.error('Error checking subscription:', subError);
-          }
-
-          setHasActiveSubscription(!!subscription);
-          
-          // Redirect to subscription page if startup doesn't have active subscription
-          if (!subscription) {
-            navigate('/subscription');
-            return;
-          }
-        }
-
         setLoading(false);
       } catch (err) {
         console.error('Error checking user access:', err);
