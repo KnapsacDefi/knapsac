@@ -9,17 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Clock, Wallet } from "lucide-react";
+import { CheckCircle, Clock } from "lucide-react";
 
 const Subscription = () => {
-  const { user, sendTransaction, createWallet } = usePrivy();
+  const { user, sendTransaction, ready } = usePrivy();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [creatingWallet, setCreatingWallet] = useState(false);
 
   const userEmail = user?.email?.address;
   const hasWallet = !!user?.wallet?.address;
@@ -82,26 +81,6 @@ const Subscription = () => {
     checkSubscription();
   }, [userEmail, user?.id]);
 
-  const handleCreateWallet = async () => {
-    setCreatingWallet(true);
-    try {
-      await createWallet();
-      toast({
-        title: "Wallet Created!",
-        description: "Your wallet has been created successfully.",
-      });
-    } catch (error: any) {
-      console.error('Error creating wallet:', error);
-      toast({
-        title: "Wallet Creation Failed",
-        description: error.message || "Failed to create wallet. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingWallet(false);
-    }
-  };
-
   const handleSubscribe = async () => {
     if (!selectedPlan || !user?.id) {
       toast({
@@ -114,8 +93,8 @@ const Subscription = () => {
 
     if (!hasWallet) {
       toast({
-        title: "Wallet Required",
-        description: "Please create a wallet first to proceed with payment.",
+        title: "Wallet Not Ready",
+        description: "Please wait for your wallet to be set up, then try again.",
         variant: "destructive",
       });
       return;
@@ -176,12 +155,15 @@ const Subscription = () => {
     }
   };
 
-  if (loading) {
+  // Show loading state while Privy and our data are loading
+  if (!ready || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">
+            {!ready ? "Setting up your wallet..." : "Loading..."}
+          </p>
         </div>
       </div>
     );
@@ -208,42 +190,6 @@ const Subscription = () => {
     );
   }
 
-  // Show wallet creation step if user doesn't have a wallet
-  if (!hasWallet) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create Your Wallet</h1>
-            <p className="text-muted-foreground">
-              You need a wallet to subscribe and make payments
-            </p>
-          </div>
-
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <Wallet className="w-16 h-16 text-primary mx-auto mb-4" />
-              <CardTitle>Wallet Required</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                To proceed with your subscription, you'll need to create a secure wallet first.
-              </p>
-              <Button
-                onClick={handleCreateWallet}
-                disabled={creatingWallet}
-                className="w-full"
-                size="lg"
-              >
-                {creatingWallet ? "Creating Wallet..." : "Create Wallet"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
@@ -252,6 +198,14 @@ const Subscription = () => {
           <p className="text-muted-foreground">
             Subscribe to access all Knapsac features and start your startup journey
           </p>
+          {!hasWallet && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <Clock className="w-4 h-4 inline mr-1" />
+                Setting up your wallet... This may take a moment.
+              </p>
+            </div>
+          )}
         </div>
 
         <RadioGroup value={selectedPlan} onValueChange={setSelectedPlan} className="space-y-4">
@@ -305,11 +259,11 @@ const Subscription = () => {
         <div className="mt-8 space-y-4">
           <Button
             onClick={handleSubscribe}
-            disabled={!selectedPlan || isSubmitting}
+            disabled={!selectedPlan || isSubmitting || !hasWallet}
             className="w-full"
             size="lg"
           >
-            {isSubmitting ? "Processing..." : "Subscribe with USDT"}
+            {isSubmitting ? "Processing..." : !hasWallet ? "Waiting for wallet..." : "Subscribe with USDT"}
           </Button>
           
           <div className="text-center text-xs text-muted-foreground">

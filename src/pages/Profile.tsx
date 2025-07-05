@@ -109,7 +109,7 @@ const Profile = () => {
         description: "Your profile has been successfully created.",
       });
 
-      // Handle different profile types - Startups go to subscription after T&C
+      // Handle different profile types - Startups go to subscription, others go to their respective pages
       if (selectedProfile === "Service Provider") {
         navigate('/service-provider-motivation');
       } else if (selectedProfile === "Startup") {
