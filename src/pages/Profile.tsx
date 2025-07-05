@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -109,9 +110,11 @@ const Profile = () => {
         description: "Your profile has been successfully created.",
       });
 
-      // Direct all profile types to wallet page
+      // Updated navigation flow: Startups go to subscription, others go to wallet
       if (selectedProfile === "Service Provider") {
         navigate('/service-provider-motivation');
+      } else if (selectedProfile === "Startup") {
+        navigate('/subscription');
       } else {
         navigate('/wallet');
       }

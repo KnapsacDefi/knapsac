@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle, Clock, ArrowLeft } from "lucide-react";
 
 const Subscription = () => {
   const { user, sendTransaction, ready } = usePrivy();
@@ -193,6 +193,18 @@ const Subscription = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
+        {/* Back navigation */}
+        <div className="mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/wallet')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Wallet
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
           <p className="text-muted-foreground">

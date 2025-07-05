@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import WalletOverview from "@/components/WalletOverview";
 import UserAddressDisplay from "@/components/UserAddressDisplay";
-import SubscriptionBanner from "@/components/SubscriptionBanner";
 import BottomNavigation from "@/components/BottomNavigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -98,19 +97,11 @@ const Wallet = () => {
     return null;
   }
 
-  const isStartup = userProfile?.profile_type === 'Startup';
-
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         <WalletOverview />
-        
-        {/* Show subscription banner for startups without active subscription */}
-        {isStartup && !hasActiveSubscription && (
-          <SubscriptionBanner />
-        )}
-        
         <UserAddressDisplay />
         
         <Alert>
