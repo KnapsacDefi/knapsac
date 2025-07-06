@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,14 +16,35 @@ import NotFound from "./pages/NotFound";
 import Wallet from "./pages/Wallet";
 import Subscription from "./pages/Subscription";
 import ServiceProviderMotivation from "./pages/ServiceProviderMotivation";
+import Terms from "./pages/Terms";
 
 console.log("App.tsx: Top-level entry");
 
 const queryClient = new QueryClient();
 
+// Define Tron network
+const tron = {
+  id: 728126428,
+  name: 'Tron',
+  network: 'tron',
+  nativeCurrency: {
+    decimals: 6,
+    name: 'TRX',
+    symbol: 'TRX',
+  },
+  rpcUrls: {
+    public: { http: ['https://api.trongrid.io'] },
+    default: { http: ['https://api.trongrid.io'] },
+  },
+  blockExplorers: {
+    default: { name: 'Tronscan', url: 'https://tronscan.org' },
+  },
+};
+
 const wagmiConfig = createConfig({
-  chains: [mainnet, polygon, base],
+  chains: [tron, mainnet, polygon, base],
   transports: {
+    [tron.id]: http(),
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [base.id]: http(),
@@ -140,6 +162,8 @@ const App = () => {
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
         },
+        defaultChain: tron,
+        supportedChains: [tron, mainnet, polygon, base],
       }}
     >
       <QueryClientProvider client={queryClient}>
@@ -154,6 +178,7 @@ const App = () => {
                 <Route path="/wallet" element={<Wallet />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

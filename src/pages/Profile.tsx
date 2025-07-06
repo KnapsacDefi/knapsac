@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Quote } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
-import TermsAndConditions from "@/components/TermsAndConditions";
 
 const profileOptions = [
   {
@@ -40,10 +40,8 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showTerms, setShowTerms] = useState(false);
 
   const userEmail = user?.email?.address;
   const walletAddress = user?.wallet?.address;
@@ -84,49 +82,8 @@ const Profile = () => {
       return;
     }
 
-    setShowTerms(true);
-  };
-
-  const handleTermsAccepted = async (signedHash: string) => {
-    setIsSubmitting(true);
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          user_email: userEmail,
-          crypto_address: walletAddress,
-          profile_type: selectedProfile,
-          signed_terms_hash: signedHash,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Profile Created!",
-        description: "Your profile has been successfully created.",
-      });
-
-      // Updated navigation flow: Startups go to subscription, Lenders and others go to wallet
-      if (selectedProfile === "Service Provider") {
-        navigate('/service-provider-motivation');
-      } else if (selectedProfile === "Startup") {
-        navigate('/subscription');
-      } else {
-        navigate('/wallet');
-      }
-    } catch (error: any) {
-      console.error('Error creating profile:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Navigate to Terms page with profile type
+    navigate(`/terms?type=${encodeURIComponent(selectedProfile)}`);
   };
 
   if (loading) {
@@ -137,15 +94,6 @@ const Profile = () => {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
-    );
-  }
-
-  if (showTerms && selectedProfile) {
-    return (
-      <TermsAndConditions
-        profileType={selectedProfile as "Startup" | "Lender" | "Service Provider"}
-        onAccept={handleTermsAccepted}
-      />
     );
   }
 
@@ -220,11 +168,11 @@ const Profile = () => {
 
             <Button
               onClick={handleSubmit}
-              disabled={!selectedProfile || isSubmitting}
+              disabled={!selectedProfile}
               className="w-full"
               size="lg"
             >
-              {isSubmitting ? "Creating Profile..." : "Continue to Terms & Conditions"}
+              Continue to Terms & Conditions
             </Button>
           </CardContent>
         </Card>
