@@ -1,4 +1,3 @@
-
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -96,9 +95,6 @@ const WalletOverview = () => {
             {showBalance ? displayBalance : "••••••"}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          Powered by <span className="font-medium text-primary">Privy</span>
-        </span>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
