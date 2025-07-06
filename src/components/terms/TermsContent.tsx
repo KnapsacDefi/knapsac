@@ -1,15 +1,9 @@
 
-import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TermsContent } from "@/components/terms/TermsContent";
-import { TermsAgreement } from "@/components/terms/TermsAgreement";
-import { useTermsAcceptance } from "@/hooks/useTermsAcceptance";
+interface TermsContentProps {
+  profileType: "Startup" | "Lender" | "Service Provider";
+}
 
-const Terms = () => {
-  const [searchParams] = useSearchParams();
-  const profileType = searchParams.get('type') as "Startup" | "Lender" | "Service Provider" || "Startup";
-
-  // Get terms content for the hook
+export const TermsContent = ({ profileType }: TermsContentProps) => {
   const getTermsContent = () => {
     const commonTerms = `# KNAPSAC TERMS AND CONDITIONS
 
@@ -127,31 +121,22 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
     return commonTerms + specificTerms[profileType];
   };
 
-  const { agreed, setAgreed, isSubmitting, handleAccept } = useTermsAcceptance({
-    profileType,
-    termsContent: getTermsContent(),
-  });
-
   return (
-    <div className="min-h-screen flex flex-col bg-background p-4">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">
-            Terms & Conditions - {profileType}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <TermsContent profileType={profileType} />
-          <TermsAgreement 
-            agreed={agreed}
-            setAgreed={setAgreed}
-            isSubmitting={isSubmitting}
-            onAccept={handleAccept}
-          />
-        </CardContent>
-      </Card>
+    <div className="max-h-96 overflow-y-auto p-6 border rounded-lg bg-muted/50">
+      <div 
+        className="prose prose-sm max-w-none text-justify leading-relaxed"
+        dangerouslySetInnerHTML={{
+          __html: getTermsContent()
+            .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold mb-4 text-center">$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2 class="text-lg font-semibold mb-3 mt-6">$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3 class="text-base font-semibold mb-2 mt-4">$1</h3>')
+            .replace(/^\*\*(.*?)\*\*/gm, '<strong>$1</strong>')
+            .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1">• $1</li>')
+            .replace(/\n\n/g, '</p><p class="mb-4">')
+            .replace(/^(?!<[h|l])/gm, '<p class="mb-4">')
+            .replace(/<p class="mb-4"><\/p>/g, '')
+        }}
+      />
     </div>
   );
 };
-
-export default Terms;
