@@ -7,9 +7,8 @@ import WalletOverview from "@/components/WalletOverview";
 import UserAddressDisplay from "@/components/UserAddressDisplay";
 import BottomNavigation from "@/components/BottomNavigation";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import CreditScore from "@/components/CreditScore";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 
 const Wallet = () => {
   const { ready, authenticated, user } = usePrivy();
@@ -101,12 +100,8 @@ const Wallet = () => {
         <WalletOverview />
         <UserAddressDisplay />
         
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Our comprehensive lending and credit services are coming soon. We're building advanced features to connect startups with lenders seamlessly.
-          </AlertDescription>
-        </Alert>
+        {/* Show credit score for startups only */}
+        {userProfile?.profile_type === 'Startup' && <CreditScore />}
       </main>
       <BottomNavigation />
     </div>
