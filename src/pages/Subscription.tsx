@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -168,7 +169,7 @@ const Subscription = () => {
           user_id: user.id,
           subscription_type: selectedPlan,
           amount_paid: plan.discountedPrice,
-          transaction_hash: txResult.transactionHash,
+          transaction_hash: txResult.hash,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           status: 'active'
