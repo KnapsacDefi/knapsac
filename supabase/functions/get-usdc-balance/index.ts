@@ -51,8 +51,11 @@ serve(async (req) => {
 
     const data = await response.json()
     
+    // Extract USD value from the balances array
+    const usdBalance = data.balances?.[0]?.display_values?.usd || '0'
+    
     return new Response(
-      JSON.stringify({ balance: data.balance || '0' }),
+      JSON.stringify({ balance: usdBalance }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
