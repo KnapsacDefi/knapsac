@@ -1,13 +1,25 @@
 
-import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TermsContent } from "@/components/terms/TermsContent";
 import { TermsAgreement } from "@/components/terms/TermsAgreement";
 import { useTermsAcceptance } from "@/hooks/useTermsAcceptance";
 
 const Terms = () => {
+  const { authenticated } = usePrivy();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const profileType = searchParams.get('type') as "Startup" | "Lender" | "Service Provider" || "Startup";
+
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (!authenticated) {
+      navigate('/');
+      return;
+    }
+  }, [authenticated, navigate]);
 
   // Get terms content for the hook
   const getTermsContent = () => {

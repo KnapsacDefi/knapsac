@@ -36,7 +36,7 @@ const inspirationalQuotes = {
 };
 
 const Profile = () => {
-  const { user } = usePrivy();
+  const { user, authenticated } = usePrivy();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
@@ -45,6 +45,14 @@ const Profile = () => {
 
   const userEmail = user?.email?.address;
   const walletAddress = user?.wallet?.address;
+
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (!authenticated) {
+      navigate('/');
+      return;
+    }
+  }, [authenticated, navigate]);
 
   useEffect(() => {
     const checkExistingProfile = async () => {

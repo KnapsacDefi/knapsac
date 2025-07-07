@@ -1,11 +1,22 @@
 
+import { useEffect } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, TrendingUp, Users, Zap } from "lucide-react";
 
 const ServiceProviderMotivation = () => {
+  const { authenticated } = usePrivy();
   const navigate = useNavigate();
+
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (!authenticated) {
+      navigate('/');
+      return;
+    }
+  }, [authenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">

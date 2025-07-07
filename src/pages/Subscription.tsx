@@ -26,7 +26,7 @@ const erc20Abi = [
 ] as const;
 
 const Subscription = () => {
-  const { user, ready } = usePrivy();
+  const { user, ready, authenticated } = usePrivy();
   const { sendTransaction } = useSendTransaction();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,6 +37,14 @@ const Subscription = () => {
 
   const userEmail = user?.email?.address;
   const hasWallet = !!user?.wallet?.address;
+
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (ready && !authenticated) {
+      navigate('/');
+      return;
+    }
+  }, [ready, authenticated, navigate]);
 
   const subscriptionPlans = [
     {
