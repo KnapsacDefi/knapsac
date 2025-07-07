@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useSignMessage } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,8 @@ interface UseTermsAcceptanceProps {
 }
 
 export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAcceptanceProps) => {
-  const { user, signMessage } = usePrivy();
+  const { user } = usePrivy();
+  const { signMessage } = useSignMessage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
@@ -44,7 +45,14 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     try {
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      const signature = await signMessage({ message });
+      const uiOptions = {
+        title: `You are signing Terms and Conditions for ${profileType} profile`
+      };
+
+      const { signature } = await signMessage(
+        { message }, 
+        { uiOptions }
+      );
       
       // Create hash of the signed message
       const encoder = new TextEncoder();

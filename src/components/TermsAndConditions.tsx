@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSignMessage } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +15,7 @@ interface TermsAndConditionsProps {
 const TermsAndConditions = ({ profileType, onAccept }: TermsAndConditionsProps) => {
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signMessage } = usePrivy();
+  const { signMessage } = useSignMessage();
   const { toast } = useToast();
 
   const getTermsContent = () => {
@@ -135,7 +135,14 @@ const TermsAndConditions = ({ profileType, onAccept }: TermsAndConditionsProps) 
       const termsText = getTermsContent();
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsText}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      const signature = await signMessage({ message });
+      const uiOptions = {
+        title: `You are signing Terms and Conditions for ${profileType} profile`
+      };
+
+      const { signature } = await signMessage(
+        { message }, 
+        { uiOptions }
+      );
       
       // Create hash of the signed message
       const encoder = new TextEncoder();
