@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +9,25 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Clock, ArrowLeft } from "lucide-react";
+import { encodeFunctionData } from 'viem';
+
+// An ABI for the ERC-20 transfer function.
+const erc20Abi = [
+  {
+    name: 'transfer',
+    type: 'function',
+    inputs: [
+      {name: 'to', type: 'address'},
+      {name: 'value', type: 'uint256'},
+    ],
+    outputs: [{name: '', type: 'bool'}],
+    stateMutability: 'nonpayable',
+  },
+] as const;
 
 const Subscription = () => {
-  const { user, sendTransaction, ready } = usePrivy();
+  const { user, ready } = usePrivy();
+  const { sendTransaction } = useSendTransaction();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -53,6 +68,10 @@ const Subscription = () => {
       ]
     }
   ];
+
+  // USDT contract configuration
+  const usdtContractAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7'; // USDT on Ethereum Mainnet
+  const recipientAddress = '0x742d35Cc6635C0532925a3b8D5CaAbF834B4C0c1'; // Replace with your actual recipient address
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -106,11 +125,32 @@ const Subscription = () => {
       const plan = subscriptionPlans.find(p => p.id === selectedPlan);
       if (!plan) throw new Error("Invalid plan selected");
 
-      // Send USDT transaction
-      const txResult = await sendTransaction({
-        to: "TR5y2Eoh6ZAqyHEdgZ4HNJb9Ekncnh2gSA",
-        value: `${plan.discountedPrice}`
+      // Convert USDT amount to proper format (USDT has 6 decimals)
+      const amount = BigInt(plan.discountedPrice * 1e6);
+
+      // Encode the transaction data for the 'transfer' function call
+      const transactionData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'transfer',
+        args: [recipientAddress, amount],
       });
+
+      // Define the UI options for the transaction modal
+      const uiOptions = {
+        title: 'Subscribe with USDT',
+        description: `You are about to pay ${plan.discountedPrice} USDT for the ${plan.name} subscription.`,
+        buttonText: 'Confirm Payment',
+      };
+
+      // Send USDT transaction
+      const txResult = await sendTransaction(
+        {
+          to: usdtContractAddress,
+          data: transactionData,
+          value: 0, // Value is 0 for token transfers
+        },
+        { uiOptions }
+      );
 
       // Calculate end date
       const startDate = new Date();
@@ -128,7 +168,7 @@ const Subscription = () => {
           user_id: user.id,
           subscription_type: selectedPlan,
           amount_paid: plan.discountedPrice,
-          transaction_hash: txResult.hash,
+          transaction_hash: txResult.transactionHash,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           status: 'active'
