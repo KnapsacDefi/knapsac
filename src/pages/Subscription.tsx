@@ -69,8 +69,8 @@ const Subscription = () => {
     }
   ];
 
-  // USDT contract configuration
-  const usdtContractAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7'; // USDT on Ethereum Mainnet
+  // USDC contract configuration
+  const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC on Ethereum Mainnet
   const recipientAddress = '0x9ec14B42b5F4526C518F0021E26C417fa76D710d' as `0x${string}`; // Updated recipient address
 
   useEffect(() => {
@@ -125,7 +125,7 @@ const Subscription = () => {
       const plan = subscriptionPlans.find(p => p.id === selectedPlan);
       if (!plan) throw new Error("Invalid plan selected");
 
-      // Convert USDT amount to proper format (USDT has 6 decimals)
+      // Convert USDC amount to proper format (USDC has 6 decimals)
       const amount = BigInt(plan.discountedPrice * 1e6);
 
       // Encode the transaction data for the 'transfer' function call
@@ -137,15 +137,15 @@ const Subscription = () => {
 
       // Define the UI options for the transaction modal
       const uiOptions = {
-        title: 'Subscribe with USDT',
-        description: `You are about to pay ${plan.discountedPrice} USDT for the ${plan.name} subscription.`,
+        title: 'Subscribe with USDC',
+        description: `You are about to pay ${plan.discountedPrice} USDC for the ${plan.name} subscription.`,
         buttonText: 'Confirm Payment',
       };
 
-      // Send USDT transaction
+      // Send USDC transaction
       const txResult = await sendTransaction(
         {
-          to: usdtContractAddress,
+          to: usdcContractAddress,
           data: transactionData,
           value: 0, // Value is 0 for token transfers
         },
@@ -315,7 +315,7 @@ const Subscription = () => {
             className="w-full"
             size="lg"
           >
-            {isSubmitting ? "Processing..." : !hasWallet ? "Waiting for wallet..." : "Subscribe with USDT"}
+            {isSubmitting ? "Processing..." : !hasWallet ? "Waiting for wallet..." : "Subscribe with USDC"}
           </Button>
           
           <div className="text-center text-xs text-muted-foreground">

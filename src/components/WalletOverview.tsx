@@ -44,18 +44,23 @@ const WalletOverview = () => {
         try {
           setIsLoading(true);
           const wallet = wallets[0]; // Use the first wallet
-          const provider = await wallet.getEthereumProvider();
           
-          // Get balance in wei
-          const balanceWei = await provider.request({
-            method: 'eth_getBalance',
-            params: [wallet.address, 'latest']
+          // Fetch USDC balance using Privy API
+          const response = await fetch(`https://api.privy.io/v1/wallets/${wallet.address}/balance?asset=usdc&chain=base`, {
+            headers: {
+              'privy-app-id': import.meta.env.VITE_PRIVY_APP_ID || '',
+              'Authorization': `Basic ${btoa(`${import.meta.env.VITE_PRIVY_APP_ID}:${import.meta.env.VITE_PRIVY_APP_SECRET || ''}`)}`,
+            },
           });
           
-          // Convert from wei to ether and format
-          const balanceEth = formatEther(BigInt(balanceWei));
-          const formattedBalance = parseFloat(balanceEth).toFixed(4);
-          setBalance(formattedBalance);
+          if (response.ok) {
+            const data = await response.json();
+            const formattedBalance = parseFloat(data.balance || 0).toFixed(2);
+            setBalance(formattedBalance);
+          } else {
+            console.error('Error fetching USDC balance:', response.statusText);
+            setBalance("0.00");
+          }
         } catch (error) {
           console.error('Error fetching balance:', error);
           setBalance("0.00");
