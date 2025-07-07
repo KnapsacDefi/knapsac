@@ -1,0 +1,1 @@
+-- No database changes needed for Privy API integration

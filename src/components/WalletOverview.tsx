@@ -45,21 +45,17 @@ const WalletOverview = () => {
           setIsLoading(true);
           const wallet = wallets[0]; // Use the first wallet
           
-          // Fetch USDC balance using Privy API
-          const response = await fetch(`https://api.privy.io/v1/wallets/${wallet.address}/balance?asset=usdc&chain=base`, {
-            headers: {
-              'privy-app-id': import.meta.env.VITE_PRIVY_APP_ID || '',
-              'Authorization': `Basic ${btoa(`${import.meta.env.VITE_PRIVY_APP_ID}:${import.meta.env.VITE_PRIVY_APP_SECRET || ''}`)}`,
-            },
+          // Fetch USDC balance using our edge function
+          const response = await supabase.functions.invoke('get-usdc-balance', {
+            body: { walletAddress: wallet.address }
           });
           
-          if (response.ok) {
-            const data = await response.json();
-            const formattedBalance = parseFloat(data.balance || 0).toFixed(2);
-            setBalance(formattedBalance);
-          } else {
-            console.error('Error fetching USDC balance:', response.statusText);
+          if (response.error) {
+            console.error('Error fetching USDC balance:', response.error);
             setBalance("0.00");
+          } else {
+            const formattedBalance = parseFloat(response.data?.balance || 0).toFixed(2);
+            setBalance(formattedBalance);
           }
         } catch (error) {
           console.error('Error fetching balance:', error);
