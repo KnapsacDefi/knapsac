@@ -1,3 +1,4 @@
+
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -69,7 +70,7 @@ const WalletOverview = () => {
     fetchBalance();
   }, [wallets]);
 
-  const displayBalance = isLoading ? "Loading..." : `${balance} ETH`;
+  const displayBalance = isLoading ? "Loading..." : `$${balance}`;
 
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';

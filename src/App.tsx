@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,10 +41,10 @@ const tron = {
 };
 
 const wagmiConfig = createConfig({
-  chains: [tron, mainnet, polygon, base],
+  chains: [mainnet, tron, polygon, base],
   transports: {
-    [tron.id]: http(),
     [mainnet.id]: http(),
+    [tron.id]: http(),
     [polygon.id]: http(),
     [base.id]: http(),
   },
@@ -162,8 +161,8 @@ const App = () => {
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
         },
-        defaultChain: tron,
-        supportedChains: [tron, mainnet, polygon, base],
+        defaultChain: mainnet,
+        supportedChains: [mainnet, tron, polygon, base],
       }}
     >
       <QueryClientProvider client={queryClient}>
