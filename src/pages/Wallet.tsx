@@ -6,6 +6,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import WalletOverview from "@/components/WalletOverview";
 import UserAddressDisplay from "@/components/UserAddressDisplay";
 import BottomNavigation from "@/components/BottomNavigation";
+import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
@@ -14,6 +15,7 @@ const Wallet = () => {
   const { ready, authenticated, user } = usePrivy();
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +43,21 @@ const Wallet = () => {
         }
 
         setUserProfile(profile);
+
+        // Check for active subscription
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (subscriptionError && subscriptionError.code !== 'PGRST116') {
+          console.error('Error checking subscription:', subscriptionError);
+        } else if (subscription) {
+          setHasSubscription(true);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('Error checking user access:', err);
@@ -78,6 +95,9 @@ const Wallet = () => {
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
+        {/* Show subscription banner for unsubscribed users */}
+        {!hasSubscription && <SubscriptionBanner />}
+        
         <WalletOverview />
         <UserAddressDisplay />
         
