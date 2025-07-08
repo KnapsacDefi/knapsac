@@ -3,6 +3,7 @@ import { usePrivy, useSignMessage, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { validateWallet, logWalletState } from "@/utils/walletValidation";
 
 interface UseTermsAcceptanceProps {
   profileType: "Startup" | "Lender" | "Service Provider";
@@ -19,7 +20,6 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userEmail = user?.email?.address;
-  const walletAddress = wallets[0]?.address || user?.wallet?.address;
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -31,15 +31,21 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    if (!walletAddress) {
+    // Validate wallet connection with detailed logging
+    logWalletState(wallets, user?.wallet);
+    const walletValidation = validateWallet(wallets, user?.wallet);
+    
+    if (!walletValidation.isValid) {
+      console.error("Wallet validation failed:", walletValidation.error);
       toast({
         title: "Wallet Not Connected",
-        description: "Please connect your wallet to continue.",
+        description: walletValidation.error || "Please connect your wallet to continue.",
         variant: "destructive",
       });
       return;
     }
 
+    const walletAddress = walletValidation.address!;
     setIsSubmitting(true);
 
     try {
@@ -51,6 +57,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         .maybeSingle();
 
       if (checkError) {
+        console.error("Database check error:", checkError);
         throw new Error('Failed to check existing profile');
       }
 
@@ -65,11 +72,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
 
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      // Check wallet readiness before signing
-      const wallet = wallets[0];
-      if (!wallet || !wallet.connectedAt) {
-        throw new Error('Wallet is not properly connected');
-      }
+      console.log("Attempting to sign message with wallet:", walletAddress);
 
       // Attempt signing with retry logic
       let retryCount = 0;
@@ -78,11 +81,14 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
 
       while (retryCount < maxRetries) {
         try {
+          console.log(`Signing attempt ${retryCount + 1}/${maxRetries}`);
           const result = await signMessage({ message });
           signature = result.signature;
+          console.log("Message signed successfully");
           break;
         } catch (signError: any) {
           retryCount++;
+          console.error(`Signing attempt ${retryCount} failed:`, signError);
           
           if (retryCount >= maxRetries) {
             throw signError;
@@ -128,19 +134,27 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         navigate('/wallet');
       }
     } catch (error: any) {
+      console.error("Terms acceptance failed:", error);
+      
       // Provide specific error handling for different failure scenarios
       let errorTitle = "Error";
       let errorDescription = "Failed to accept terms. Please try again.";
       
-      if (error?.message?.includes('User rejected the request')) {
+      if (error?.message?.includes('User rejected the request') || error?.message?.includes('rejected')) {
         errorTitle = "Signing Cancelled";
         errorDescription = "You need to sign the terms to continue. Please try again.";
+      } else if (error?.message?.includes('Wallet is not properly connected')) {
+        errorTitle = "Wallet Connection Error";
+        errorDescription = "Please try refreshing the page and reconnecting your wallet.";
       } else if (error?.message?.includes('Unable to connect to wallet') || error?.message?.includes('wallet')) {
         errorTitle = "Wallet Connection Error";
         errorDescription = "Unable to connect to your wallet. Please check your wallet connection and try again.";
       } else if (error?.message?.includes('timeout')) {
         errorTitle = "Request Timeout";
         errorDescription = "The signing request timed out. Please try again.";
+      } else if (error?.code === 'SIGNING_ERROR') {
+        errorTitle = "Signing Failed";
+        errorDescription = "Failed to sign the message. Please ensure your wallet is unlocked and try again.";
       } else if (error?.message) {
         errorDescription = error.message;
       }
@@ -155,10 +169,15 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     }
   };
 
+  // Get current wallet validation for UI
+  const walletValidation = validateWallet(wallets, user?.wallet);
+
   return {
     agreed,
     setAgreed,
     isSubmitting,
     handleAccept,
+    walletAddress: walletValidation.address,
+    hasWallet: walletValidation.isValid,
   };
 };

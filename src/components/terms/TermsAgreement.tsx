@@ -9,15 +9,24 @@ interface TermsAgreementProps {
   setAgreed: (agreed: boolean) => void;
   isSubmitting: boolean;
   onAccept: () => void;
+  walletAddress?: string | null;
+  hasWallet?: boolean;
 }
 
-export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: TermsAgreementProps) => {
+export const TermsAgreement = ({ 
+  agreed, 
+  setAgreed, 
+  isSubmitting, 
+  onAccept,
+  walletAddress: propWalletAddress,
+  hasWallet: propHasWallet
+}: TermsAgreementProps) => {
   const { wallets } = useWallets();
   const { user } = usePrivy();
   
-  // Use unified wallet detection approach consistent with other components
-  const walletAddress = wallets[0]?.address || user?.wallet?.address;
-  const hasWallet = !!walletAddress;
+  // Use props if provided, otherwise fallback to direct wallet detection
+  const walletAddress = propWalletAddress ?? (wallets[0]?.address || user?.wallet?.address);
+  const hasWallet = propHasWallet ?? !!walletAddress;
 
 
   return (

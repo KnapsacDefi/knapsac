@@ -139,7 +139,7 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
     return commonTerms + specificTerms[profileType];
   };
 
-  const { agreed, setAgreed, isSubmitting, handleAccept } = useTermsAcceptance({
+  const { agreed, setAgreed, isSubmitting, handleAccept, walletAddress, hasWallet } = useTermsAcceptance({
     profileType,
     termsContent: getTermsContent(),
   });
@@ -159,6 +159,8 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
             setAgreed={setAgreed}
             isSubmitting={isSubmitting}
             onAccept={handleAccept}
+            walletAddress={walletAddress}
+            hasWallet={hasWallet}
           />
         </CardContent>
       </Card>
