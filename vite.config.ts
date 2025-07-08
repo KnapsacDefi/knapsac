@@ -14,15 +14,17 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
   define: {
     global: 'globalThis',
+    'process.env': {},
   },
   optimizeDeps: {
     include: ['buffer'],
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "buffer": "buffer",
+    },
   },
 }));
