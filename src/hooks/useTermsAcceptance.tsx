@@ -76,16 +76,34 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
       console.log('📝 Preparing message for signing...');
       
+      // Check wallet readiness before signing
+      const wallet = wallets[0];
+      console.log('🔍 Wallet readiness check:', {
+        hasWallet: !!wallet,
+        walletType: wallet?.walletClientType,
+        walletConnected: wallet?.connectedAt,
+        walletAddress: walletAddress
+      });
+
       const uiOptions = {
         title: `You are signing Terms and Conditions for ${profileType} profile`
       };
       console.log('⚙️ UI options:', uiOptions);
 
       console.log('🚀 Calling signMessage for T&C...');
-      const { signature } = await signMessage(
+      
+      // Add timeout wrapper for signing operation
+      const signPromise = signMessage(
         { message }, 
         { uiOptions }
       );
+      
+      const timeoutPromise = new Promise<{ signature: string }>((_, reject) => 
+        setTimeout(() => reject(new Error('Signing timeout - please try again')), 30000)
+      );
+      
+      const result = await Promise.race([signPromise, timeoutPromise]);
+      const signature = result.signature;
       console.log('✅ T&C signature received successfully');
       
       // Create hash of the signed message
@@ -140,9 +158,26 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       console.error('❌ Error stack:', error?.stack);
       console.error('❌ Full error object:', JSON.stringify(error, null, 2));
       
+      // Provide specific error handling for different failure scenarios
+      let errorTitle = "Error";
+      let errorDescription = "Failed to accept terms. Please try again.";
+      
+      if (error?.message?.includes('User rejected the request')) {
+        errorTitle = "Signing Cancelled";
+        errorDescription = "You need to sign the terms to continue. Please try again.";
+      } else if (error?.message?.includes('Unable to connect to wallet') || error?.message?.includes('wallet')) {
+        errorTitle = "Wallet Connection Error";
+        errorDescription = "Unable to connect to your wallet. Please check your wallet connection and try again.";
+      } else if (error?.message?.includes('timeout')) {
+        errorTitle = "Request Timeout";
+        errorDescription = "The signing request timed out. Please try again.";
+      } else if (error?.message) {
+        errorDescription = error.message;
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to accept terms. Please try again.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
