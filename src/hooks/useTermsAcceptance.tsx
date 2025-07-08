@@ -59,8 +59,8 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    if (wallets.length === 0) {
-      console.log('❌ No wallets connected');
+    if (!walletAddress) {
+      console.log('❌ No wallet address available - wallets detected:', wallets.length);
       toast({
         title: "Wallet Not Connected",
         description: "Please connect your wallet to continue.",
@@ -69,15 +69,6 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    if (!walletAddress) {
-      console.log('❌ Wallet address not available');
-      toast({
-        title: "Wallet Error",
-        description: "Unable to access wallet address. Please try reconnecting your wallet.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsSubmitting(true);
 
