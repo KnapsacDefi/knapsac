@@ -4,9 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { WagmiProvider } from "@privy-io/wagmi";
-import { createConfig, http } from "wagmi";
-import { mainnet, polygon, base } from "wagmi/chains";
+import { mainnet, polygon, base } from "viem/chains";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import Index from "./pages/Index";
@@ -20,17 +18,6 @@ import Terms from "./pages/Terms";
 console.log("App.tsx: Top-level entry");
 
 const queryClient = new QueryClient();
-
-
-
-const wagmiConfig = createConfig({
-  chains: [mainnet, polygon, base],
-  transports: {
-    [mainnet.id]: http(),
-    [polygon.id]: http(),
-    [base.id]: http(),
-  },
-});
 
 const App = () => {
   const [privyAppId, setPrivyAppId] = useState<string | null>(null);
@@ -146,23 +133,21 @@ const App = () => {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={wagmiConfig}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/wallet" element={<Wallet />} />
-                <Route path="/subscription" element={<Subscription />} />
-                <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </WagmiProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/subscription" element={<Subscription />} />
+              <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
       </QueryClientProvider>
     </PrivyProvider>
   );
