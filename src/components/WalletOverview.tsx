@@ -1,7 +1,7 @@
 
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePrivy, useWallets, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,53 +77,17 @@ const WalletOverview = () => {
   const isLender = userProfile?.profile_type === 'Lender';
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
 
-  const { signMessage } = useSignMessage({
-    onSuccess: ({ signature }) => {
-      console.log('✅ Signature successful');
-      console.log('✅ Signature type:', typeof signature);
-      console.log('✅ Signature length:', signature?.length);
-      alert(`Deposit request signed successfully!`);
-    },
-    onError: (error) => {
-      console.error('❌ Signature error details:', error);
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error code:', error);
-      
-      // Convert error to string for display
-      const errorMessage = typeof error === 'string' ? error : JSON.stringify(error);
-      alert(`Error signing deposit request: ${errorMessage}`);
+  const { fundWallet } = useFundWallet({
+    onUserExited: (params) => {
+      console.log('Funding completed or exited:', params);
+      if (params.balance > 0) {
+        alert(`Successfully funded wallet! New balance: ${params.balance}`);
+      }
     }
   });
 
-  const handleDeposit = async () => {
-    console.log('🔄 Starting deposit signing process...');
-    console.log('🔄 User profile type:', userProfile?.profile_type);
-    console.log('🔄 Wallets available:', wallets?.length);
-    
-    const messageToSign = 'I hereby confirm my deposit request to the Knapsac platform.';
-    const uiOptions = {
-      title: 'Confirm Deposit Request',
-      description: 'Please sign this message to confirm your deposit request. This action will be recorded securely.',
-      buttonText: 'Confirm Deposit'
-    };
-
-    console.log('📝 Message to sign:', messageToSign);
-    console.log('⚙️ UI options:', uiOptions);
-
-    try {
-      console.log('🚀 Calling signMessage...');
-      await signMessage(
-        { message: messageToSign },
-        { uiOptions }
-      );
-      console.log('✅ signMessage call completed successfully');
-    } catch (e) {
-      console.error("❌ Exception in handleDeposit:", e);
-      console.error("❌ Exception type:", typeof e);
-      console.error("❌ Exception message:", e?.message);
-      console.error("❌ Exception stack:", e?.stack);
-      alert(`Failed to initiate signing: ${e?.message || 'Unknown error'}`);
-    }
+  const handleDeposit = () => {
+    fundWallet('0x036CbD53842c5426634e7929541eC2318f3dCF7e');
   };
 
   return (
