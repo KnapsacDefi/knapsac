@@ -128,7 +128,7 @@ const App = () => {
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
         },
-        loginMethods: ['wallet', 'email', 'sms'],
+        loginMethods: ['wallet', 'email'],
         defaultChain: mainnet,
         supportedChains: [mainnet, polygon, base]
       }}
