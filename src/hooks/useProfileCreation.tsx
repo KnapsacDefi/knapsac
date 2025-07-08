@@ -64,16 +64,32 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
     onError: (error) => {
       console.error("Message signing failed:", error);
       
-      if (error?.toString().includes('User rejected') || error?.toString().includes('rejected')) {
+      const errorString = error?.toString() || '';
+      
+      if (errorString.includes('User rejected') || errorString.includes('rejected')) {
         toast({
           title: "Signing Cancelled",
           description: "You need to sign the terms to continue. Please try again.",
           variant: "destructive",
         });
-      } else if (error?.toString().includes('Unable to connect to wallet')) {
+      } else if (errorString.includes('Unable to connect to wallet') || 
+                 errorString.includes('wallet connection') ||
+                 errorString.includes('connect wallet')) {
         toast({
           title: "Wallet Connection Error",
-          description: "Unable to connect to wallet. Please try connecting your wallet first.",
+          description: "Unable to connect to wallet. Please ensure your wallet is available and try again.",
+          variant: "destructive",
+        });
+      } else if (errorString.includes('Buffer is not defined')) {
+        toast({
+          title: "Browser Compatibility Issue",
+          description: "Please refresh the page and try again. If the issue persists, try using a different browser.",
+          variant: "destructive",
+        });
+      } else if (errorString.includes('timeout')) {
+        toast({
+          title: "Connection Timeout",
+          description: "The operation timed out. Please try again.",
           variant: "destructive",
         });
       } else {

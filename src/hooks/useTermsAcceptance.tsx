@@ -14,6 +14,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     hasWallet,
     walletReady,
     privyReady,
+    connectionError,
     ensureWalletConnection,
   } = useWalletValidation();
 
@@ -58,5 +59,6 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     hasWallet,
     walletReady,
     privyReady,
+    connectionError,
   };
 };
