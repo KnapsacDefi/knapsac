@@ -49,15 +49,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    if (!userEmail) {
-      console.log('❌ Missing user email');
-      toast({
-        title: "Missing Email",
-        description: "Please ensure your email is verified.",
-        variant: "destructive",
-      });
-      return;
-    }
+  
 
     if (!walletAddress) {
       console.log('❌ No wallet address available - wallets detected:', wallets.length);
