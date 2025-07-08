@@ -50,17 +50,6 @@ const Profile = () => {
 
   // Enhanced wallet state debugging
   useEffect(() => {
-    console.log('🔍 Profile Wallet Debug:', {
-      authenticated,
-      ready,
-      userHasEmail: !!userEmail,
-      walletsCount: wallets.length,
-      walletAddresses: wallets.map(w => w.address),
-      userWalletFromPrivy: user?.wallet?.address,
-      finalWalletAddress: walletAddress,
-      privyUserObject: user
-    });
-
     // Set wallet loading to false after a brief delay to allow for wallet initialization
     const timer = setTimeout(() => {
       setWalletLoading(false);

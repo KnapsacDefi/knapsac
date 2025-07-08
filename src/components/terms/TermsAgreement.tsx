@@ -19,14 +19,6 @@ export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: Te
   const walletAddress = wallets[0]?.address || user?.wallet?.address;
   const hasWallet = !!walletAddress;
 
-  // Debug logging for wallet state
-  console.log('🔍 TermsAgreement Wallet Debug:', {
-    walletsCount: wallets.length,
-    walletAddresses: wallets.map(w => w.address),
-    userWalletFromPrivy: user?.wallet?.address,
-    finalWalletAddress: walletAddress,
-    hasWallet
-  });
 
   return (
     <div className="space-y-4">

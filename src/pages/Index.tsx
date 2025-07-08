@@ -8,17 +8,17 @@ const Index = () => {
   const { ready, authenticated } = usePrivy();
   const navigate = useNavigate();
 
-  console.log("Index.tsx: rendered, ready:", ready, "authenticated:", authenticated);
+  
 
   useEffect(() => {
     if (ready && authenticated) {
-      console.log("Index.tsx: user authenticated, redirecting to profile");
+      
       navigate('/profile');
     }
   }, [ready, authenticated, navigate]);
 
   if (!ready) {
-    console.log("Index.tsx: Privy is not ready.");
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -30,7 +30,7 @@ const Index = () => {
   }
 
   if (!authenticated) {
-    console.log("Index.tsx: user NOT authenticated, showing auth screen");
+    
     return <AuthScreen />;
   }
 

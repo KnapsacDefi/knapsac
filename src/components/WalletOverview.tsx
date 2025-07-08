@@ -82,7 +82,7 @@ const WalletOverview = () => {
 
   const { fundWallet } = useFundWallet({
     onUserExited: (params) => {
-      console.log('Funding completed or exited:', params);
+      
       if (params.balance > 0) {
         alert(`Successfully funded wallet! New balance: ${params.balance}`);
       }

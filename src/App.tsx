@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +16,7 @@ import Subscription from "./pages/Subscription";
 import ServiceProviderMotivation from "./pages/ServiceProviderMotivation";
 import Terms from "./pages/Terms";
 
-console.log("App.tsx: Top-level entry");
+
 
 const queryClient = new QueryClient();
 
@@ -24,18 +25,18 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  console.log("App.tsx: Inside App() function.");
+  
 
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
-        console.log("App.tsx: Fetching PRIVY_APP_ID from Supabase...");
+        
         
         const { data, error } = await supabase.functions.invoke('get-secret', {
           body: { secret_name: 'PRIVY_APP_ID' }
         });
         
-        console.log("App.tsx: Supabase response received:", { hasData: !!data, hasError: !!error });
+        
         
         if (error) {
           console.error('Error fetching PRIVY_APP_ID:', error);
@@ -115,42 +116,44 @@ const App = () => {
     );
   }
 
-  console.log("App.tsx: Initializing PrivyProvider with app ID configured");
+  
 
   return (
-    <PrivyProvider
-      appId={privyAppId}
-      config={{
-        appearance: {
-          theme: "light",
-          accentColor: "#676FFF",
-        },
-        embeddedWallets: {
-          createOnLogin: "users-without-wallets",
-        },
-        loginMethods: ['wallet', 'email'],
-        defaultChain: mainnet,
-        supportedChains: [mainnet, polygon, base]
-      }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/wallet" element={<Wallet />} />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </PrivyProvider>
+    <ErrorBoundary>
+      <PrivyProvider
+        appId={privyAppId}
+        config={{
+          appearance: {
+            theme: "light",
+            accentColor: "#676FFF",
+          },
+          embeddedWallets: {
+            createOnLogin: "users-without-wallets",
+          },
+          loginMethods: ['wallet', 'email'],
+          defaultChain: mainnet,
+          supportedChains: [mainnet, polygon, base]
+        }}
+      >
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/wallet" element={<Wallet />} />
+                <Route path="/subscription" element={<Subscription />} />
+                <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </PrivyProvider>
+    </ErrorBoundary>
   );
 };
 

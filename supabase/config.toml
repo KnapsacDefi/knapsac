@@ -1,1 +1,4 @@
 project_id = "jxfqfrfpaiijyvciclrw"
+
+[functions.get-usdc-balance]
+verify_jwt = true

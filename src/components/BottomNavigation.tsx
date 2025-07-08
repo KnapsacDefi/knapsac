@@ -9,21 +9,25 @@ import { supabase } from "@/integrations/supabase/client";
 const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = usePrivy();
+  const { user, authenticated } = usePrivy();
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!user?.email?.address) return;
+      if (!authenticated) return;
+      
+      // Get wallet address from user or connected wallets
+      const walletAddress = user?.wallet?.address;
+      if (!walletAddress) return;
 
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_email', user.email.address)
-          .single();
+          .eq('crypto_address', walletAddress)
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
         } else {
           setUserProfile(data);
@@ -34,7 +38,7 @@ const BottomNavigation = () => {
     };
 
     fetchUserProfile();
-  }, [user?.email?.address]);
+  }, [user?.wallet?.address, authenticated]);
 
   const getNavItems = () => {
     const isServiceProvider = userProfile?.profile_type === 'Service Provider';
