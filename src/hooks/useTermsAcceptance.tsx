@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateWallet, logWalletState } from "@/utils/walletValidation";
+import { usePrivyConnection } from "@/hooks/usePrivyConnection";
 
 interface UseTermsAcceptanceProps {
   profileType: "Startup" | "Lender" | "Service Provider";
@@ -18,6 +19,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isWalletReady, connectionQuality, forceWalletReconnect } = usePrivyConnection();
 
   const userEmail = user?.email?.address;
 
@@ -31,7 +33,11 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    // Validate wallet connection with detailed logging
+    // Enhanced wallet validation with connection quality check
+    console.log('=== Enhanced Wallet Validation ===');
+    console.log('Wallet ready:', isWalletReady);
+    console.log('Connection quality:', connectionQuality);
+    
     logWalletState(wallets, user?.wallet);
     const walletValidation = validateWallet(wallets, user?.wallet);
     
@@ -43,6 +49,27 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         variant: "destructive",
       });
       return;
+    }
+
+    // Check wallet readiness and connection quality
+    if (!isWalletReady || connectionQuality === 'failed') {
+      console.error("Wallet not ready or connection failed");
+      toast({
+        title: "Wallet Connection Issue", 
+        description: "Wallet connection is not stable. Please try reconnecting.",
+        variant: "destructive",
+      });
+      
+      // Attempt to reconnect automatically
+      setTimeout(() => {
+        forceWalletReconnect();
+      }, 1000);
+      
+      return;
+    }
+
+    if (connectionQuality === 'poor') {
+      console.warn("Poor wallet connection quality, proceeding with caution");
     }
 
     const walletAddress = walletValidation.address!;
@@ -74,28 +101,69 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       
       console.log("Attempting to sign message with wallet:", walletAddress);
 
-      // Attempt signing with retry logic
+      // Enhanced signing with robust retry logic and connection verification
       let retryCount = 0;
-      const maxRetries = 3;
+      const maxRetries = 5;
       let signature: string;
 
       while (retryCount < maxRetries) {
         try {
           console.log(`Signing attempt ${retryCount + 1}/${maxRetries}`);
-          const result = await signMessage({ message });
+          
+          // Pre-signing connection verification  
+          if ((connectionQuality as 'good' | 'poor' | 'failed') === 'failed') {
+            throw new Error('Wallet connection failed. Please reconnect.');
+          }
+          
+          // Add small delay to ensure iframe is ready
+          if (retryCount > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1500 * retryCount));
+          }
+          
+          // Attempt to sign with timeout
+          const signPromise = signMessage({ message });
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Signing timeout')), 15000)
+          );
+          
+          const result = await Promise.race([signPromise, timeoutPromise]) as any;
           signature = result.signature;
+          
           console.log("Message signed successfully");
           break;
         } catch (signError: any) {
           retryCount++;
           console.error(`Signing attempt ${retryCount} failed:`, signError);
           
-          if (retryCount >= maxRetries) {
-            throw signError;
+          // Handle specific error types
+          if (signError.message?.includes('timeout') && retryCount < maxRetries) {
+            console.log('Signing timed out, retrying with longer timeout...');
+            continue;
           }
           
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          if (signError.message?.includes('Could not establish connection') && retryCount < maxRetries) {
+            console.log('Connection issue detected, attempting wallet reconnection...');
+            forceWalletReconnect();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          
+          if (retryCount >= maxRetries) {
+            // Provide specific error based on the type
+            if (signError.message?.includes('User rejected')) {
+              throw new Error('Signing was cancelled. Please try again and approve the signature request.');
+            } else if (signError.message?.includes('timeout')) {
+              throw new Error('Signing request timed out. Please ensure your wallet is responsive and try again.');
+            } else if (signError.message?.includes('Could not establish connection')) {
+              throw new Error('Unable to connect to wallet. Please refresh the page and try again.');
+            } else {
+              throw signError;
+            }
+          }
+          
+          // Exponential backoff with jitter
+          const delay = (1000 * Math.pow(2, retryCount)) + (Math.random() * 1000);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
