@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -44,7 +44,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
 
   const userEmail = user?.email?.address;
-  const walletAddress = user?.wallet?.address;
+  // Use consistent wallet detection with Terms acceptance
+  const { wallets } = useWallets();
+  const walletAddress = wallets[0]?.address || user?.wallet?.address;
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {

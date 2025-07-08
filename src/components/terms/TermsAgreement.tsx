@@ -1,6 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useWallets } from "@privy-io/react-auth";
+import { Wallet, AlertCircle } from "lucide-react";
 
 interface TermsAgreementProps {
   agreed: boolean;
@@ -10,8 +12,26 @@ interface TermsAgreementProps {
 }
 
 export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: TermsAgreementProps) => {
+  const { wallets } = useWallets();
+  const hasWallet = wallets.length > 0;
+
   return (
     <div className="space-y-4">
+      {/* Wallet Connection Status */}
+      <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasWallet ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+        {hasWallet ? (
+          <>
+            <Wallet className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-700">Wallet Connected</span>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="w-4 h-4 text-orange-600" />
+            <span className="text-sm text-orange-700">Please connect your wallet to continue</span>
+          </>
+        )}
+      </div>
+
       <div className="flex items-center space-x-2">
         <Checkbox 
           id="agree" 
@@ -25,11 +45,11 @@ export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: Te
 
       <Button
         onClick={onAccept}
-        disabled={!agreed || isSubmitting}
+        disabled={!agreed || isSubmitting || !hasWallet}
         className="w-full"
         size="lg"
       >
-        {isSubmitting ? "Signing..." : "Accept Terms & Continue"}
+        {isSubmitting ? "Signing..." : !hasWallet ? "Connect Wallet First" : "Accept Terms & Continue"}
       </Button>
     </div>
   );

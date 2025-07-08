@@ -20,7 +20,8 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userEmail = user?.email?.address;
-  const walletAddress = wallets[0]?.address;
+  // Try multiple wallet detection methods for better compatibility
+  const walletAddress = wallets[0]?.address || user?.wallet?.address;
 
   const handleAccept = async () => {
     console.log('🔄 Starting T&C acceptance process...');
@@ -28,8 +29,15 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     console.log('🔄 Agreed status:', agreed);
     console.log('🔄 Wallets available:', wallets.length);
     console.log('🔄 Wallet addresses:', wallets.map(w => w.address));
+    console.log('🔄 User wallet from user object:', user?.wallet?.address);
     console.log('🔄 User email:', userEmail);
-    console.log('🔄 Wallet address:', walletAddress);
+    console.log('🔄 Final wallet address used:', walletAddress);
+    console.log('🔄 User authentication state:', { 
+      isAuthenticated: !!user, 
+      hasEmail: !!userEmail, 
+      hasWallets: wallets.length > 0,
+      hasWalletAddress: !!walletAddress 
+    });
 
     if (!agreed) {
       console.log('❌ User has not agreed to terms');
