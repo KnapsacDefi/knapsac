@@ -21,24 +21,7 @@ console.log("App.tsx: Top-level entry");
 
 const queryClient = new QueryClient();
 
-// Define Tron network
-const tron = {
-  id: 728126428,
-  name: 'Tron',
-  network: 'tron',
-  nativeCurrency: {
-    decimals: 6,
-    name: 'TRX',
-    symbol: 'TRX',
-  },
-  rpcUrls: {
-    public: { http: ['https://api.trongrid.io'] },
-    default: { http: ['https://api.trongrid.io'] },
-  },
-  blockExplorers: {
-    default: { name: 'Tronscan', url: 'https://tronscan.org' },
-  },
-};
+
 
 const wagmiConfig = createConfig({
   chains: [mainnet, tron, polygon, base],
@@ -75,9 +58,7 @@ const App = () => {
         } else if (data?.secret_value) {
           // Trim whitespace from the secret value
           const trimmedSecret = data.secret_value.trim();
-          console.log("App.tsx: Successfully retrieved PRIVY_APP_ID");
-          console.log("App.tsx: Original value:", JSON.stringify(data.secret_value));
-          console.log("App.tsx: Trimmed value:", JSON.stringify(trimmedSecret));
+    
           setPrivyAppId(trimmedSecret);
           setError(null);
         } else {
