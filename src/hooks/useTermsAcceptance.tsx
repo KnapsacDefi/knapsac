@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { usePrivy, useSignMessage } from "@privy-io/react-auth";
+import { usePrivy, useSignMessage, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,18 +13,23 @@ interface UseTermsAcceptanceProps {
 export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAcceptanceProps) => {
   const { user } = usePrivy();
   const { signMessage } = useSignMessage();
+  const { wallets } = useWallets();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userEmail = user?.email?.address;
-  const walletAddress = user?.wallet?.address;
+  const walletAddress = wallets[0]?.address;
 
   const handleAccept = async () => {
     console.log('🔄 Starting T&C acceptance process...');
     console.log('🔄 Profile type:', profileType);
     console.log('🔄 Agreed status:', agreed);
+    console.log('🔄 Wallets available:', wallets.length);
+    console.log('🔄 Wallet addresses:', wallets.map(w => w.address));
+    console.log('🔄 User email:', userEmail);
+    console.log('🔄 Wallet address:', walletAddress);
 
     if (!agreed) {
       console.log('❌ User has not agreed to terms');
@@ -36,11 +41,31 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    if (!userEmail || !walletAddress) {
-      console.log('❌ Missing user information: email or wallet not available');
+    if (!userEmail) {
+      console.log('❌ Missing user email');
       toast({
-        title: "Missing Information",
-        description: "Please ensure your profile is complete and wallet is connected.",
+        title: "Missing Email",
+        description: "Please ensure your email is verified.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (wallets.length === 0) {
+      console.log('❌ No wallets connected');
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!walletAddress) {
+      console.log('❌ Wallet address not available');
+      toast({
+        title: "Wallet Error",
+        description: "Unable to access wallet address. Please try reconnecting your wallet.",
         variant: "destructive",
       });
       return;
