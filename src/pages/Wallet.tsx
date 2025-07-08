@@ -47,7 +47,7 @@ const Wallet = () => {
 
         setUserProfile(profile);
 
-        // Check for active subscription
+        // Check for active subscription using user.id (Privy user ID)
         const { data: subscription, error: subscriptionError } = await supabase
           .from('subscriptions')
           .select('*')

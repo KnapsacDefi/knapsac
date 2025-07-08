@@ -24,7 +24,7 @@ export type Database = {
           profile_type: string
           signed_terms_hash: string | null
           updated_at: string
-          user_email: string
+          user_email: string | null
         }
         Insert: {
           created_at?: string
@@ -35,7 +35,7 @@ export type Database = {
           profile_type: string
           signed_terms_hash?: string | null
           updated_at?: string
-          user_email: string
+          user_email?: string | null
         }
         Update: {
           created_at?: string
@@ -46,7 +46,7 @@ export type Database = {
           profile_type?: string
           signed_terms_hash?: string | null
           updated_at?: string
-          user_email?: string
+          user_email?: string | null
         }
         Relationships: []
       }

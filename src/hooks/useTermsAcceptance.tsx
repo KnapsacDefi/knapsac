@@ -21,7 +21,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isWalletReady, connectionQuality, forceWalletReconnect } = usePrivyConnection();
 
-  const userEmail = user?.email?.address;
+  // Wallet address is the primary user identifier in Web3 applications
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -174,11 +174,11 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-      // Create profile with signed terms
+      // Create profile with signed terms - wallet address is primary identifier
       const { error } = await supabase
         .from('profiles')
         .insert({
-          user_email: userEmail,
+          user_email: user?.email?.address || '', // Optional metadata
           crypto_address: walletAddress,
           profile_type: profileType,
           signed_terms_hash: hashHex,
