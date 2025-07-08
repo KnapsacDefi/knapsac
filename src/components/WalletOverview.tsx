@@ -122,20 +122,22 @@ const WalletOverview = () => {
         >
           <span className="text-xs">Deposit</span>
         </Button>
-        <Button 
-          variant="secondary" 
-          className="h-12 flex flex-col gap-1"
-          disabled={isStartup || isServiceProvider}
-        >
-          <span className="text-xs">Lend</span>
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-12 flex flex-col gap-1"
-          disabled={isLender || isServiceProvider}
-        >
-          <span className="text-xs">Credit</span>
-        </Button>
+        {!isStartup && !isServiceProvider && (
+          <Button 
+            variant="secondary" 
+            className="h-12 flex flex-col gap-1"
+          >
+            <span className="text-xs">Lend</span>
+          </Button>
+        )}
+        {!isLender && !isServiceProvider && (
+          <Button 
+            variant="outline" 
+            className="h-12 flex flex-col gap-1"
+          >
+            <span className="text-xs">Credit</span>
+          </Button>
+        )}
       </div>
     </section>
   );
