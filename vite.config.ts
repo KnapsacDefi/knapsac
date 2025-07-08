@@ -27,4 +27,9 @@ export default defineConfig(({ mode }) => ({
       "buffer": "buffer",
     },
   },
+  esbuild: {
+    define: {
+      global: 'globalThis',
+    },
+  },
 }));
