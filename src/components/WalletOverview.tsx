@@ -1,7 +1,7 @@
 
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useSignMessage } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +77,35 @@ const WalletOverview = () => {
   const isLender = userProfile?.profile_type === 'Lender';
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
 
+  const { signMessage } = useSignMessage({
+    onSuccess: ({ signature }) => {
+      console.log('Signature successful:', signature);
+      alert(`Deposit request signed successfully! Signature: ${signature}`);
+    },
+    onError: (error) => {
+      console.error('Signature error:', error);
+      alert('There was an error signing the deposit request.');
+    }
+  });
+
+  const handleDeposit = async () => {
+    const messageToSign = 'I hereby confirm my deposit request to the Knapsac platform.';
+    const uiOptions = {
+      title: 'Confirm Deposit Request',
+      description: 'Please sign this message to confirm your deposit request. This action will be recorded securely.',
+      buttonText: 'Confirm Deposit'
+    };
+
+    try {
+      await signMessage(
+        { message: messageToSign },
+        { uiOptions }
+      );
+    } catch (e) {
+      console.error("An error occurred when trying to sign:", e);
+    }
+  };
+
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
@@ -103,6 +132,7 @@ const WalletOverview = () => {
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
           disabled={isServiceProvider}
+          onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>
         </Button>
