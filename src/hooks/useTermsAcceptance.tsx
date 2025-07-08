@@ -78,32 +78,50 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       
       // Check wallet readiness before signing
       const wallet = wallets[0];
+      if (!wallet) {
+        throw new Error('No wallet available for signing');
+      }
+
+      // Verify wallet is connected and ready
+      if (!wallet.connectedAt) {
+        throw new Error('Wallet is not properly connected');
+      }
+
       console.log('🔍 Wallet readiness check:', {
         hasWallet: !!wallet,
         walletType: wallet?.walletClientType,
         walletConnected: wallet?.connectedAt,
-        walletAddress: walletAddress
+        walletAddress: walletAddress,
+        isReady: !!(wallet && wallet.connectedAt)
       });
 
-      const uiOptions = {
-        title: `You are signing Terms and Conditions for ${profileType} profile`
-      };
-      console.log('⚙️ UI options:', uiOptions);
+      // Attempt signing with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      let signature: string;
 
-      console.log('🚀 Calling signMessage for T&C...');
-      
-      // Add timeout wrapper for signing operation
-      const signPromise = signMessage(
-        { message }, 
-        { uiOptions }
-      );
-      
-      const timeoutPromise = new Promise<{ signature: string }>((_, reject) => 
-        setTimeout(() => reject(new Error('Signing timeout - please try again')), 30000)
-      );
-      
-      const result = await Promise.race([signPromise, timeoutPromise]);
-      const signature = result.signature;
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`🚀 Signing attempt ${retryCount + 1}/${maxRetries}...`);
+          
+          // Correct Privy signMessage API usage - pass message as object with proper structure
+          const result = await signMessage({ message });
+          
+          signature = result.signature;
+          console.log('✅ T&C signature received successfully');
+          break;
+        } catch (signError: any) {
+          retryCount++;
+          console.log(`❌ Signing attempt ${retryCount} failed:`, signError?.message);
+          
+          if (retryCount >= maxRetries) {
+            throw signError;
+          }
+          
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
       console.log('✅ T&C signature received successfully');
       
       // Create hash of the signed message
