@@ -79,10 +79,10 @@ const WalletOverview = () => {
 
   const { signMessage } = useSignMessage({
     onSuccess: ({ signature }) => {
-      console.log('✅ Signature successful:', signature);
+      console.log('✅ Signature successful');
       console.log('✅ Signature type:', typeof signature);
       console.log('✅ Signature length:', signature?.length);
-      alert(`Deposit request signed successfully! Signature: ${signature}`);
+      alert(`Deposit request signed successfully!`);
     },
     onError: (error) => {
       console.error('❌ Signature error details:', error);

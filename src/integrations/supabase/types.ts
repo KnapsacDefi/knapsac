@@ -14,39 +14,11 @@ export type Database = {
   }
   public: {
     Tables: {
-      deposit_transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          id: string
-          status: string | null
-          transaction_hash: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          id?: string
-          status?: string | null
-          transaction_hash: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          status?: string | null
-          transaction_hash?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           created_at: string
+          credit_score: number | null
+          credit_score_recommendation: string | null
           crypto_address: string
           id: string
           profile_type: string
@@ -56,6 +28,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          credit_score?: number | null
+          credit_score_recommendation?: string | null
           crypto_address: string
           id?: string
           profile_type: string
@@ -65,6 +39,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          credit_score?: number | null
+          credit_score_recommendation?: string | null
           crypto_address?: string
           id?: string
           profile_type?: string
@@ -108,30 +84,6 @@ export type Database = {
           status?: string | null
           subscription_type?: string
           transaction_hash?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      wallet_balances: {
-        Row: {
-          balance: number
-          currency: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          balance?: number
-          currency?: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          balance?: number
-          currency?: string
-          id?: string
           updated_at?: string
           user_id?: string
         }

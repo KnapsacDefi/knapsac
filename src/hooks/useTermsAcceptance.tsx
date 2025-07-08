@@ -23,7 +23,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
 
   const handleAccept = async () => {
     console.log('🔄 Starting T&C acceptance process...');
-    console.log('🔄 User data:', { user, userEmail, walletAddress, profileType });
+    console.log('🔄 Profile type:', profileType);
     console.log('🔄 Agreed status:', agreed);
 
     if (!agreed) {
@@ -37,8 +37,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     }
 
     if (!userEmail || !walletAddress) {
-      console.log('❌ Missing user information:', { userEmail, walletAddress });
-      console.log('❌ Full user object:', user);
+      console.log('❌ Missing user information: email or wallet not available');
       toast({
         title: "Missing Information",
         description: "Please ensure your profile is complete and wallet is connected.",
@@ -51,7 +50,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
 
     try {
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
-      console.log('📝 Message to sign:', message);
+      console.log('📝 Preparing message for signing...');
       
       const uiOptions = {
         title: `You are signing Terms and Conditions for ${profileType} profile`
@@ -63,7 +62,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         { message }, 
         { uiOptions }
       );
-      console.log('✅ T&C signature received:', signature);
+      console.log('✅ T&C signature received successfully');
       
       // Create hash of the signed message
       console.log('🔄 Creating hash...');
@@ -72,16 +71,10 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      console.log('✅ Hash created:', hashHex);
+      console.log('✅ Hash created successfully');
 
       // Create profile with signed terms
       console.log('🔄 Inserting profile to database...');
-      console.log('🔄 Profile data:', {
-        user_email: userEmail,
-        crypto_address: walletAddress,
-        profile_type: profileType,
-        signed_terms_hash: hashHex,
-      });
 
       const { error } = await supabase
         .from('profiles')
