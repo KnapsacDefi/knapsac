@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useWallets } from "@privy-io/react-auth";
+import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { Wallet, AlertCircle } from "lucide-react";
 
 interface TermsAgreementProps {
@@ -13,7 +13,20 @@ interface TermsAgreementProps {
 
 export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: TermsAgreementProps) => {
   const { wallets } = useWallets();
-  const hasWallet = wallets.length > 0;
+  const { user } = usePrivy();
+  
+  // Use unified wallet detection approach consistent with other components
+  const walletAddress = wallets[0]?.address || user?.wallet?.address;
+  const hasWallet = !!walletAddress;
+
+  // Debug logging for wallet state
+  console.log('🔍 TermsAgreement Wallet Debug:', {
+    walletsCount: wallets.length,
+    walletAddresses: wallets.map(w => w.address),
+    userWalletFromPrivy: user?.wallet?.address,
+    finalWalletAddress: walletAddress,
+    hasWallet
+  });
 
   return (
     <div className="space-y-4">
@@ -22,7 +35,9 @@ export const TermsAgreement = ({ agreed, setAgreed, isSubmitting, onAccept }: Te
         {hasWallet ? (
           <>
             <Wallet className="w-4 h-4 text-green-600" />
-            <span className="text-sm text-green-700">Wallet Connected</span>
+            <span className="text-sm text-green-700">
+              Wallet Connected: {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+            </span>
           </>
         ) : (
           <>
