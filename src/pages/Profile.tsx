@@ -79,13 +79,13 @@ const Profile = () => {
 
   useEffect(() => {
     const checkExistingProfile = async () => {
-      if (!userEmail) return;
+      if (!walletAddress) return;
 
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_email', userEmail)
+          .eq('crypto_address', walletAddress)
           .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
@@ -101,7 +101,7 @@ const Profile = () => {
     };
 
     checkExistingProfile();
-  }, [userEmail]);
+  }, [walletAddress]);
 
   const handleSubmit = async () => {
     if (!selectedProfile) {

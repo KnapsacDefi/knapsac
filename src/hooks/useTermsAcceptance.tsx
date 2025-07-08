@@ -65,6 +65,29 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     setIsSubmitting(true);
 
     try {
+      // Check if profile already exists with this wallet address
+      console.log('🔄 Checking for existing profile with wallet address...');
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('crypto_address', walletAddress)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ Error checking existing profile:', checkError);
+        throw new Error('Failed to check existing profile');
+      }
+
+      if (existingProfile) {
+        console.log('✅ Profile already exists for this wallet address');
+        toast({
+          title: "Profile Already Exists",
+          description: "A profile with this wallet address already exists.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
       console.log('📝 Preparing message for signing...');
       

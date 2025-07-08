@@ -25,17 +25,20 @@ const Wallet = () => {
 
   useEffect(() => {
     const checkUserAccess = async () => {
-      if (!user?.email?.address) return;
+      if (wallets.length === 0) return;
+
+      const walletAddress = wallets[0]?.address || user?.wallet?.address;
+      if (!walletAddress) return;
 
       try {
         // Get user profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_email', user.email.address)
-          .single();
+          .eq('crypto_address', walletAddress)
+          .maybeSingle();
 
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
           console.error('Error fetching profile:', profileError);
           setLoading(false);
           return;
@@ -67,7 +70,7 @@ const Wallet = () => {
     if (ready && authenticated) {
       checkUserAccess();
     }
-  }, [ready, authenticated, user, navigate]);
+  }, [ready, authenticated, user, wallets, navigate]);
 
   if (!ready || loading) {
     return (

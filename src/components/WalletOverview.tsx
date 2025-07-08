@@ -16,16 +16,19 @@ const WalletOverview = () => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!user?.email?.address) return;
+      if (wallets.length === 0) return;
+
+      const walletAddress = wallets[0]?.address;
+      if (!walletAddress) return;
 
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_email', user.email.address)
-          .single();
+          .eq('crypto_address', walletAddress)
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
         } else {
           setUserProfile(data);
@@ -36,7 +39,7 @@ const WalletOverview = () => {
     };
 
     fetchUserProfile();
-  }, [user?.email?.address]);
+  }, [wallets]);
 
   useEffect(() => {
     const fetchBalance = async () => {
