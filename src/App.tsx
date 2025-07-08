@@ -24,10 +24,9 @@ const queryClient = new QueryClient();
 
 
 const wagmiConfig = createConfig({
-  chains: [mainnet, tron, polygon, base],
+  chains: [mainnet, polygon, base],
   transports: {
     [mainnet.id]: http(),
-    [tron.id]: http(),
     [polygon.id]: http(),
     [base.id]: http(),
   },
@@ -143,7 +142,7 @@ const App = () => {
           createOnLogin: "users-without-wallets",
         },
         defaultChain: mainnet,
-        supportedChains: [mainnet, tron, polygon, base],
+        supportedChains: [mainnet, polygon, base],
       }}
     >
       <QueryClientProvider client={queryClient}>
