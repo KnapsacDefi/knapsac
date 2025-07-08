@@ -130,7 +130,8 @@ const App = () => {
             accentColor: "#676FFF",
           },
           embeddedWallets: {
-            createOnLogin: "users-without-wallets",
+            createOnLogin: "all-users",
+            requireUserPasswordOnCreate: false,
           },
           loginMethods: ['wallet', 'email'],
           defaultChain: mainnet,

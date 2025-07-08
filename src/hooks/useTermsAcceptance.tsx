@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrivy, useSignMessage, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -10,15 +10,29 @@ interface UseTermsAcceptanceProps {
 }
 
 export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAcceptanceProps) => {
-  const { user } = usePrivy();
+  const { user, ready, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletReady, setWalletReady] = useState(false);
+
+  // Check wallet readiness
+  useEffect(() => {
+    const checkWalletReady = () => {
+      const walletAddress = wallets[0]?.address || user?.wallet?.address;
+      const isReady = ready && (wallets.length > 0 || user?.wallet?.address) && walletAddress;
+      console.log('Wallet readiness check:', { ready, walletsLength: wallets.length, userWallet: !!user?.wallet?.address, walletAddress, isReady });
+      setWalletReady(!!isReady);
+    };
+
+    checkWalletReady();
+  }, [ready, wallets, user?.wallet?.address]);
 
   const { signMessage } = useSignMessage({
     onSuccess: async (data) => {
+      console.log('Signature successful:', data.signature);
       try {
         const walletAddress = wallets[0]?.address || user?.wallet?.address;
         const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
@@ -64,6 +78,12 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
           description: "You need to sign the terms to continue. Please try again.",
           variant: "destructive",
         });
+      } else if (error?.toString().includes('Unable to connect to wallet')) {
+        toast({
+          title: "Wallet Connection Error",
+          description: "Unable to connect to wallet. Please try connecting your wallet first.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Signing Failed",
@@ -85,22 +105,65 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
       return;
     }
 
-    // Simple wallet check - let Privy handle the rest
-    const walletAddress = wallets[0]?.address || user?.wallet?.address;
-    if (!walletAddress) {
+    // Check if Privy is ready
+    if (!ready) {
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to continue.",
+        title: "Please Wait",
+        description: "Wallet is still initializing. Please wait a moment.",
         variant: "destructive",
       });
       return;
+    }
+
+    // Enhanced wallet check with connection retry
+    const walletAddress = wallets[0]?.address || user?.wallet?.address;
+    if (!walletAddress || !walletReady) {
+      console.log('Wallet not ready, attempting to connect...', { walletAddress, walletReady, walletsLength: wallets.length });
+      
+      try {
+        // Try to connect wallet if not connected
+        await connectWallet();
+        
+        // Wait a moment for wallet to initialize
+        setTimeout(() => {
+          const newWalletAddress = wallets[0]?.address || user?.wallet?.address;
+          if (!newWalletAddress) {
+            toast({
+              title: "Wallet Not Connected",
+              description: "Please connect your wallet to continue.",
+              variant: "destructive",
+            });
+            return;
+          }
+        }, 1000);
+        
+      } catch (connectError) {
+        console.error('Wallet connection failed:', connectError);
+        toast({
+          title: "Wallet Connection Failed",
+          description: "Unable to connect wallet. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
 
     try {
       // Check if profile already exists
-      const existingProfile = await profileService.checkExistingProfile(walletAddress);
+      const currentWalletAddress = wallets[0]?.address || user?.wallet?.address;
+      if (!currentWalletAddress) {
+        toast({
+          title: "Wallet Not Ready",
+          description: "Wallet address not available. Please try again.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const existingProfile = await profileService.checkExistingProfile(currentWalletAddress);
       
       if (existingProfile) {
         toast({
@@ -121,6 +184,8 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         buttonText: 'Sign & Create Profile'
       };
 
+      console.log('Initiating message signing...', { walletAddress: currentWalletAddress, ready, walletReady });
+
       // Use Privy's signMessage with UI options - callbacks handle success/error
       signMessage(
         { message },
@@ -137,9 +202,9 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     }
   };
 
-  // Simple wallet validation for UI
+  // Enhanced wallet validation for UI
   const walletAddress = wallets[0]?.address || user?.wallet?.address;
-  const hasWallet = !!walletAddress;
+  const hasWallet = !!walletAddress && walletReady;
 
   return {
     agreed,
@@ -148,5 +213,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     handleAccept,
     walletAddress,
     hasWallet,
+    walletReady,
+    privyReady: ready,
   };
 };

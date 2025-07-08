@@ -65,7 +65,7 @@ export const TermsAgreement = ({
         className="w-full"
         size="lg"
       >
-        {isSubmitting ? "Signing..." : !hasWallet ? "Connect Wallet First" : "Accept Terms & Continue"}
+        {isSubmitting ? "Signing..." : !hasWallet ? "Connecting Wallet..." : "Accept Terms & Continue"}
       </Button>
     </div>
   );
