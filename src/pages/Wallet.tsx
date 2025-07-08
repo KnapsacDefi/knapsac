@@ -1,5 +1,5 @@
 
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Wallet = () => {
   const { ready, authenticated, user } = usePrivy();
+  const { wallets } = useWallets();
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [hasSubscription, setHasSubscription] = useState(false);
