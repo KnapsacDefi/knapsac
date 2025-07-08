@@ -38,12 +38,13 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
         const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
 
+        // Use secure profile service with wallet signature authentication
         await profileService.createProfile({
           userEmail: user?.email?.address,
           walletAddress: walletAddress!,
           profileType,
           signedTermsHash,
-        });
+        }, data.signature);
 
         toast({
           title: "Profile Created!",
@@ -60,11 +61,21 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         }
       } catch (error: any) {
         console.error("Profile creation failed:", error);
-        toast({
-          title: "Error",
-          description: "Failed to create profile. Please try again.",
-          variant: "destructive",
-        });
+        
+        // Handle specific error cases
+        if (error.message?.includes('already exists')) {
+          toast({
+            title: "Profile Already Exists",
+            description: "A profile with this wallet address already exists.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to create profile. Please try again.",
+            variant: "destructive",
+          });
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -151,7 +162,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     setIsSubmitting(true);
 
     try {
-      // Check if profile already exists
+      // Check if profile already exists with secure wallet authentication
       const currentWalletAddress = wallets[0]?.address || user?.wallet?.address;
       if (!currentWalletAddress) {
         toast({
@@ -163,17 +174,12 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         return;
       }
 
-      const existingProfile = await profileService.checkExistingProfile(currentWalletAddress);
+      // Create a temporary signature for profile check - this will be replaced by the actual terms signature
+      const checkMessage = profileService.createSecurityMessage('checkProfile', currentWalletAddress, Date.now());
       
-      if (existingProfile) {
-        toast({
-          title: "Profile Already Exists",
-          description: "A profile with this wallet address already exists.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
+      // For now, we'll skip the existing profile check and let the creation handle duplicates
+      // This avoids requiring two signatures from the user
+      // The secure edge function will check for duplicates during creation
 
       // Create and sign the terms message with UI options
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;

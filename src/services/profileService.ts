@@ -7,34 +7,93 @@ export interface ProfileCreationData {
   signedTermsHash: string;
 }
 
+// Secure profile service that uses wallet signatures for authentication
 export const profileService = {
-  async checkExistingProfile(walletAddress: string) {
-    const { data: existingProfile, error: checkError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('crypto_address', walletAddress)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error("Database check error:", checkError);
-      throw new Error('Failed to check existing profile');
-    }
-
-    return existingProfile;
+  // Helper function to create a signature message
+  createSecurityMessage(operation: string, walletAddress: string, timestamp: number): string {
+    return `Authorize ${operation} operation for wallet ${walletAddress} at ${timestamp}`;
   },
 
-  async createProfile(data: ProfileCreationData) {
-    const { error } = await supabase
-      .from('profiles')
-      .insert({
-        user_email: data.userEmail || '', // Optional metadata
-        crypto_address: data.walletAddress,
-        profile_type: data.profileType,
-        signed_terms_hash: data.signedTermsHash,
+  async checkExistingProfile(walletAddress: string, signature: string) {
+    const timestamp = Date.now();
+    const message = this.createSecurityMessage('checkProfile', walletAddress, timestamp);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
+        body: {
+          operation: 'checkExisting',
+          walletAddress,
+          signature,
+          message
+        }
       });
 
-    if (error) {
-      throw error;
+      if (error) {
+        console.error("Secure profile check error:", error);
+        throw new Error('Failed to check existing profile');
+      }
+
+      return data.exists;
+    } catch (error) {
+      console.error("Profile check failed:", error);
+      throw new Error('Failed to check existing profile');
+    }
+  },
+
+  async getProfile(walletAddress: string, signature: string) {
+    const timestamp = Date.now();
+    const message = this.createSecurityMessage('getProfile', walletAddress, timestamp);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
+        body: {
+          operation: 'get',
+          walletAddress,
+          signature,
+          message
+        }
+      });
+
+      if (error) {
+        console.error("Secure profile get error:", error);
+        throw new Error('Failed to get profile');
+      }
+
+      return data.profile;
+    } catch (error) {
+      console.error("Profile get failed:", error);
+      throw new Error('Failed to get profile');
+    }
+  },
+
+  async createProfile(data: ProfileCreationData, signature: string) {
+    const timestamp = Date.now();
+    const message = this.createSecurityMessage('createProfile', data.walletAddress, timestamp);
+
+    try {
+      const { data: result, error } = await supabase.functions.invoke('secure-profile-operations', {
+        body: {
+          operation: 'create',
+          walletAddress: data.walletAddress,
+          signature,
+          message,
+          profileData: {
+            userEmail: data.userEmail,
+            profileType: data.profileType,
+            signedTermsHash: data.signedTermsHash
+          }
+        }
+      });
+
+      if (error) {
+        console.error("Secure profile creation error:", error);
+        throw new Error('Failed to create profile');
+      }
+
+      return result.profile;
+    } catch (error) {
+      console.error("Profile creation failed:", error);
+      throw new Error('Failed to create profile');
     }
   },
 

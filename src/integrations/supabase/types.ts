@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          additional_data: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          operation_type: string
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+          wallet_address: string
+        }
+        Insert: {
+          additional_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          operation_type: string
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+          wallet_address: string
+        }
+        Update: {
+          additional_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          operation_type?: string
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount_paid: number

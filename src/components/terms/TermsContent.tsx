@@ -1,4 +1,6 @@
 
+import ReactMarkdown from 'react-markdown';
+
 interface TermsContentProps {
   profileType: "Startup" | "Lender" | "Service Provider";
 }
@@ -123,20 +125,21 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
 
   return (
     <div className="max-h-96 overflow-y-auto p-6 border rounded-lg bg-muted/50">
-      <div 
-        className="prose prose-sm max-w-none text-justify leading-relaxed"
-        dangerouslySetInnerHTML={{
-          __html: getTermsContent()
-            .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold mb-4 text-center">$1</h1>')
-            .replace(/^## (.*$)/gm, '<h2 class="text-lg font-semibold mb-3 mt-6">$1</h2>')
-            .replace(/^### (.*$)/gm, '<h3 class="text-base font-semibold mb-2 mt-4">$1</h3>')
-            .replace(/^\*\*(.*?)\*\*/gm, '<strong>$1</strong>')
-            .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1">• $1</li>')
-            .replace(/\n\n/g, '</p><p class="mb-4">')
-            .replace(/^(?!<[h|l])/gm, '<p class="mb-4">')
-            .replace(/<p class="mb-4"><\/p>/g, '')
-        }}
-      />
+      <div className="prose prose-sm max-w-none text-justify leading-relaxed">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => <h1 className="text-xl font-bold mb-4 text-center text-foreground">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-lg font-semibold mb-3 mt-6 text-foreground">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-base font-semibold mb-2 mt-4 text-foreground">{children}</h3>,
+            p: ({ children }) => <p className="mb-4 text-muted-foreground">{children}</p>,
+            li: ({ children }) => <li className="ml-4 mb-1 text-muted-foreground">• {children}</li>,
+            strong: ({ children }) => <strong className="text-foreground">{children}</strong>,
+            ul: ({ children }) => <ul className="mb-4">{children}</ul>
+          }}
+        >
+          {getTermsContent()}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 };
