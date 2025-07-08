@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { usePrivy, useSignMessage, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { validateWallet, logWalletState } from "@/utils/walletValidation";
 import { usePrivyConnection } from "@/hooks/usePrivyConnection";
+import { useWalletValidation } from "@/services/walletValidation";
+import { useMessageSigning } from "@/services/messageSigningService";
+import { profileService } from "@/services/profileService";
 
 interface UseTermsAcceptanceProps {
   profileType: "Startup" | "Lender" | "Service Provider";
@@ -13,15 +14,14 @@ interface UseTermsAcceptanceProps {
 
 export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAcceptanceProps) => {
   const { user } = usePrivy();
-  const { signMessage } = useSignMessage();
-  const { wallets } = useWallets();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { isWalletReady, connectionQuality, forceWalletReconnect } = usePrivyConnection();
-
-  // Wallet address is the primary user identifier in Web3 applications
+  const { validateCurrentWallet } = useWalletValidation();
+  const { signMessageWithRetry } = useMessageSigning();
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -38,8 +38,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     console.log('Wallet ready:', isWalletReady);
     console.log('Connection quality:', connectionQuality);
     
-    logWalletState(wallets, user?.wallet);
-    const walletValidation = validateWallet(wallets, user?.wallet);
+    const walletValidation = validateCurrentWallet(user?.wallet);
     
     if (!walletValidation.isValid) {
       console.error("Wallet validation failed:", walletValidation.error);
@@ -60,7 +59,6 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         variant: "destructive",
       });
       
-      // Attempt to reconnect automatically
       setTimeout(() => {
         forceWalletReconnect();
       }, 1000);
@@ -76,18 +74,9 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
     setIsSubmitting(true);
 
     try {
-      // Check if profile already exists with this wallet address
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('crypto_address', walletAddress)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Database check error:", checkError);
-        throw new Error('Failed to check existing profile');
-      }
-
+      // Check if profile already exists
+      const existingProfile = await profileService.checkExistingProfile(walletAddress);
+      
       if (existingProfile) {
         toast({
           title: "Profile Already Exists",
@@ -97,96 +86,20 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
         return;
       }
 
+      // Create and sign the terms message
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
-      
       console.log("Attempting to sign message with wallet:", walletAddress);
 
-      // Enhanced signing with robust retry logic and connection verification
-      let retryCount = 0;
-      const maxRetries = 5;
-      let signature: string;
+      const signature = await signMessageWithRetry(message);
+      const signedTermsHash = await profileService.createSignedTermsHash(message, signature);
 
-      while (retryCount < maxRetries) {
-        try {
-          console.log(`Signing attempt ${retryCount + 1}/${maxRetries}`);
-          
-          // Pre-signing connection verification  
-          if ((connectionQuality as 'good' | 'poor' | 'failed') === 'failed') {
-            throw new Error('Wallet connection failed. Please reconnect.');
-          }
-          
-          // Add small delay to ensure iframe is ready
-          if (retryCount > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1500 * retryCount));
-          }
-          
-          // Attempt to sign with timeout
-          const signPromise = signMessage({ message });
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Signing timeout')), 15000)
-          );
-          
-          const result = await Promise.race([signPromise, timeoutPromise]) as any;
-          signature = result.signature;
-          
-          console.log("Message signed successfully");
-          break;
-        } catch (signError: any) {
-          retryCount++;
-          console.error(`Signing attempt ${retryCount} failed:`, signError);
-          
-          // Handle specific error types
-          if (signError.message?.includes('timeout') && retryCount < maxRetries) {
-            console.log('Signing timed out, retrying with longer timeout...');
-            continue;
-          }
-          
-          if (signError.message?.includes('Could not establish connection') && retryCount < maxRetries) {
-            console.log('Connection issue detected, attempting wallet reconnection...');
-            forceWalletReconnect();
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          
-          if (retryCount >= maxRetries) {
-            // Provide specific error based on the type
-            if (signError.message?.includes('User rejected')) {
-              throw new Error('Signing was cancelled. Please try again and approve the signature request.');
-            } else if (signError.message?.includes('timeout')) {
-              throw new Error('Signing request timed out. Please ensure your wallet is responsive and try again.');
-            } else if (signError.message?.includes('Could not establish connection')) {
-              throw new Error('Unable to connect to wallet. Please refresh the page and try again.');
-            } else {
-              throw signError;
-            }
-          }
-          
-          // Exponential backoff with jitter
-          const delay = (1000 * Math.pow(2, retryCount)) + (Math.random() * 1000);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-      
-      // Create hash of the signed message
-      const encoder = new TextEncoder();
-      const data = encoder.encode(message + signature);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-      // Create profile with signed terms - wallet address is primary identifier
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          user_email: user?.email?.address || '', // Optional metadata
-          crypto_address: walletAddress,
-          profile_type: profileType,
-          signed_terms_hash: hashHex,
-        });
-
-      if (error) {
-        throw error;
-      }
+      // Create profile
+      await profileService.createProfile({
+        userEmail: user?.email?.address,
+        walletAddress,
+        profileType,
+        signedTermsHash,
+      });
 
       toast({
         title: "Profile Created!",
@@ -238,7 +151,7 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
   };
 
   // Get current wallet validation for UI
-  const walletValidation = validateWallet(wallets, user?.wallet);
+  const walletValidation = validateCurrentWallet(user?.wallet);
 
   return {
     agreed,
