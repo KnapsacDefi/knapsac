@@ -48,7 +48,7 @@ const App = () => {
           body: { secret_name: 'PRIVY_APP_ID' }
         });
         
-        console.log("App.tsx: Supabase response:", { data, error });
+        console.log("App.tsx: Supabase response received:", { hasData: !!data, hasError: !!error });
         
         if (error) {
           console.error('Error fetching PRIVY_APP_ID:', error);
@@ -128,7 +128,7 @@ const App = () => {
     );
   }
 
-  console.log("App.tsx: Initializing PrivyProvider with app ID:", privyAppId);
+  console.log("App.tsx: Initializing PrivyProvider with app ID configured");
 
   return (
     <PrivyProvider
