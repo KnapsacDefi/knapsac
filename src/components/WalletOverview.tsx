@@ -79,16 +79,27 @@ const WalletOverview = () => {
 
   const { signMessage } = useSignMessage({
     onSuccess: ({ signature }) => {
-      console.log('Signature successful:', signature);
+      console.log('✅ Signature successful:', signature);
+      console.log('✅ Signature type:', typeof signature);
+      console.log('✅ Signature length:', signature?.length);
       alert(`Deposit request signed successfully! Signature: ${signature}`);
     },
     onError: (error) => {
-      console.error('Signature error:', error);
-      alert('There was an error signing the deposit request.');
+      console.error('❌ Signature error details:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error code:', error);
+      
+      // Convert error to string for display
+      const errorMessage = typeof error === 'string' ? error : JSON.stringify(error);
+      alert(`Error signing deposit request: ${errorMessage}`);
     }
   });
 
   const handleDeposit = async () => {
+    console.log('🔄 Starting deposit signing process...');
+    console.log('🔄 User profile type:', userProfile?.profile_type);
+    console.log('🔄 Wallets available:', wallets?.length);
+    
     const messageToSign = 'I hereby confirm my deposit request to the Knapsac platform.';
     const uiOptions = {
       title: 'Confirm Deposit Request',
@@ -96,13 +107,22 @@ const WalletOverview = () => {
       buttonText: 'Confirm Deposit'
     };
 
+    console.log('📝 Message to sign:', messageToSign);
+    console.log('⚙️ UI options:', uiOptions);
+
     try {
+      console.log('🚀 Calling signMessage...');
       await signMessage(
         { message: messageToSign },
         { uiOptions }
       );
+      console.log('✅ signMessage call completed successfully');
     } catch (e) {
-      console.error("An error occurred when trying to sign:", e);
+      console.error("❌ Exception in handleDeposit:", e);
+      console.error("❌ Exception type:", typeof e);
+      console.error("❌ Exception message:", e?.message);
+      console.error("❌ Exception stack:", e?.stack);
+      alert(`Failed to initiate signing: ${e?.message || 'Unknown error'}`);
     }
   };
 
