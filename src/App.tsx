@@ -1,4 +1,5 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PrivyErrorBoundary } from "@/components/PrivyErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -120,7 +121,8 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <PrivyProvider
+      <PrivyErrorBoundary onRetry={() => window.location.reload()}>
+        <PrivyProvider
         appId={privyAppId}
         config={{
           appearance: {
@@ -153,6 +155,7 @@ const App = () => {
           </TooltipProvider>
         </QueryClientProvider>
       </PrivyProvider>
+      </PrivyErrorBoundary>
     </ErrorBoundary>
   );
 };
