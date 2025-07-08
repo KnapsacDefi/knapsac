@@ -12,11 +12,68 @@ interface UseTermsAcceptanceProps {
 export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAcceptanceProps) => {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { signMessage } = useSignMessage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { signMessage } = useSignMessage({
+    onSuccess: async (data) => {
+      try {
+        const walletAddress = wallets[0]?.address || user?.wallet?.address;
+        const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
+        const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
+
+        await profileService.createProfile({
+          userEmail: user?.email?.address,
+          walletAddress: walletAddress!,
+          profileType,
+          signedTermsHash,
+        });
+
+        toast({
+          title: "Profile Created!",
+          description: "Your profile has been successfully created.",
+        });
+
+        // Navigate based on profile type
+        if (profileType === "Service Provider") {
+          navigate('/service-provider-motivation');
+        } else if (profileType === "Startup") {
+          navigate('/subscription');
+        } else {
+          navigate('/wallet');
+        }
+      } catch (error: any) {
+        console.error("Profile creation failed:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create profile. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Message signing failed:", error);
+      
+      if (error?.toString().includes('User rejected') || error?.toString().includes('rejected')) {
+        toast({
+          title: "Signing Cancelled",
+          description: "You need to sign the terms to continue. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Signing Failed",
+          description: "Failed to sign terms. Please try again.",
+          variant: "destructive",
+        });
+      }
+      setIsSubmitting(false);
+    }
+  });
 
   const handleAccept = async () => {
     if (!agreed) {
@@ -51,55 +108,31 @@ export const useTermsAcceptance = ({ profileType, termsContent }: UseTermsAccept
           description: "A profile with this wallet address already exists.",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
-      // Create and sign the terms message
+      // Create and sign the terms message with UI options
       const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      // Use Privy's signMessage directly - no retry logic needed
-      const result = await signMessage({ message });
-      const signedTermsHash = await profileService.createSignedTermsHash(message, result.signature);
+      const uiOptions = {
+        title: 'Accept Terms & Conditions',
+        description: 'Please sign this message to accept the terms and create your profile. This does not cost any gas.',
+        buttonText: 'Sign & Create Profile'
+      };
 
-      // Create profile
-      await profileService.createProfile({
-        userEmail: user?.email?.address,
-        walletAddress,
-        profileType,
-        signedTermsHash,
-      });
-
-      toast({
-        title: "Profile Created!",
-        description: "Your profile has been successfully created.",
-      });
-
-      // Navigate based on profile type
-      if (profileType === "Service Provider") {
-        navigate('/service-provider-motivation');
-      } else if (profileType === "Startup") {
-        navigate('/subscription');
-      } else {
-        navigate('/wallet');
-      }
+      // Use Privy's signMessage with UI options - callbacks handle success/error
+      signMessage(
+        { message },
+        { uiOptions }
+      );
     } catch (error: any) {
-      console.error("Terms acceptance failed:", error);
-      
-      // Simple error handling
-      if (error?.message?.includes('User rejected') || error?.message?.includes('rejected')) {
-        toast({
-          title: "Signing Cancelled",
-          description: "You need to sign the terms to continue. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to accept terms. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } finally {
+      console.error("Terms acceptance setup failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate signing. Please try again.",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
     }
   };
