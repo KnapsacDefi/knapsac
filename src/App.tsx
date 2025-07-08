@@ -129,7 +129,7 @@ const App = () => {
           createOnLogin: "users-without-wallets",
         },
         defaultChain: mainnet,
-        supportedChains: [mainnet, polygon, base],
+        supportedChains: [mainnet, polygon, base]
       }}
     >
       <QueryClientProvider client={queryClient}>

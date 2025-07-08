@@ -36,17 +36,38 @@ const inspirationalQuotes = {
 };
 
 const Profile = () => {
-  const { user, authenticated } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [walletLoading, setWalletLoading] = useState(true);
 
   const userEmail = user?.email?.address;
-  // Use consistent wallet detection with Terms acceptance
   const { wallets } = useWallets();
   const walletAddress = wallets[0]?.address || user?.wallet?.address;
+
+  // Enhanced wallet state debugging
+  useEffect(() => {
+    console.log('🔍 Profile Wallet Debug:', {
+      authenticated,
+      ready,
+      userHasEmail: !!userEmail,
+      walletsCount: wallets.length,
+      walletAddresses: wallets.map(w => w.address),
+      userWalletFromPrivy: user?.wallet?.address,
+      finalWalletAddress: walletAddress,
+      privyUserObject: user
+    });
+
+    // Set wallet loading to false after a brief delay to allow for wallet initialization
+    const timer = setTimeout(() => {
+      setWalletLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [authenticated, ready, userEmail, wallets, walletAddress, user]);
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {
@@ -83,11 +104,38 @@ const Profile = () => {
   }, [userEmail]);
 
   const handleSubmit = async () => {
-    if (!selectedProfile || !userEmail || !walletAddress) {
+    if (!selectedProfile) {
       toast({
-        title: "Missing Information",
-        description: "Please select a profile type and ensure your wallet is connected.",
+        title: "Profile Selection Required",
+        description: "Please select a profile type to continue.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please ensure your email is verified with Privy.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!walletAddress && !walletLoading) {
+      toast({
+        title: "Wallet Connection Required",
+        description: "Please connect your wallet to continue. You can do this from the main dashboard.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (walletLoading) {
+      toast({
+        title: "Wallet Initializing",
+        description: "Please wait for your wallet to finish connecting...",
+        variant: "default",
       });
       return;
     }
@@ -96,12 +144,15 @@ const Profile = () => {
     navigate(`/terms?type=${encodeURIComponent(selectedProfile)}`);
   };
 
-  if (loading) {
+  // Show loading while Privy or profile data is loading
+  if (!ready || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">
+            {!ready ? "Initializing..." : "Loading profile..."}
+          </p>
         </div>
       </div>
     );
@@ -176,13 +227,38 @@ const Profile = () => {
               ))}
             </RadioGroup>
 
+            {/* Wallet Status Info */}
+            {walletLoading && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  🔄 Wallet initializing... Please wait.
+                </p>
+              </div>
+            )}
+            
+            {!walletLoading && !walletAddress && (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-700">
+                  ⚠️ No wallet connected. You can connect one from the dashboard, or continue without a wallet for now.
+                </p>
+              </div>
+            )}
+
+            {!walletLoading && walletAddress && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  ✅ Wallet connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </p>
+              </div>
+            )}
+
             <Button
               onClick={handleSubmit}
-              disabled={!selectedProfile}
+              disabled={!selectedProfile || walletLoading}
               className="w-full"
               size="lg"
             >
-              Continue to Terms & Conditions
+              {walletLoading ? "Waiting for wallet..." : "Continue to Terms & Conditions"}
             </Button>
           </CardContent>
         </Card>
