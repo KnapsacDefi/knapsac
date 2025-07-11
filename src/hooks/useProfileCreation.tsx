@@ -22,12 +22,13 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
         const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
 
         // Use secure profile service with wallet signature authentication
+        // Pass the original message that was actually signed
         await profileService.createProfile({
           userEmail: user?.email?.address,
           walletAddress: walletAddress!,
           profileType,
           signedTermsHash,
-        }, data.signature);
+        }, data.signature, message);
 
         toast({
           title: "Profile Created!",

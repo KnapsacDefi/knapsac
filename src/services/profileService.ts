@@ -66,17 +66,16 @@ export const profileService = {
     }
   },
 
-  async createProfile(data: ProfileCreationData, signature: string) {
-    const timestamp = Date.now();
-    const message = this.createSecurityMessage('createProfile', data.walletAddress, timestamp);
-
+  async createProfile(data: ProfileCreationData, signature: string, originalMessage: string) {
     try {
+      console.log('Creating profile with original message:', { originalMessage, signature });
+      
       const { data: result, error } = await supabase.functions.invoke('secure-profile-operations', {
         body: {
           operation: 'create',
           walletAddress: data.walletAddress,
           signature,
-          message,
+          message: originalMessage, // Use the original signed message
           profileData: {
             userEmail: data.userEmail,
             profileType: data.profileType,
