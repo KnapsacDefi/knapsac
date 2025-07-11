@@ -34,25 +34,20 @@
 
   <body>
     <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.js"></script>
     <script>
-      // Global polyfills must be available before any modules load
+      // Ensure global polyfills are available immediately
       if (typeof global === 'undefined') {
         var global = globalThis;
       }
       
-      // Load Buffer polyfill immediately
-      import('https://esm.sh/buffer@6.0.3').then(({ Buffer }) => {
-        globalThis.Buffer = Buffer;
-        window.Buffer = Buffer;
-        global.Buffer = Buffer;
-        
-        // Now load the main application
-        import('/src/main.tsx');
-      }).catch(err => {
-        console.error('Failed to load Buffer polyfill:', err);
-        // Fallback - load main anyway
-        import('/src/main.tsx');
-      });
+      // Make Buffer available globally
+      if (typeof window !== 'undefined' && window.buffer && window.buffer.Buffer) {
+        window.Buffer = window.buffer.Buffer;
+        global.Buffer = window.buffer.Buffer;
+        globalThis.Buffer = window.buffer.Buffer;
+      }
     </script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
