@@ -104,8 +104,8 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
   });
 
   const createProfile = async () => {
-    //const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
-    const= `I agree to the Knapsac Terms and Conditions`;
+    // const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\n${termsContent}\n\nTimestamp: ${new Date().toISOString()}`;
+    const message= `I agree to the Knapsac Terms and Conditions`;
     const uiOptions = {
       title: 'Accept Terms & Conditions',
       description: 'Please sign this message to accept the terms and create your profile. This does not cost any gas.',
