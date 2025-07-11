@@ -39,7 +39,20 @@
       if (typeof global === 'undefined') {
         var global = globalThis;
       }
+      
+      // Load Buffer polyfill immediately
+      import('https://esm.sh/buffer@6.0.3').then(({ Buffer }) => {
+        globalThis.Buffer = Buffer;
+        window.Buffer = Buffer;
+        global.Buffer = Buffer;
+        
+        // Now load the main application
+        import('/src/main.tsx');
+      }).catch(err => {
+        console.error('Failed to load Buffer polyfill:', err);
+        // Fallback - load main anyway
+        import('/src/main.tsx');
+      });
     </script>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
