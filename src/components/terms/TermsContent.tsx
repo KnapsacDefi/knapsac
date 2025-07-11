@@ -40,7 +40,7 @@ Knapsac's liability is limited to the maximum extent permitted by law. We are no
 
 ## 5. PLATFORM FEES
 
-${profileType === "Startup" ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Monthly interest payments** between 3-7% (based on credit score) for 5 months\n" : ""}
+${profileType === "Startup" ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Monthly interest payments** between 3-7% for 5-10 months (based on credit score)\n" : ""}
 
 ## 6. DISPUTE RESOLUTION
 
