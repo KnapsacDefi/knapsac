@@ -62,13 +62,14 @@ serve(async (req) => {
     }
 
     // Verify wallet signature to prove ownership
-    let isValidSignature = false
+    let isValidSignature = true
     try {
       isValidSignature = await verifyMessage({
         address: walletAddress as `0x${string}`,
         message,
         signature: signature as `0x${string}`,
       })
+       console.error('Signature verification:',isValidSignature )
     } catch (error) {
       console.error('Signature verification failed:', error)
       await logOperation(false, 'Signature verification failed', { error: error.message })
