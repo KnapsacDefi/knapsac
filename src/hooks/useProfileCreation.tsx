@@ -18,7 +18,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
     onSuccess: async (data) => {
       console.log('Signature successful:', data.signature);
       try {
-        const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\nTimestamp: ${new Date().toISOString()}`;
+        const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile\n\nTimestamp: ${new Date().toISOString()}`;
         const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
 
         // Use secure profile service with wallet signature authentication
@@ -104,7 +104,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
   });
 
   const createProfile = async () => {
-    const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile:\n\nTimestamp: ${new Date().toISOString()}`;
+    const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile\n\nTimestamp: ${new Date().toISOString()}`;
    
     const uiOptions = {
       title: 'Accept Terms & Conditions',
