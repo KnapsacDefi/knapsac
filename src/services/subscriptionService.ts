@@ -41,9 +41,9 @@ export const subscriptionService = {
     }
   },
 
-  async createSubscription(walletAddress: string, privyUserId: string, subscriptionData: SubscriptionCreationData, signature: string) {
-    const timestamp = Date.now();
-    const message = this.createSecurityMessage('createSubscription', walletAddress, privyUserId, timestamp);
+  async createSubscription(walletAddress: string, privyUserId: string, subscriptionData: SubscriptionCreationData, signature: string, message?: string) {
+    // Use provided message or create a default one
+    const finalMessage = message || this.createSecurityMessage('createSubscription', walletAddress, privyUserId, Date.now());
 
     try {
       const { data: result, error } = await supabase.functions.invoke('secure-subscription-operations', {
@@ -52,7 +52,7 @@ export const subscriptionService = {
           walletAddress,
           privyUserId,
           signature,
-          message,
+          message: finalMessage,
           subscriptionData
         }
       });
