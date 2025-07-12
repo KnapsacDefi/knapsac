@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.secure-subscription-operations]
 verify_jwt = true
+
+[functions.test-privy-secrets]
+verify_jwt = false
