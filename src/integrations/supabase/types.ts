@@ -101,6 +101,7 @@ export type Database = {
           transaction_hash: string | null
           updated_at: string
           user_id: string
+          wallet_address: string
         }
         Insert: {
           amount_paid: number
@@ -113,6 +114,7 @@ export type Database = {
           transaction_hash?: string | null
           updated_at?: string
           user_id: string
+          wallet_address: string
         }
         Update: {
           amount_paid?: number
@@ -125,6 +127,7 @@ export type Database = {
           transaction_hash?: string | null
           updated_at?: string
           user_id?: string
+          wallet_address?: string
         }
         Relationships: []
       }

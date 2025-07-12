@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { usePrivy, useSendTransaction } from "@privy-io/react-auth";
+import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { subscriptionService } from "@/services/subscriptionService";
 import { CheckCircle, Clock, ArrowLeft } from "lucide-react";
 import { encodeFunctionData } from 'viem';
 
@@ -28,6 +29,7 @@ const erc20Abi = [
 const Subscription = () => {
   const { user, ready, authenticated } = usePrivy();
   const { sendTransaction } = useSendTransaction();
+  const { wallets } = useWallets();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -188,23 +190,27 @@ const Subscription = () => {
       // Try to save subscription to database directly
       // This will fail for external wallets due to RLS, but that's ok
       try {
-        const { error } = await supabase
-          .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            subscription_type: selectedPlan,
-            amount_paid: plan.discountedPrice,
-            transaction_hash: txResult.hash,
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString(),
-            status: 'active'
-          });
-
-        if (error) {
-          console.log('Direct subscription insert failed (expected for external wallets):', error);
-          // For external wallets, this is expected due to RLS
-          // The subscription will be handled by the secure service later if needed
+        // Use subscription service instead of direct database insert
+        const walletAddress = wallets[0]?.address || user?.wallet?.address;
+        if (!walletAddress) {
+          throw new Error('Wallet address not found');
         }
+
+        // Create a simple signature for subscription creation (in production, use proper wallet signing)
+        const timestamp = Date.now();
+        const message = `Create subscription for ${walletAddress} at ${timestamp}`;
+        
+        const subscriptionData = {
+          subscriptionType: selectedPlan as 'early_bird' | 'standard',
+          amountPaid: plan.discountedPrice,
+          transactionHash: txResult.hash,
+          endDate: endDate.toISOString()
+        };
+
+        // For now, use a placeholder signature - in production, you'd sign the message with the wallet
+        await subscriptionService.createSubscription(walletAddress, user.id, subscriptionData, 'placeholder-signature');
+
+        console.log('Subscription created successfully');
       } catch (dbError) {
         console.log('Database operation failed (expected for external wallets):', dbError);
       }

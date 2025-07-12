@@ -127,7 +127,8 @@ serve(async (req) => {
         const { data: subscription, error: getError } = await supabase
           .from('subscriptions')
           .select('*')
-          .eq('user_id', privyUserId)
+          .eq('wallet_address', walletAddress)
+          .eq('status', 'active')
           .maybeSingle()
 
         if (getError) {
@@ -157,7 +158,8 @@ serve(async (req) => {
         const { data: existingSubscription, error: existingError } = await supabase
           .from('subscriptions')
           .select('id')
-          .eq('user_id', privyUserId)
+          .eq('wallet_address', walletAddress)
+          .eq('status', 'active')
           .maybeSingle()
 
         if (existingError) {
@@ -179,7 +181,8 @@ serve(async (req) => {
         const { data: newSubscription, error: createError } = await supabase
           .from('subscriptions')
           .insert({
-            user_id: privyUserId,
+            wallet_address: walletAddress,
+            user_id: privyUserId, // Keep for compatibility
             subscription_type: subscriptionData.subscriptionType,
             amount_paid: subscriptionData.amountPaid,
             transaction_hash: subscriptionData.transactionHash,
@@ -215,7 +218,8 @@ serve(async (req) => {
         const { data: updatedSubscription, error: updateError } = await supabase
           .from('subscriptions')
           .update(subscriptionData)
-          .eq('user_id', privyUserId)
+          .eq('wallet_address', walletAddress)
+          .eq('status', 'active')
           .select()
           .single()
 
