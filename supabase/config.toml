@@ -1,4 +1,13 @@
 project_id = "jxfqfrfpaiijyvciclrw"
 
+[functions.get-secret]
+verify_jwt = false
+
 [functions.get-usdc-balance]
+verify_jwt = true
+
+[functions.secure-profile-operations]
+verify_jwt = true
+
+[functions.secure-subscription-operations]
 verify_jwt = true
