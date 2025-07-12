@@ -117,14 +117,6 @@ const Profile = () => {
       return;
     }
 
-    if (!userEmail) {
-      toast({
-        title: "Email Required",
-        description: "Please ensure your email is verified with Privy.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!walletAddress && !walletLoading) {
       toast({
