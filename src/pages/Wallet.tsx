@@ -7,6 +7,7 @@ import WalletOverview from "@/components/WalletOverview";
 import UserAddressDisplay from "@/components/UserAddressDisplay";
 import BottomNavigation from "@/components/BottomNavigation";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -98,8 +99,11 @@ const Wallet = () => {
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
-        {/* Show subscription banner for unsubscribed users */}
-        {!hasSubscription && <SubscriptionBanner />}
+        {/* Show add profile banner if signed_terms_hash is null */}
+        {!userProfile?.signed_terms_hash && <AddProfileBanner />}
+        
+        {/* Show subscription banner for unsubscribed startup profiles only */}
+        {userProfile?.signed_terms_hash && !hasSubscription && userProfile?.profile_type === 'Startup' && <SubscriptionBanner />}
         
         <WalletOverview />
         <UserAddressDisplay />

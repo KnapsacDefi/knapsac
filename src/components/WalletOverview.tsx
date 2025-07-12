@@ -79,6 +79,7 @@ const WalletOverview = () => {
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
+  const hasSignedTerms = userProfile?.signed_terms_hash;
 
   const { fundWallet } = useFundWallet({
     onUserExited: (params) => {
@@ -125,7 +126,7 @@ const WalletOverview = () => {
         >
           <span className="text-xs">Deposit</span>
         </Button>
-        {!isStartup && !isServiceProvider && (
+        {!isStartup && !isServiceProvider && hasSignedTerms && (
           <Button 
             variant="secondary" 
             className="h-12 flex flex-col gap-1"
@@ -133,7 +134,7 @@ const WalletOverview = () => {
             <span className="text-xs">Lend</span>
           </Button>
         )}
-        {!isLender && !isServiceProvider && (
+        {!isLender && !isServiceProvider && hasSignedTerms && (
           <Button 
             variant="outline" 
             className="h-12 flex flex-col gap-1"
