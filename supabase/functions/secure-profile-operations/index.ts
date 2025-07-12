@@ -69,7 +69,6 @@ serve(async (req) => {
         message,
         signature: signature as `0x${string}`,
       })
-       console.error('Signature verification :', isValidSignature)
     } catch (error) {
       console.error('Signature verification failed:', error)
       await logOperation(false, 'Signature verification failed', { error: error.message })

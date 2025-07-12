@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { mainnet, polygon, base,celo } from "viem/chains";
+import { mainnet, polygon, base } from "viem/chains";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import Index from "./pages/Index";
@@ -22,8 +22,100 @@ import Terms from "./pages/Terms";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Replace with your actual Privy App ID - this is a public identifier, not a secret
-  const privyAppId = 'cmby0t9xh037old0ngdyu15ct';
+  const [privyAppId, setPrivyAppId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  
+
+  useEffect(() => {
+    const fetchPrivyAppId = async () => {
+      try {
+        
+        
+        const { data, error } = await supabase.functions.invoke('get-secret', {
+          body: { secret_name: 'PRIVY_APP_ID' }
+        });
+        
+        
+        
+        if (error) {
+          console.error('Error fetching PRIVY_APP_ID:', error);
+          setError(`Error fetching PRIVY_APP_ID: ${error.message || 'Unknown error'}`);
+          setPrivyAppId(null);
+        } else if (data?.secret_value) {
+          // Trim whitespace from the secret value
+          const trimmedSecret = data.secret_value.trim();
+    
+          setPrivyAppId(trimmedSecret);
+          setError(null);
+        } else {
+          console.error('No secret value returned from get-secret function');
+          setError('No secret value returned from get-secret function');
+          setPrivyAppId(null);
+        }
+      } catch (err) {
+        console.error('Error fetching PRIVY_APP_ID:', err);
+        setError(`Error fetching PRIVY_APP_ID: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setPrivyAppId(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrivyAppId();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if there's an issue fetching the secret
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Configuration Error</div>
+          <div className="mb-2 text-muted-foreground">{error}</div>
+          <div className="text-sm text-muted-foreground mt-4">
+            Please check that the <b>PRIVY_APP_ID</b> secret is properly set in Supabase.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show a helpful UI if no Privy App ID is present
+  if (!privyAppId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Missing PRIVY_APP_ID secret</div>
+          <div className="mb-2 text-muted-foreground">You must set the <b>PRIVY_APP_ID</b> secret in Supabase before this app will work.</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Validate that privyAppId looks like a valid Privy App ID
+  if (typeof privyAppId !== 'string' || privyAppId.trim().length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-red-600 mb-4 text-xl font-bold">Invalid PRIVY_APP_ID</div>
+          <div className="mb-2 text-muted-foreground">The PRIVY_APP_ID secret appears to be empty or invalid.</div>
+          <div className="text-sm text-muted-foreground">Current value: "{privyAppId}"</div>
+        </div>
+      </div>
+    );
+  }
 
   
 
@@ -43,7 +135,7 @@ const App = () => {
           },
           loginMethods: ['wallet', 'email'],
           defaultChain: mainnet,
-          supportedChains: [mainnet, polygon, base,celo]
+          supportedChains: [mainnet, polygon, base]
         }}
       >
         <QueryClientProvider client={queryClient}>
