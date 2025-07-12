@@ -50,7 +50,7 @@ const WalletOverview = () => {
           
           // Fetch USDC balance using our edge function with wallet ID
           const response = await supabase.functions.invoke('get-usdc-balance', {
-            body: { walletId: (wallet as any).id }
+            body: { walletId: (wallet as any).userWallet?.id || (wallet as any).id }
           });
           
           if (response.error) {
