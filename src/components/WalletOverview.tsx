@@ -46,11 +46,20 @@ const WalletOverview = () => {
       if (wallets.length > 0) {
         try {
           setIsLoading(true);
-          const wallet = wallets[0]; // Use the first wallet
           
-          // Fetch USDC balance using our edge function with wallet address
+          // Use the wallet ID from the Privy user object
+          const walletId = user?.wallet?.id;
+          console.log('Using wallet ID from user.wallet.id:', walletId);
+          
+          if (!walletId) {
+            console.error('No wallet ID found in user object');
+            setIsLoading(false);
+            return;
+          }
+          
+          // Fetch USDC balance using our edge function with wallet ID
           const response = await supabase.functions.invoke('get-usdc-balance', {
-            body: { walletAddress: wallet.address }
+            body: { walletId }
           });
           
           if (response.error) {
