@@ -116,7 +116,7 @@ serve(async (req) => {
     }
 
     // Basic input validation
-    if (!operation || !walletAddress || !message) {
+    if (!operation || !walletAddress) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
