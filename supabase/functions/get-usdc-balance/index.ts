@@ -148,7 +148,7 @@ serve(async (req) => {
     
     // Find USDC balance on Base chain
     const usdcBalance = data.balances?.find(
-      (balance: any) => balance.chain === 'base' && balance.asset === 'usdc'
+      (balance: any) => balance.chain === 'ethereum' && balance.asset === 'usdc'
     );
     
     const usdValue = usdcBalance?.display_values?.usd || '0.00';
