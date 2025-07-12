@@ -100,28 +100,45 @@ serve(async (req) => {
     // Verify wallet signature to prove ownership
     let isValidSignature = false
     try {
+      console.log('🔐 Verifying signature:', {
+        walletAddress,
+        signature: signature?.substring(0, 10) + '...',
+        message: message?.substring(0, 50) + '...',
+        messageLength: message?.length
+      });
+      
       isValidSignature = await verifyMessage({
         address: walletAddress as `0x${string}`,
         message,
         signature: signature as `0x${string}`,
       })
-       console.error('Signature verification :', isValidSignature)
+      
+      console.log('✅ Signature verification result:', isValidSignature)
     } catch (error) {
-      console.error('Signature verification failed:', error)
+      console.error('❌ Signature verification failed:', {
+        error,
+        errorMessage: error?.message,
+        walletAddress,
+        signature: signature?.substring(0, 10) + '...',
+        message: message?.substring(0, 50) + '...'
+      })
       await logOperation(false, 'Signature verification failed', { error: error.message })
       return new Response(
         JSON.stringify({ error: 'Invalid signature' }),
-        { status: 401, headers: corsHeaders }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!isValidSignature) {
+      console.error('❌ Signature verification failed - invalid signature')
       await logOperation(false, 'Invalid signature')
       return new Response(
         JSON.stringify({ error: 'Invalid signature' }),
-        { status: 401, headers: corsHeaders }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    console.log('🎉 Signature verification successful, proceeding with operation...')
 
     // Handle different operations
     switch (operation) {
