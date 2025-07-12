@@ -46,6 +46,15 @@ const Wallet = () => {
           return;
         }
 
+        console.log('🔍 Profile fetch result:', {
+          walletAddress,
+          profile,
+          signed_terms_hash: profile?.signed_terms_hash,
+          signed_terms_hash_type: typeof profile?.signed_terms_hash,
+          signed_terms_hash_length: profile?.signed_terms_hash?.length,
+          signed_terms_hash_truthy: !!profile?.signed_terms_hash
+        });
+
         setUserProfile(profile);
 
         // Check for active subscription using user.id (Privy user ID)
@@ -100,7 +109,16 @@ const Wallet = () => {
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         {/* Show add profile banner if signed_terms_hash is null */}
-        {!userProfile?.signed_terms_hash && <AddProfileBanner />}
+        {(() => {
+          const shouldShowBanner = !userProfile?.signed_terms_hash;
+          console.log('🚨 AddProfileBanner check:', {
+            userProfile,
+            signed_terms_hash: userProfile?.signed_terms_hash,
+            signed_terms_hash_type: typeof userProfile?.signed_terms_hash,
+            shouldShowBanner
+          });
+          return shouldShowBanner && <AddProfileBanner />;
+        })()}
         
         {/* Show subscription banner for unsubscribed startup profiles only */}
         {userProfile?.signed_terms_hash && !hasSubscription && userProfile?.profile_type === 'Startup' && <SubscriptionBanner />}
