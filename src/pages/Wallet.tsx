@@ -9,6 +9,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
+import LenderComingSoonBanner from "@/components/LenderComingSoonBanner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Wallet = () => {
@@ -158,6 +159,9 @@ const Wallet = () => {
         
         {/* Show subscription banner for unsubscribed startup profiles only */}
         {userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '' && !hasSubscription && userProfile?.profile_type === 'Startup' && <SubscriptionBanner />}
+        
+        {/* Show lender coming soon banner for lender profiles */}
+        {userProfile?.profile_type === 'Lender' && <LenderComingSoonBanner />}
         
         <WalletOverview />
         <UserAddressDisplay />
