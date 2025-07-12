@@ -104,13 +104,27 @@ serve(async (req) => {
         walletAddress,
         signature: signature?.substring(0, 10) + '...',
         message: message?.substring(0, 50) + '...',
-        messageLength: message?.length
+        messageLength: message?.length,
+        walletAddressLength: walletAddress?.length,
+        signatureLength: signature?.length
+      });
+      
+      // Ensure wallet address starts with 0x
+      const formattedWalletAddress = walletAddress.startsWith('0x') ? walletAddress : `0x${walletAddress}`;
+      // Ensure signature starts with 0x  
+      const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+      
+      console.log('🔧 Formatted for verification:', {
+        formattedWalletAddress,
+        formattedSignature: formattedSignature?.substring(0, 10) + '...',
+        originalWalletAddress: walletAddress,
+        originalSignature: signature?.substring(0, 10) + '...'
       });
       
       isValidSignature = await verifyMessage({
-        address: walletAddress as `0x${string}`,
+        address: formattedWalletAddress as `0x${string}`,
         message,
-        signature: signature as `0x${string}`,
+        signature: formattedSignature as `0x${string}`,
       })
       
       console.log('✅ Signature verification result:', isValidSignature)
@@ -124,7 +138,7 @@ serve(async (req) => {
       })
       await logOperation(false, 'Signature verification failed', { error: error.message })
       return new Response(
-        JSON.stringify({ error: 'Invalid signature' }),
+        JSON.stringify({ error: `Signature verification error: ${error.message}` }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
