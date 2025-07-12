@@ -50,13 +50,10 @@ serve(async (req) => {
       )
     }
 
-    // First, find the wallet ID using the address
-    const walletsUrl = `https://api.privy.io/v1/wallets?address=${walletAddress}`;
-    console.log('🔍 Looking up wallet by address:', walletsUrl);
-    
+    // Get wallet by address first
     const authHeader = `Basic ${btoa(`${privyAppId}:${privyAppSecret}`)}`;
     
-    const walletsResponse = await fetch(walletsUrl, {
+    const walletResponse = await fetch(`https://api.privy.io/v1/wallets/${walletAddress}`, {
       method: 'GET',
       headers: {
         'privy-app-id': privyAppId,
@@ -65,17 +62,17 @@ serve(async (req) => {
       },
     });
 
-    if (!walletsResponse.ok) {
-      const errorText = await walletsResponse.text();
-      console.error('❌ Failed to find wallet:', {
-        status: walletsResponse.status,
-        statusText: walletsResponse.statusText,
+    if (!walletResponse.ok) {
+      const errorText = await walletResponse.text();
+      console.error('❌ Failed to get wallet:', {
+        status: walletResponse.status,
+        statusText: walletResponse.statusText,
         errorBody: errorText
       });
       
       return new Response(
         JSON.stringify({ 
-          error: `Failed to find wallet: ${walletsResponse.status} ${walletsResponse.statusText}`,
+          error: `Failed to get wallet: ${walletResponse.status} ${walletResponse.statusText}`,
           details: errorText
         }),
         { 
@@ -85,26 +82,11 @@ serve(async (req) => {
       );
     }
 
-    const walletsData = await walletsResponse.json();
-    console.log('📋 Wallets lookup response:', walletsData);
-    
-    if (!walletsData.data || walletsData.data.length === 0) {
-      console.error('❌ No wallet found for address:', walletAddress);
-      return new Response(
-        JSON.stringify({ 
-          error: 'No wallet found for the provided address'
-        }),
-        { 
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    const walletId = walletsData.data[0].id;
+    const walletData = await walletResponse.json();
+    const walletId = walletData.id;
     console.log('✅ Found wallet ID:', walletId);
     
-    // Now fetch the balance using the wallet ID
+    // Fetch the balance using the wallet ID
     const apiUrl = `https://api.privy.io/v1/wallets/${walletId}/balance`;
     console.log('🌐 Making balance API request to:', apiUrl);
     
