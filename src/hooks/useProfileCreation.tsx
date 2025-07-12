@@ -2,6 +2,7 @@ import { usePrivy, useSignMessage } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { profileService } from "@/services/profileService";
+import { useRef } from "react";
 
 interface UseProfileCreationProps {
   profileType: "Startup" | "Lender" | "Service Provider";
@@ -14,8 +15,8 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Store the message outside so both signing and success callback use the same one
-  let currentMessage = '';
+  // Use ref to persist the message across renders
+  const currentMessageRef = useRef<string>('');
 
   const { signMessage } = useSignMessage({
     onSuccess: async (data) => {
@@ -28,7 +29,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
       
       try {
         // Use the same message that was stored when signing was initiated
-        const message = currentMessage;
+        const message = currentMessageRef.current;
         console.log('📝 Creating signed terms hash with message:', message);
         
         const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
@@ -137,7 +138,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
     const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile\n\nTimestamp: ${new Date().toISOString()}`;
     
     // Store the message so the success callback can use the exact same one
-    currentMessage = message;
+    currentMessageRef.current = message;
    
     const uiOptions = {
       title: 'Accept Terms & Conditions',
