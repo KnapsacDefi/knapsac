@@ -10,7 +10,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.secure-subscription-operations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.test-privy-secrets]
 verify_jwt = false
