@@ -86,18 +86,21 @@ const Wallet = () => {
 
         setUserProfile(profile);
 
-        // Check for active subscription using user.id (Privy user ID)
-        const { data: subscription, error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
+        // Check for active subscription using Supabase auth user ID
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: subscription, error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .eq('status', 'active')
+            .maybeSingle();
 
-        if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-          console.error('Error checking subscription:', subscriptionError);
-        } else if (subscription) {
-          setHasSubscription(true);
+          if (subscriptionError && subscriptionError.code !== 'PGRST116') {
+            console.error('Error checking subscription:', subscriptionError);
+          } else if (subscription) {
+            setHasSubscription(true);
+          }
         }
 
         setLoading(false);
