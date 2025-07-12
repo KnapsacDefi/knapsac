@@ -60,10 +60,19 @@ serve(async (req) => {
     const apiUrl = `https://api.privy.io/v1/wallets/${walletAddress}/balance?asset=usdc&chain=base`;
     console.log('🌐 Making API request to:', apiUrl);
     
+    const authHeader = `Basic ${btoa(`${privyAppId}:${privyAppSecret}`)}`;
+    console.log('🔐 Auth header format check:', {
+      authHeaderLength: authHeader.length,
+      btoadResult: btoa(`${privyAppId}:${privyAppSecret}`).substring(0, 20) + '...'
+    });
+    
     const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
         'privy-app-id': privyAppId,
-        'Authorization': `Basic ${btoa(`${privyAppId}:${privyAppSecret}`)}`,
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
     });
 
@@ -79,9 +88,35 @@ serve(async (req) => {
       console.error('❌ Privy API error:', {
         status: response.status,
         statusText: response.statusText,
-        errorBody: errorText
+        errorBody: errorText,
+        requestUrl: apiUrl,
+        requestHeaders: {
+          'privy-app-id': privyAppId,
+          'Authorization': authHeader.substring(0, 20) + '...'
+        }
       });
-      throw new Error(`Privy API error: ${response.status} ${response.statusText} - ${errorText}`);
+      
+      // Return a more specific error based on status code
+      let errorMessage = `Privy API error: ${response.status} ${response.statusText}`;
+      if (response.status === 401) {
+        errorMessage = 'Authentication failed with Privy API';
+      } else if (response.status === 404) {
+        errorMessage = 'Wallet not found or invalid address';
+      } else if (response.status === 403) {
+        errorMessage = 'Access denied to Privy API';
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          error: errorMessage,
+          details: errorText,
+          status: response.status
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const data = await response.json();
