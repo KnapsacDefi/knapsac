@@ -31,21 +31,21 @@ const App = () => {
     <ErrorBoundary>
       <PrivyErrorBoundary onRetry={() => window.location.reload()}>
         <PrivyProvider
-        appId={privyAppId}
-        config={{
-          appearance: {
-            theme: "light",
-            accentColor: "#676FFF",
-          },
-          embeddedWallets: {
-            createOnLogin: "all-users",
-            requireUserPasswordOnCreate: false,
-          },
-          loginMethods: ['wallet', 'email'],
-          defaultChain: mainnet,
-          supportedChains: [mainnet, polygon, base,celo]
-        }}
-      >
+          appId={privyAppId}
+          config={{
+            appearance: {
+              theme: "light",
+              accentColor: "#676FFF",
+            },
+            embeddedWallets: {
+              createOnLogin: "all-users",
+              requireUserPasswordOnCreate: false,
+            },
+            loginMethods: ['wallet', 'email'],
+            defaultChain: mainnet,
+            supportedChains: [mainnet, polygon, base, celo],
+          }}
+        >
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <Toaster />
