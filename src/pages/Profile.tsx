@@ -147,8 +147,8 @@ const Profile = () => {
     );
   }
 
-  // Show inspiration message if profile already exists
-  if (existingProfile) {
+  // Show motivation page if profile has signed terms
+  if (existingProfile && existingProfile.signed_terms_hash) {
     const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
     
     return (
@@ -177,6 +177,58 @@ const Profile = () => {
                   Connected since {new Date(existingProfile.created_at).toLocaleDateString()}
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNavigation />
+      </div>
+    );
+  }
+
+  // Show inspiration message if profile exists but no signed terms
+  if (existingProfile && !existingProfile.signed_terms_hash) {
+    const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
+    
+    return (
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <Card className="max-w-md w-full">
+            <CardHeader className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Sparkles className="w-8 h-8 text-primary" />
+                <CardTitle className="text-2xl">Complete Your Setup</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-center space-y-6">
+              <div className="p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+                <Quote className="w-6 h-6 text-primary mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground italic">
+                  "{quote}"
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Profile Type: <span className="font-semibold text-foreground">{existingProfile.profile_type}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Created on {new Date(existingProfile.created_at).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-700">
+                  ⚠️ Please complete the terms and conditions to access all features.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => navigate(`/terms?type=${encodeURIComponent(existingProfile.profile_type)}`)}
+                className="w-full"
+                size="lg"
+              >
+                Continue to Terms & Conditions
+              </Button>
             </CardContent>
           </Card>
         </div>
