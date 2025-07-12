@@ -20,8 +20,15 @@ interface ProfileOperationRequest {
 }
 
 serve(async (req) => {
+  console.log('🚀 Edge function called:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -32,7 +39,36 @@ serve(async (req) => {
     // Use service role key to bypass RLS
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { operation, walletAddress, signature, message, profileData }: ProfileOperationRequest = await req.json()
+    console.log('📝 Parsing request body...');
+    const rawBody = await req.text();
+    console.log('📄 Raw request body:', { 
+      rawBody: rawBody.substring(0, 500),
+      bodyLength: rawBody.length,
+      firstBytes: Array.from(new TextEncoder().encode(rawBody.substring(0, 20)))
+    });
+    
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(rawBody);
+      console.log('✅ Successfully parsed JSON:', parsedBody);
+    } catch (parseError) {
+      console.error('❌ Failed to parse JSON:', {
+        parseError,
+        rawBodyStart: rawBody.substring(0, 100),
+        rawBodyBytes: Array.from(new TextEncoder().encode(rawBody.substring(0, 20)))
+      });
+      throw parseError;
+    }
+    
+    const { operation, walletAddress, signature, message, profileData }: ProfileOperationRequest = parsedBody;
+    
+    console.log('🔍 Operation details:', {
+      operation,
+      walletAddress,
+      signature: signature?.substring(0, 10) + '...',
+      message: message?.substring(0, 50) + '...',
+      profileData
+    });
 
     // Get client IP and user agent for audit logging
     const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
@@ -132,13 +168,18 @@ serve(async (req) => {
         )
 
       case 'create':
+        console.log('🔨 Processing create operation...');
+        
         if (!profileData) {
+          console.error('❌ Profile data missing');
           await logOperation(false, 'Missing profile data for create operation')
           return new Response(
             JSON.stringify({ error: 'Profile data required for create operation' }),
             { status: 400, headers: corsHeaders }
           )
         }
+        
+        console.log('✅ Profile data provided:', profileData);
 
         // Check if profile already exists
         const { data: existingForCreate, error: existingError } = await supabase
@@ -163,18 +204,30 @@ serve(async (req) => {
           )
         }
 
+        const insertData = {
+          user_email: profileData.userEmail || '',
+          crypto_address: walletAddress,
+          profile_type: profileData.profileType,
+          signed_terms_hash: profileData.signedTermsHash || '',
+        };
+        
+        console.log('📊 Inserting profile data:', insertData);
+        
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .insert({
-            user_email: profileData.userEmail || '',
-            crypto_address: walletAddress,
-            profile_type: profileData.profileType,
-            signed_terms_hash: profileData.signedTermsHash || '',
-          })
+          .insert(insertData)
           .select()
-          .single()
+          .single();
+          
+        console.log('💾 Database insert result:', { newProfile, createError });
 
         if (createError) {
+          console.error('❌ Database create error:', {
+            createError,
+            errorMessage: createError?.message,
+            errorCode: createError?.code,
+            errorDetails: createError?.details
+          });
           await logOperation(false, 'Database error during create', { error: createError.message })
           return new Response(
             JSON.stringify({ error: 'Failed to create profile' }),
@@ -182,9 +235,13 @@ serve(async (req) => {
           )
         }
 
+        console.log('🎉 Profile created successfully, returning response...');
+        const response = { profile: newProfile };
+        console.log('📤 Returning response:', response);
+        
         await logOperation(true, null, { profileType: profileData.profileType })
         return new Response(
-          JSON.stringify({ profile: newProfile }),
+          JSON.stringify(response),
           { headers: corsHeaders }
         )
 
@@ -227,9 +284,19 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Secure profile operations error:', error)
+    console.error('❌ Edge function error:', {
+      error,
+      errorMessage: error?.message,
+      errorStack: error?.stack,
+      errorType: typeof error,
+      errorString: error?.toString()
+    });
+    
+    const errorResponse = { error: 'Internal server error' };
+    console.log('📤 Returning error response:', errorResponse);
+    
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify(errorResponse),
       { status: 500, headers: corsHeaders }
     )
   }

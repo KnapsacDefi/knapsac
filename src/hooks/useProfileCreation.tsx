@@ -16,19 +16,39 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
 
   const { signMessage } = useSignMessage({
     onSuccess: async (data) => {
-      console.log('Signature successful:', data.signature);
+      console.log('🔐 Message signing successful:', {
+        signature: data.signature,
+        walletAddress,
+        profileType,
+        userEmail: user?.email?.address
+      });
+      
       try {
         const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile\n\nTimestamp: ${new Date().toISOString()}`;
+        console.log('📝 Creating signed terms hash with message:', message);
+        
         const signedTermsHash = await profileService.createSignedTermsHash(message, data.signature);
+        console.log('✅ Signed terms hash created:', signedTermsHash);
 
-        // Use secure profile service with wallet signature authentication
-        // Pass the original message that was actually signed
-        await profileService.createProfile({
+        const profileData = {
           userEmail: user?.email?.address,
           walletAddress: walletAddress!,
           profileType,
           signedTermsHash,
-        }, data.signature, message);
+        };
+        
+        console.log('🚀 Calling profileService.createProfile with:', {
+          profileData,
+          signature: data.signature,
+          message,
+          messageLength: message.length
+        });
+
+        // Use secure profile service with wallet signature authentication
+        // Pass the original message that was actually signed
+        const result = await profileService.createProfile(profileData, data.signature, message);
+        
+        console.log('✅ Profile creation successful:', result);
 
         toast({
           title: "Profile Created!",
@@ -44,7 +64,13 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
           navigate('/wallet');
         }
       } catch (error: any) {
-        console.error("Profile creation failed:", error);
+        console.error("❌ Profile creation failed:", {
+          error,
+          errorMessage: error?.message,
+          errorStack: error?.stack,
+          errorType: typeof error,
+          errorString: error?.toString()
+        });
         
         // Handle specific error cases
         if (error.message?.includes('already exists')) {
@@ -112,7 +138,13 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
       buttonText: 'Sign & Create Profile'
     };
 
-    console.log('Initiating message signing...', { walletAddress });
+    console.log('🎯 Initiating message signing...', { 
+      walletAddress, 
+      profileType, 
+      message,
+      messageLength: message.length,
+      uiOptions 
+    });
 
     // Use Privy's signMessage with UI options - callbacks handle success/error
     signMessage(

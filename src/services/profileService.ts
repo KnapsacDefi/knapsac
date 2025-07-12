@@ -68,31 +68,57 @@ export const profileService = {
 
   async createProfile(data: ProfileCreationData, signature: string, originalMessage: string) {
     try {
-      console.log('Creating profile with original message:', { originalMessage, signature });
+      console.log('🔄 ProfileService.createProfile called with:', { 
+        walletAddress: data.walletAddress,
+        profileType: data.profileType,
+        userEmail: data.userEmail,
+        signedTermsHash: data.signedTermsHash,
+        signature,
+        originalMessage,
+        messageLength: originalMessage.length
+      });
+      
+      const requestBody = {
+        operation: 'create',
+        walletAddress: data.walletAddress,
+        signature,
+        message: originalMessage, // Use the original signed message
+        profileData: {
+          userEmail: data.userEmail,
+          profileType: data.profileType,
+          signedTermsHash: data.signedTermsHash
+        }
+      };
+      
+      console.log('📡 Calling edge function with body:', requestBody);
       
       const { data: result, error } = await supabase.functions.invoke('secure-profile-operations', {
-        body: {
-          operation: 'create',
-          walletAddress: data.walletAddress,
-          signature,
-          message: originalMessage, // Use the original signed message
-          profileData: {
-            userEmail: data.userEmail,
-            profileType: data.profileType,
-            signedTermsHash: data.signedTermsHash
-          }
-        }
+        body: requestBody
       });
+      
+      console.log('📨 Edge function response:', { result, error });
 
       if (error) {
-        console.error("Secure profile creation error:", error);
-        throw new Error('Failed to create profile');
+        console.error("❌ Secure profile creation error:", {
+          error,
+          errorMessage: error?.message,
+          errorDetails: error?.details,
+          errorHint: error?.hint,
+          errorCode: error?.code
+        });
+        throw new Error(`Failed to create profile: ${error?.message || error}`);
       }
 
+      console.log('✅ Profile created successfully:', result);
       return result.profile;
     } catch (error) {
-      console.error("Profile creation failed:", error);
-      throw new Error('Failed to create profile');
+      console.error("❌ Profile creation failed in service:", {
+        error,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorType: typeof error
+      });
+      throw new Error(`Failed to create profile: ${error?.message || error}`);
     }
   },
 
