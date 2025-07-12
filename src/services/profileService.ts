@@ -91,6 +91,16 @@ export const profileService = {
       };
       
       console.log('📡 Calling edge function with body:', requestBody);
+      console.log('🔍 Request body validation:', {
+        hasWalletAddress: !!requestBody.walletAddress,
+        hasSignature: !!requestBody.signature,
+        hasMessage: !!requestBody.message,
+        walletAddressLength: requestBody.walletAddress?.length,
+        signatureLength: requestBody.signature?.length,
+        messageLength: requestBody.message?.length,
+        signaturePreview: requestBody.signature?.substring(0, 10) + '...',
+        messagePreview: requestBody.message?.substring(0, 50) + '...'
+      });
       
       const { data: result, error } = await supabase.functions.invoke('secure-profile-operations', {
         body: requestBody
