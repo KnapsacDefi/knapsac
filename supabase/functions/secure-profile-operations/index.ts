@@ -100,34 +100,6 @@ async function checkSignatureReplay(
   }
 }
 
-async function checkRateLimit(
-  supabase: any,
-  walletAddress: string,
-  operation: string
-): Promise<boolean> {
-  try {
-    console.log('🚦 Checking rate limit for:', { walletAddress, operation })
-    
-    // Use more lenient rate limits for development: 20 attempts per 30 minutes
-    const { data, error } = await supabase.rpc('check_rate_limit', {
-      p_wallet_address: walletAddress,
-      p_operation_type: operation,
-      p_max_attempts: 20, // Increased from default 10
-      p_window_minutes: 30 // Increased from default 15
-    })
-    
-    if (error) {
-      console.error('❌ Rate limit check error:', error)
-      return false
-    }
-    
-    console.log('🚦 Rate limit check result:', data)
-    return data === true
-  } catch (error) {
-    console.error('❌ Rate limit check failed:', error)
-    return false
-  }
-}
 
 interface ProfileOperationRequest {
   operation: 'get' | 'create' | 'update' | 'checkExisting'
@@ -226,18 +198,6 @@ serve(async (req) => {
       )
     }
 
-    // Check rate limiting
-    console.log('🚦 Checking rate limits...')
-    const rateLimitOk = await checkRateLimit(supabase, walletAddress, operation)
-    if (!rateLimitOk) {
-      console.log('❌ Rate limit exceeded for:', { walletAddress, operation })
-      await logOperation(false, 'Rate limit exceeded')
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again in a few minutes.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    console.log('✅ Rate limit check passed')
 
     // For insert/update operations, require signature authentication
     const requiresSignature = operation === 'create' || operation === 'update'
