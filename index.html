@@ -34,38 +34,18 @@
 
   <body>
     <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.js"></script>
     <script>
-      // Import Buffer polyfill immediately and make it globally available
-      window.Buffer = window.Buffer || {};
-      
-      // Create a minimal Buffer polyfill with the from method
-      if (typeof Buffer === 'undefined' || !Buffer.from) {
-        window.Buffer = {
-          from: function(data, encoding) {
-            if (typeof data === 'string') {
-              const encoder = new TextEncoder();
-              const bytes = encoder.encode(data);
-              return new Uint8Array(bytes);
-            }
-            if (data instanceof ArrayBuffer) {
-              return new Uint8Array(data);
-            }
-            if (Array.isArray(data) || data instanceof Uint8Array) {
-              return new Uint8Array(data);
-            }
-            return new Uint8Array();
-          },
-          isBuffer: function(obj) {
-            return obj instanceof Uint8Array;
-          }
-        };
-        global.Buffer = window.Buffer;
-        globalThis.Buffer = window.Buffer;
-      }
-      
-      // Ensure global is defined
+      // Ensure global polyfills are available immediately
       if (typeof global === 'undefined') {
         var global = globalThis;
+      }
+      
+      // Make Buffer available globally
+      if (typeof window !== 'undefined' && window.buffer && window.buffer.Buffer) {
+        window.Buffer = window.buffer.Buffer;
+        global.Buffer = window.buffer.Buffer;
+        globalThis.Buffer = window.buffer.Buffer;
       }
     </script>
     <script type="module" src="/src/main.tsx"></script>
