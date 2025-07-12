@@ -21,22 +21,6 @@ function validateProfileType(type: string): boolean {
   return ['Startup', 'Lender', 'Service Provider'].includes(type)
 }
 
-function validateTimestamp(message: string): boolean {
-  const timestampMatch = message.match(/at (\d+)/)
-  if (!timestampMatch) {
-    console.log('❌ No timestamp found in message:', message)
-    return false
-  }
-  
-  const timestamp = parseInt(timestampMatch[1])
-  const now = Date.now()
-  const fifteenMinutes = 15 * 60 * 1000 // Increased from 5 to 15 minutes
-  
-  const timeDiff = Math.abs(now - timestamp)
-  console.log('🕐 Timestamp validation:', { timestamp, now, timeDiff, limit: fifteenMinutes, valid: timeDiff < fifteenMinutes })
-  
-  return timeDiff < fifteenMinutes
-}
 
 function sanitizeError(error: any): string {
   console.error('Operation error:', error)
@@ -210,17 +194,6 @@ serve(async (req) => {
         )
       }
 
-      // Validate timestamp in message
-      console.log('🕐 Validating timestamp in message...')
-      if (!validateTimestamp(message)) {
-        console.log('❌ Timestamp validation failed for message:', message)
-        await logOperation(false, 'Invalid or expired timestamp')
-        return new Response(
-          JSON.stringify({ error: 'Invalid or expired timestamp. Please try signing a new message.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      console.log('✅ Timestamp validation passed')
 
       // Check signature replay
       console.log('🔄 Checking for signature replay...')

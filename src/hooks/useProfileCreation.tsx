@@ -135,8 +135,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
   });
 
   const createProfile = async () => {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile at ${timestamp}`;
+    const message = `I agree to the Knapsac Terms and Conditions for ${profileType} profile\n\nDate: ${new Date().toLocaleString()}`;
     
     // Store the message so the success callback can use the exact same one
     currentMessageRef.current = message;

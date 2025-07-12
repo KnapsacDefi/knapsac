@@ -21,16 +21,6 @@ function validateTransactionHash(hash?: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(hash)
 }
 
-function validateTimestamp(message: string): boolean {
-  const timestampMatch = message.match(/at (\d+)/)
-  if (!timestampMatch) return false
-  
-  const timestamp = parseInt(timestampMatch[1])
-  const now = Date.now()
-  const fiveMinutes = 5 * 60 * 1000
-  
-  return Math.abs(now - timestamp) < fiveMinutes
-}
 
 function sanitizeError(error: any): string {
   console.error('Operation error:', error)
@@ -153,14 +143,6 @@ serve(async (req) => {
         )
       }
 
-      // Validate timestamp in message
-      if (!validateTimestamp(message)) {
-        await logOperation(false, 'Invalid or expired timestamp')
-        return new Response(
-          JSON.stringify({ error: 'Invalid or expired timestamp' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
 
       // Check signature replay
       const signatureValid = await checkSignatureReplay(supabase, walletAddress, signature)
