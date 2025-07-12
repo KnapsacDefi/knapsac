@@ -79,7 +79,18 @@ const Profile = () => {
           }
         });
         
-        const data = profileResult?.profile || null;
+        // Parse the JSON string response  
+        let data = null;
+        if (profileResult && typeof profileResult === 'string') {
+          try {
+            const parsedResult = JSON.parse(profileResult);
+            data = parsedResult?.profile || null;
+          } catch (parseError) {
+            console.error('Failed to parse profile result:', parseError);
+          }
+        } else if (profileResult?.profile) {
+          data = profileResult.profile;
+        }
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error checking profile:', error);

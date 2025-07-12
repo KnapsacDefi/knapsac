@@ -53,7 +53,19 @@ const Wallet = () => {
 
         console.log('🔍 Edge function result:', { profileResult, profileError });
         
-        const profile = profileResult?.profile || null;
+        // Parse the JSON string response
+        let profile = null;
+        if (profileResult && typeof profileResult === 'string') {
+          try {
+            const parsedResult = JSON.parse(profileResult);
+            profile = parsedResult?.profile || null;
+            console.log('🔍 Parsed profile:', profile);
+          } catch (parseError) {
+            console.error('🔍 Failed to parse profile result:', parseError);
+          }
+        } else if (profileResult?.profile) {
+          profile = profileResult.profile;
+        }
 
 
         if (profileError && profileError.code !== 'PGRST116') {
