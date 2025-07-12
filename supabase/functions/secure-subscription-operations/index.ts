@@ -55,10 +55,10 @@ serve(async (req) => {
     }
 
     // Validate required fields
-    if (!walletAddress || !privyUserId) {
+    if (!walletAddress ) {
       await logOperation(false, 'Missing required fields')
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: walletAddress, privyUserId' }),
+        JSON.stringify({ error: 'Missing required fields: walletAddress' }),
         { status: 400, headers: corsHeaders }
       )
     }
