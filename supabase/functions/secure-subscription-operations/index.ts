@@ -55,37 +55,55 @@ serve(async (req) => {
     }
 
     // Validate required fields
-    if (!walletAddress || !signature || !message || !privyUserId) {
+    if (!walletAddress || !privyUserId) {
       await logOperation(false, 'Missing required fields')
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: walletAddress, signature, message, privyUserId' }),
+        JSON.stringify({ error: 'Missing required fields: walletAddress, privyUserId' }),
         { status: 400, headers: corsHeaders }
       )
     }
 
-    // Verify wallet signature to prove ownership
-    let isValidSignature = false
-    try {
-      isValidSignature = await verifyMessage({
-        address: walletAddress as `0x${string}`,
-        message,
-        signature: signature as `0x${string}`,
-      })
-    } catch (error) {
-      console.error('Signature verification failed:', error)
-      await logOperation(false, 'Signature verification failed', { error: error.message })
-      return new Response(
-        JSON.stringify({ error: 'Invalid signature' }),
-        { status: 401, headers: corsHeaders }
-      )
-    }
+    // For insert/update operations, require signature authentication
+    const requiresSignature = operation === 'create' || operation === 'update'
+    
+    if (requiresSignature) {
+      // Validate signature fields for authenticated operations
+      if (!signature || !message) {
+        await logOperation(false, 'Missing signature fields for authenticated operation')
+        return new Response(
+          JSON.stringify({ error: 'Missing required fields for this operation: signature, message' }),
+          { status: 400, headers: corsHeaders }
+        )
+      }
 
-    if (!isValidSignature) {
-      await logOperation(false, 'Invalid signature')
-      return new Response(
-        JSON.stringify({ error: 'Invalid signature' }),
-        { status: 401, headers: corsHeaders }
-      )
+      // Verify wallet signature to prove ownership
+      let isValidSignature = false
+      try {
+        isValidSignature = await verifyMessage({
+          address: walletAddress as `0x${string}`,
+          message,
+          signature: signature as `0x${string}`,
+        })
+      } catch (error) {
+        console.error('Signature verification failed:', error)
+        await logOperation(false, 'Signature verification failed', { error: error.message })
+        return new Response(
+          JSON.stringify({ error: 'Invalid signature' }),
+          { status: 401, headers: corsHeaders }
+        )
+      }
+
+      if (!isValidSignature) {
+        await logOperation(false, 'Invalid signature')
+        return new Response(
+          JSON.stringify({ error: 'Invalid signature' }),
+          { status: 401, headers: corsHeaders }
+        )
+      }
+      
+      console.log('Signature verification successful for authenticated operation')
+    } else {
+      console.log('Proceeding with read operation (no signature required)')
     }
 
     // Verify that the wallet address belongs to the profile

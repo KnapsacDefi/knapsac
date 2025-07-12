@@ -88,71 +88,88 @@ serve(async (req) => {
       })
     }
 
-    // Validate required fields
-    if (!walletAddress || !signature || !message) {
-      await logOperation(false, 'Missing required fields')
+    // Validate wallet address is always required
+    if (!walletAddress) {
+      await logOperation(false, 'Missing wallet address')
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: walletAddress, signature, message' }),
+        JSON.stringify({ error: 'Missing required field: walletAddress' }),
         { status: 400, headers: corsHeaders }
       )
     }
 
-    // Verify wallet signature to prove ownership
-    let isValidSignature = false
-    try {
-      console.log('🔐 Verifying signature:', {
-        walletAddress,
-        signature: signature?.substring(0, 10) + '...',
-        message: message?.substring(0, 50) + '...',
-        messageLength: message?.length,
-        walletAddressLength: walletAddress?.length,
-        signatureLength: signature?.length
-      });
-      
-      // Ensure wallet address starts with 0x
-      const formattedWalletAddress = walletAddress.startsWith('0x') ? walletAddress : `0x${walletAddress}`;
-      // Ensure signature starts with 0x  
-      const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
-      
-      console.log('🔧 Formatted for verification:', {
-        formattedWalletAddress,
-        formattedSignature: formattedSignature?.substring(0, 10) + '...',
-        originalWalletAddress: walletAddress,
-        originalSignature: signature?.substring(0, 10) + '...'
-      });
-      
-      isValidSignature = await verifyMessage({
-        address: formattedWalletAddress as `0x${string}`,
-        message,
-        signature: formattedSignature as `0x${string}`,
-      })
-      
-      console.log('✅ Signature verification result:', isValidSignature)
-    } catch (error) {
-      console.error('❌ Signature verification failed:', {
-        error,
-        errorMessage: error?.message,
-        walletAddress,
-        signature: signature?.substring(0, 10) + '...',
-        message: message?.substring(0, 50) + '...'
-      })
-      await logOperation(false, 'Signature verification failed', { error: error.message })
-      return new Response(
-        JSON.stringify({ error: `Signature verification error: ${error.message}` }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    if (!isValidSignature) {
-      console.error('❌ Signature verification failed - invalid signature')
-      await logOperation(false, 'Invalid signature')
-      return new Response(
-        JSON.stringify({ error: 'Invalid signature' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // For insert/update operations, require signature authentication
+    const requiresSignature = operation === 'create' || operation === 'update'
     
-    console.log('🎉 Signature verification successful, proceeding with operation...')
+    if (requiresSignature) {
+      // Validate required fields for authenticated operations
+      if (!signature || !message) {
+        await logOperation(false, 'Missing required fields for authenticated operation')
+        return new Response(
+          JSON.stringify({ error: 'Missing required fields for this operation: signature, message' }),
+          { status: 400, headers: corsHeaders }
+        )
+      }
+
+      // Verify wallet signature to prove ownership
+      let isValidSignature = false
+      try {
+        console.log('🔐 Verifying signature for authenticated operation:', {
+          operation,
+          walletAddress,
+          signature: signature?.substring(0, 10) + '...',
+          message: message?.substring(0, 50) + '...',
+          messageLength: message?.length,
+          walletAddressLength: walletAddress?.length,
+          signatureLength: signature?.length
+        });
+        
+        // Ensure wallet address starts with 0x
+        const formattedWalletAddress = walletAddress.startsWith('0x') ? walletAddress : `0x${walletAddress}`;
+        // Ensure signature starts with 0x  
+        const formattedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
+        
+        console.log('🔧 Formatted for verification:', {
+          formattedWalletAddress,
+          formattedSignature: formattedSignature?.substring(0, 10) + '...',
+          originalWalletAddress: walletAddress,
+          originalSignature: signature?.substring(0, 10) + '...'
+        });
+        
+        isValidSignature = await verifyMessage({
+          address: formattedWalletAddress as `0x${string}`,
+          message,
+          signature: formattedSignature as `0x${string}`,
+        })
+        
+        console.log('✅ Signature verification result:', isValidSignature)
+      } catch (error) {
+        console.error('❌ Signature verification failed:', {
+          error,
+          errorMessage: error?.message,
+          walletAddress,
+          signature: signature?.substring(0, 10) + '...',
+          message: message?.substring(0, 50) + '...'
+        })
+        await logOperation(false, 'Signature verification failed', { error: error.message })
+        return new Response(
+          JSON.stringify({ error: `Signature verification error: ${error.message}` }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!isValidSignature) {
+        console.error('❌ Signature verification failed - invalid signature')
+        await logOperation(false, 'Invalid signature')
+        return new Response(
+          JSON.stringify({ error: 'Invalid signature' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      console.log('🎉 Signature verification successful, proceeding with authenticated operation...')
+    } else {
+      console.log('📖 Proceeding with read operation (no signature required)...')
+    }
 
     // Handle different operations
     switch (operation) {
