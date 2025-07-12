@@ -37,7 +37,7 @@ const Wallet = () => {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('crypto_address', walletAddress)
+          .ilike('crypto_address', walletAddress)
           .maybeSingle();
 
         if (profileError && profileError.code !== 'PGRST116') {
