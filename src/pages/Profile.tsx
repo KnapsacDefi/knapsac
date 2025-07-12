@@ -71,11 +71,15 @@ const Profile = () => {
       if (!walletAddress) return;
 
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .ilike('crypto_address', walletAddress)
-          .maybeSingle();
+        // Get user profile using edge function (RLS requires this approach)
+        const { data: profileResult, error } = await supabase.functions.invoke('secure-profile-operations', {
+          body: {
+            operation: 'get',
+            walletAddress: walletAddress
+          }
+        });
+        
+        const data = profileResult?.profile || null;
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error checking profile:', error);
