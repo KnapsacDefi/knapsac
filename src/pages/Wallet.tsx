@@ -42,12 +42,24 @@ const Wallet = () => {
       if (!walletAddress) return;
 
       try {
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
+        // Get user profile - try exact match first, then case-insensitive
+        let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .ilike('crypto_address', walletAddress)
+          .eq('crypto_address', walletAddress)
           .maybeSingle();
+
+        // If exact match fails, try case-insensitive with SQL function
+        if (!profile && !profileError) {
+          const { data: profileCaseInsensitive, error: caseInsensitiveError } = await supabase
+            .from('profiles')
+            .select('*')
+            .filter('crypto_address', 'ilike', walletAddress)
+            .maybeSingle();
+          
+          profile = profileCaseInsensitive;
+          profileError = caseInsensitiveError;
+        }
 
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('Error fetching profile:', profileError);
