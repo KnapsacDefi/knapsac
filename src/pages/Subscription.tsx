@@ -31,7 +31,7 @@ const subscriptionPlans = [
     id: "standard",
     name: "Standard",
     originalPrice: 5,
-    discountedPrice: 5,
+    discountedPrice: 0.1,
     discount: null,
     billing: "Monthly",
     features: [
