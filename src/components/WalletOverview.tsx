@@ -48,7 +48,7 @@ const WalletOverview = () => {
           setIsLoading(true);
           const wallet = wallets[0]; // Use the first wallet
           
-          // Fetch USDC balance using our edge function
+          // Fetch USDC balance using our edge function with wallet address
           const response = await supabase.functions.invoke('get-usdc-balance', {
             body: { walletAddress: wallet.address }
           });
