@@ -9,9 +9,10 @@ export interface SubscriptionCreationData {
 
 // Secure subscription service that uses wallet signatures for authentication
 export const subscriptionService = {
-  // Helper function to create a signature message
-  createSecurityMessage(operation: string, walletAddress: string, privyUserId: string, timestamp: number): string {
-    return `Authorize ${operation} operation for wallet ${walletAddress} and user ${privyUserId} at ${timestamp}`;
+  // Helper function to create a signature message with nonce
+  createSecurityMessage(operation: string, walletAddress: string, privyUserId: string, timestamp: number, nonce?: string): string {
+    const nonceString = nonce || Math.random().toString(36).substring(2, 15);
+    return `Authorize ${operation} operation for wallet ${walletAddress} and user ${privyUserId} at ${timestamp} with nonce ${nonceString}`;
   },
 
   async getSubscription(walletAddress: string, privyUserId: string, signature: string) {

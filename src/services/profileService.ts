@@ -9,9 +9,10 @@ export interface ProfileCreationData {
 
 // Secure profile service that uses wallet signatures for authentication
 export const profileService = {
-  // Helper function to create a signature message
-  createSecurityMessage(operation: string, walletAddress: string, timestamp: number): string {
-    return `Authorize ${operation} operation for wallet ${walletAddress} at ${timestamp}`;
+  // Helper function to create a signature message with nonce
+  createSecurityMessage(operation: string, walletAddress: string, timestamp: number, nonce?: string): string {
+    const nonceString = nonce || Math.random().toString(36).substring(2, 15);
+    return `Authorize ${operation} operation for wallet ${walletAddress} at ${timestamp} with nonce ${nonceString}`;
   },
 
   async checkExistingProfile(walletAddress: string, signature: string) {

@@ -7,6 +7,93 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Security validation functions
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+function validateWalletAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address)
+}
+
+function validateProfileType(type: string): boolean {
+  return ['Startup', 'Lender', 'Service Provider'].includes(type)
+}
+
+function validateTimestamp(message: string): boolean {
+  const timestampMatch = message.match(/at (\d+)/)
+  if (!timestampMatch) return false
+  
+  const timestamp = parseInt(timestampMatch[1])
+  const now = Date.now()
+  const fiveMinutes = 5 * 60 * 1000
+  
+  return Math.abs(now - timestamp) < fiveMinutes
+}
+
+function sanitizeError(error: any): string {
+  console.error('Operation error:', error)
+  return 'Operation failed. Please try again.'
+}
+
+async function checkSignatureReplay(
+  supabase: any,
+  walletAddress: string,
+  signature: string
+): Promise<boolean> {
+  try {
+    const signatureHash = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(signature)
+    )
+    const hashHex = Array.from(new Uint8Array(signatureHash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+
+    const { data: existing } = await supabase
+      .from('signature_nonces')
+      .select('id')
+      .eq('wallet_address', walletAddress)
+      .eq('signature_hash', hashHex)
+      .single()
+
+    if (existing) {
+      return false // Signature already used
+    }
+
+    // Store the signature hash
+    await supabase
+      .from('signature_nonces')
+      .insert({
+        wallet_address: walletAddress,
+        signature_hash: hashHex
+      })
+
+    return true
+  } catch (error) {
+    console.error('Signature replay check failed:', error)
+    return false
+  }
+}
+
+async function checkRateLimit(
+  supabase: any,
+  walletAddress: string,
+  operation: string
+): Promise<boolean> {
+  try {
+    const { data } = await supabase.rpc('check_rate_limit', {
+      p_wallet_address: walletAddress,
+      p_operation_type: operation
+    })
+    return data === true
+  } catch (error) {
+    console.error('Rate limit check failed:', error)
+    return false
+  }
+}
+
 interface ProfileOperationRequest {
   operation: 'get' | 'create' | 'update' | 'checkExisting'
   walletAddress: string
@@ -88,12 +175,29 @@ serve(async (req) => {
       })
     }
 
-    // Validate wallet address is always required
-    if (!walletAddress) {
-      await logOperation(false, 'Missing wallet address')
+    // Basic input validation
+    if (!operation || !walletAddress || !message) {
       return new Response(
-        JSON.stringify({ error: 'Missing required field: walletAddress' }),
-        { status: 400, headers: corsHeaders }
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate wallet address format
+    if (!validateWalletAddress(walletAddress)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid wallet address format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check rate limiting
+    const rateLimitOk = await checkRateLimit(supabase, walletAddress, operation)
+    if (!rateLimitOk) {
+      await logOperation(false, 'Rate limit exceeded')
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -101,12 +205,29 @@ serve(async (req) => {
     const requiresSignature = operation === 'create' || operation === 'update'
     
     if (requiresSignature) {
-      // Validate required fields for authenticated operations
-      if (!signature || !message) {
-        await logOperation(false, 'Missing required fields for authenticated operation')
+      if (!signature) {
         return new Response(
-          JSON.stringify({ error: 'Missing required fields for this operation: signature, message' }),
-          { status: 400, headers: corsHeaders }
+          JSON.stringify({ error: 'Signature required for this operation' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Validate timestamp in message
+      if (!validateTimestamp(message)) {
+        await logOperation(false, 'Invalid or expired timestamp')
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired timestamp' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Check signature replay
+      const signatureValid = await checkSignatureReplay(supabase, walletAddress, signature)
+      if (!signatureValid) {
+        await logOperation(false, 'Signature replay detected')
+        return new Response(
+          JSON.stringify({ error: 'Invalid signature or replay detected' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
@@ -216,18 +337,27 @@ serve(async (req) => {
         )
 
       case 'create':
-        console.log('🔨 Processing create operation...');
-        
         if (!profileData) {
-          console.error('❌ Profile data missing');
-          await logOperation(false, 'Missing profile data for create operation')
           return new Response(
             JSON.stringify({ error: 'Profile data required for create operation' }),
-            { status: 400, headers: corsHeaders }
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           )
         }
-        
-        console.log('✅ Profile data provided:', profileData);
+
+        // Validate profile data
+        if (profileData.userEmail && !validateEmail(profileData.userEmail)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid email format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        if (!profileData.profileType || !validateProfileType(profileData.profileType)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid profile type' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
 
         // Check if profile already exists
         const { data: existingForCreate, error: existingError } = await supabase
@@ -270,16 +400,10 @@ serve(async (req) => {
         console.log('💾 Database insert result:', { newProfile, createError });
 
         if (createError) {
-          console.error('❌ Database create error:', {
-            createError,
-            errorMessage: createError?.message,
-            errorCode: createError?.code,
-            errorDetails: createError?.details
-          });
-          await logOperation(false, 'Database error during create', { error: createError.message })
+          await logOperation(false, sanitizeError(createError))
           return new Response(
-            JSON.stringify({ error: 'Failed to create profile' }),
-            { status: 500, headers: corsHeaders }
+            JSON.stringify({ error: sanitizeError(createError) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           )
         }
 

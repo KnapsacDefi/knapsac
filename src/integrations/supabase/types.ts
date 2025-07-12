@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_tracker: {
+        Row: {
+          attempt_count: number
+          id: string
+          last_attempt: string
+          operation_type: string
+          wallet_address: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          id?: string
+          last_attempt?: string
+          operation_type: string
+          wallet_address: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          id?: string
+          last_attempt?: string
+          operation_type?: string
+          wallet_address?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       security_audit_log: {
         Row: {
           additional_data: Json | null
@@ -85,6 +112,27 @@ export type Database = {
           success?: boolean
           user_agent?: string | null
           user_id?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      signature_nonces: {
+        Row: {
+          created_at: string
+          id: string
+          signature_hash: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          signature_hash: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          signature_hash?: string
           wallet_address?: string
         }
         Relationships: []
@@ -136,7 +184,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_rate_limit: {
+        Args: {
+          p_wallet_address: string
+          p_operation_type: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
+      cleanup_old_nonces: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
