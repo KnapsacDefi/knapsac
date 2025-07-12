@@ -4,7 +4,7 @@ project_id = "jxfqfrfpaiijyvciclrw"
 verify_jwt = false
 
 [functions.get-usdc-balance]
-verify_jwt = true
+verify_jwt = false
 
 [functions.secure-profile-operations]
 verify_jwt = true
