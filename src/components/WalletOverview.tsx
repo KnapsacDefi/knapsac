@@ -47,13 +47,10 @@ const WalletOverview = () => {
         try {
           setIsLoading(true);
           const wallet = wallets[0]; // Use the first wallet
-          console.log('Full wallet object:', wallet);
-          const walletId = (wallet as any).userWallet?.id || (wallet as any).id;
-          console.log('Extracted walletId:', walletId);
           
-          // Fetch USDC balance using our edge function with wallet ID
+          // Fetch USDC balance using our edge function with wallet address
           const response = await supabase.functions.invoke('get-usdc-balance', {
-            body: { walletId }
+            body: { walletAddress: wallet.address }
           });
           
           if (response.error) {
