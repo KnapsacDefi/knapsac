@@ -43,7 +43,7 @@ const App = () => {
           },
           loginMethods: ['wallet', 'email'],
           defaultChain: mainnet,
-          supportedChains: [mainnet, polygon, base]
+          supportedChains: [mainnet, polygon, base,celo]
         }}
       >
         <QueryClientProvider client={queryClient}>
