@@ -61,7 +61,6 @@ serve(async (req) => {
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'privy-app-id': privyAppId,
         'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
