@@ -79,7 +79,7 @@ const WalletOverview = () => {
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
-  const hasSignedTerms = userProfile?.signed_terms_hash;
+  const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
   const { fundWallet } = useFundWallet({
     onUserExited: (params) => {

@@ -110,18 +110,20 @@ const Wallet = () => {
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         {/* Show add profile banner if signed_terms_hash is null */}
         {(() => {
-          const shouldShowBanner = !userProfile?.signed_terms_hash;
+          const hasValidHash = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
+          const shouldShowBanner = !hasValidHash;
           console.log('🚨 AddProfileBanner check:', {
             userProfile,
             signed_terms_hash: userProfile?.signed_terms_hash,
             signed_terms_hash_type: typeof userProfile?.signed_terms_hash,
+            hasValidHash,
             shouldShowBanner
           });
           return shouldShowBanner && <AddProfileBanner />;
         })()}
         
         {/* Show subscription banner for unsubscribed startup profiles only */}
-        {userProfile?.signed_terms_hash && !hasSubscription && userProfile?.profile_type === 'Startup' && <SubscriptionBanner />}
+        {userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '' && !hasSubscription && userProfile?.profile_type === 'Startup' && <SubscriptionBanner />}
         
         <WalletOverview />
         <UserAddressDisplay />

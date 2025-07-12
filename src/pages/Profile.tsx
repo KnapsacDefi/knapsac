@@ -148,7 +148,7 @@ const Profile = () => {
   }
 
   // Show motivation page if profile has signed terms
-  if (existingProfile && existingProfile.signed_terms_hash) {
+  if (existingProfile && existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '') {
     const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
     
     return (
@@ -186,7 +186,7 @@ const Profile = () => {
   }
 
   // Show inspiration message if profile exists but no signed terms
-  if (existingProfile && !existingProfile.signed_terms_hash) {
+  if (existingProfile && (!existingProfile.signed_terms_hash || existingProfile.signed_terms_hash.trim() === '')) {
     const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
     
     return (
