@@ -30,6 +30,15 @@ const Wallet = () => {
       if (wallets.length === 0) return;
 
       const walletAddress = wallets[0]?.address || user?.wallet?.address;
+      console.log('🔍 Wallet address from Privy:', {
+        walletsLength: wallets.length,
+        walletAddress,
+        walletAddressType: typeof walletAddress,
+        walletAddressLength: walletAddress?.length,
+        firstWallet: wallets[0],
+        userWallet: user?.wallet
+      });
+      
       if (!walletAddress) return;
 
       try {
@@ -52,7 +61,8 @@ const Wallet = () => {
           signed_terms_hash: profile?.signed_terms_hash,
           signed_terms_hash_type: typeof profile?.signed_terms_hash,
           signed_terms_hash_length: profile?.signed_terms_hash?.length,
-          signed_terms_hash_truthy: !!profile?.signed_terms_hash
+          signed_terms_hash_truthy: !!profile?.signed_terms_hash,
+          profileError: profileError
         });
 
         setUserProfile(profile);
@@ -110,15 +120,17 @@ const Wallet = () => {
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         {/* Show add profile banner if signed_terms_hash is null */}
         {(() => {
+          console.log('🚨 BANNER CHECK - Raw userProfile:', userProfile);
+          console.log('🚨 BANNER CHECK - signed_terms_hash:', userProfile?.signed_terms_hash);
+          console.log('🚨 BANNER CHECK - hash type:', typeof userProfile?.signed_terms_hash);
+          console.log('🚨 BANNER CHECK - hash length:', userProfile?.signed_terms_hash?.length);
+          
           const hasValidHash = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
           const shouldShowBanner = !hasValidHash;
-          console.log('🚨 AddProfileBanner check:', {
-            userProfile,
-            signed_terms_hash: userProfile?.signed_terms_hash,
-            signed_terms_hash_type: typeof userProfile?.signed_terms_hash,
-            hasValidHash,
-            shouldShowBanner
-          });
+          
+          console.log('🚨 BANNER CHECK - hasValidHash:', hasValidHash);
+          console.log('🚨 BANNER CHECK - shouldShowBanner:', shouldShowBanner);
+          
           return shouldShowBanner && <AddProfileBanner />;
         })()}
         
