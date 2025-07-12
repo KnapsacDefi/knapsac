@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { mainnet, polygon, base } from "viem/chains";
+import { mainnet, polygon, base,celo } from "viem/chains";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import Index from "./pages/Index";
