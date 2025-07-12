@@ -98,13 +98,13 @@ const Subscription = () => {
         return;
       }
 
-      // For users with email, try to check subscription
-      if (user?.id) {
+      // For users with email and wallet, try to check subscription using wallet address
+      if (user?.id && walletAddress) {
         try {
           const { data, error } = await supabase
             .from('subscriptions')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', walletAddress)
             .eq('status', 'active')
             .maybeSingle();
 
