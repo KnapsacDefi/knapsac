@@ -23,7 +23,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   // Replace with your actual Privy App ID - this is a public identifier, not a secret
-  const privyAppId = 'your-privy-app-id-here';
+  const privyAppId = 'cmby0t9xh037old0ngdyu15ct';
 
   
 
