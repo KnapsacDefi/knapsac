@@ -100,7 +100,7 @@ export type Database = {
           subscription_type: string
           transaction_hash: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
           wallet_address: string
         }
         Insert: {
@@ -113,7 +113,7 @@ export type Database = {
           subscription_type: string
           transaction_hash?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           wallet_address: string
         }
         Update: {
@@ -126,7 +126,7 @@ export type Database = {
           subscription_type?: string
           transaction_hash?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           wallet_address?: string
         }
         Relationships: []

@@ -84,47 +84,28 @@ const Subscription = () => {
   const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC on Ethereum Mainnet
   const recipientAddress = '0x9ec14B42b5F4526C518F0021E26C417fa76D710d' as `0x${string}`; // Updated recipient address
 
-  // Simplified subscription check that doesn't hang for external wallets
+  // Check subscription using secure edge function
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!ready || !authenticated) {
+      if (!ready || !authenticated || !walletAddress) {
         setLoading(false);
         return;
       }
 
-      // For external wallet users, skip direct database query to avoid RLS issues
-      // We'll let them proceed to subscribe and handle existing subscription in the backend
-      if (walletAddress && !userEmail) {
-        console.log('External wallet user detected, skipping subscription check to avoid hanging');
-        setLoading(false);
-        return;
-      }
-
-      // For users with email and wallet, try to check subscription using wallet address
-      if (user?.id && walletAddress) {
-        try {
-          const { data, error } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', walletAddress)
-            .eq('status', 'active')
-            .maybeSingle();
-
-          if (error && error.code !== 'PGRST116') {
-            console.error('Error checking subscription:', error);
-          } else if (data) {
-            setHasSubscription(true);
-          }
-        } catch (err) {
-          console.error('Error checking subscription:', err);
+      try {
+        const subscription = await subscriptionService.getSubscription(walletAddress, user?.id || '', 'placeholder-signature');
+        if (subscription && subscription.status === 'active') {
+          setHasSubscription(true);
         }
+      } catch (err) {
+        console.error('Error checking subscription:', err);
       }
       
       setLoading(false);
     };
 
     checkSubscription();
-  }, [ready, authenticated, userEmail, user?.id, walletAddress]);
+  }, [ready, authenticated, user?.id, walletAddress]);
 
   const handleSubscribe = async () => {
     if (!selectedPlan || !user?.id) {
