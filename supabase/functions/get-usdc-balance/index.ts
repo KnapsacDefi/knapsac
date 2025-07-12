@@ -62,6 +62,7 @@ serve(async (req) => {
       method: 'GET',
       headers: {
         'privy-app-id': privyAppId,
+        'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
     });
