@@ -55,12 +55,13 @@ serve(async (req) => {
     console.log('✅ Using wallet ID:', walletId);
     
     // Fetch the balance using the wallet ID
-    const apiUrl = `https://api.privy.io/v1/wallets/${walletId}/balance`;
+    const apiUrl = `https://api.privy.io/v1/wallets/${walletId}/balance?asset=usdc&chain=ethereum`;
     console.log('🌐 Making balance API request to:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
+        'privy-app-id': privyAppId,
         'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
