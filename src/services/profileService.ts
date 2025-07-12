@@ -41,17 +41,12 @@ export const profileService = {
     }
   },
 
-  async getProfile(walletAddress: string, signature: string) {
-    const timestamp = Date.now();
-    const message = this.createSecurityMessage('getProfile', walletAddress, timestamp);
-
+  async getProfile(walletAddress: string) {
     try {
       const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
         body: {
           operation: 'get',
-          walletAddress,
-          signature,
-          message
+          walletAddress
         }
       });
 

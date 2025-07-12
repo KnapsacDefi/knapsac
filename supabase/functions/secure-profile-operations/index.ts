@@ -88,8 +88,8 @@ async function checkSignatureReplay(
 interface ProfileOperationRequest {
   operation: 'get' | 'create' | 'update' | 'checkExisting'
   walletAddress: string
-  signature: string
-  message: string
+  signature?: string
+  message?: string
   profileData?: {
     userEmail?: string
     profileType?: "Startup" | "Lender" | "Service Provider"
@@ -167,9 +167,17 @@ serve(async (req) => {
     }
 
     // Basic input validation
-    if (!operation || !walletAddress || !message) {
+    if (!operation || !walletAddress) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Message is only required for operations that need signatures
+    if (operation !== 'get' && !message) {
+      return new Response(
+        JSON.stringify({ error: 'Message required for this operation' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

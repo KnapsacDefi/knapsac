@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.secure-profile-operations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.secure-subscription-operations]
 verify_jwt = true
