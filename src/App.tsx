@@ -31,22 +31,20 @@ const App = () => {
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
-        
-        
         const { data, error } = await supabase.functions.invoke('get-secret', {
-          body: { secret_name: 'PRIVY_APP_ID' }
+          body: { secret_name: 'PRIVY_APP_ID' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         });
-        
-        
         
         if (error) {
           console.error('Error fetching PRIVY_APP_ID:', error);
           setError(`Error fetching PRIVY_APP_ID: ${error.message || 'Unknown error'}`);
           setPrivyAppId(null);
         } else if (data?.secret_value) {
-          // Trim whitespace from the secret value
           const trimmedSecret = data.secret_value.trim();
-    
           setPrivyAppId(trimmedSecret);
           setError(null);
         } else {
@@ -56,7 +54,12 @@ const App = () => {
         }
       } catch (err) {
         console.error('Error fetching PRIVY_APP_ID:', err);
-        setError(`Error fetching PRIVY_APP_ID: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        // Handle JSON parsing errors specifically
+        if (err instanceof SyntaxError && err.message.includes('Unexpected token')) {
+          setError('Response parsing error - the server returned invalid data');
+        } else {
+          setError(`Error fetching PRIVY_APP_ID: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
         setPrivyAppId(null);
       } finally {
         setLoading(false);
