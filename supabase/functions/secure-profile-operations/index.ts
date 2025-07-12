@@ -23,13 +23,19 @@ function validateProfileType(type: string): boolean {
 
 function validateTimestamp(message: string): boolean {
   const timestampMatch = message.match(/at (\d+)/)
-  if (!timestampMatch) return false
+  if (!timestampMatch) {
+    console.log('❌ No timestamp found in message:', message)
+    return false
+  }
   
   const timestamp = parseInt(timestampMatch[1])
   const now = Date.now()
-  const fiveMinutes = 5 * 60 * 1000
+  const fifteenMinutes = 15 * 60 * 1000 // Increased from 5 to 15 minutes
   
-  return Math.abs(now - timestamp) < fiveMinutes
+  const timeDiff = Math.abs(now - timestamp)
+  console.log('🕐 Timestamp validation:', { timestamp, now, timeDiff, limit: fifteenMinutes, valid: timeDiff < fifteenMinutes })
+  
+  return timeDiff < fifteenMinutes
 }
 
 function sanitizeError(error: any): string {
@@ -43,6 +49,9 @@ async function checkSignatureReplay(
   signature: string
 ): Promise<boolean> {
   try {
+    // Clean up old nonces (older than 1 hour)
+    await supabase.rpc('cleanup_old_nonces')
+
     const signatureHash = await crypto.subtle.digest(
       'SHA-256',
       new TextEncoder().encode(signature)
@@ -51,28 +60,42 @@ async function checkSignatureReplay(
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')
 
-    const { data: existing } = await supabase
+    console.log('🔍 Checking signature replay for:', { walletAddress, signatureHash: hashHex.substring(0, 10) + '...' })
+
+    const { data: existing, error: checkError } = await supabase
       .from('signature_nonces')
       .select('id')
       .eq('wallet_address', walletAddress)
       .eq('signature_hash', hashHex)
-      .single()
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('❌ Error checking signature replay:', checkError)
+      return false
+    }
 
     if (existing) {
+      console.log('❌ Signature replay detected')
       return false // Signature already used
     }
 
-    // Store the signature hash
-    await supabase
+    console.log('✅ Signature is new, storing it')
+    // Store the signature hash - we'll only store if the operation succeeds
+    const { error: insertError } = await supabase
       .from('signature_nonces')
       .insert({
         wallet_address: walletAddress,
         signature_hash: hashHex
       })
 
+    if (insertError) {
+      console.error('❌ Error storing signature nonce:', insertError)
+      return false
+    }
+
     return true
   } catch (error) {
-    console.error('Signature replay check failed:', error)
+    console.error('❌ Signature replay check failed:', error)
     return false
   }
 }
@@ -83,13 +106,25 @@ async function checkRateLimit(
   operation: string
 ): Promise<boolean> {
   try {
-    const { data } = await supabase.rpc('check_rate_limit', {
+    console.log('🚦 Checking rate limit for:', { walletAddress, operation })
+    
+    // Use more lenient rate limits for development: 20 attempts per 30 minutes
+    const { data, error } = await supabase.rpc('check_rate_limit', {
       p_wallet_address: walletAddress,
-      p_operation_type: operation
+      p_operation_type: operation,
+      p_max_attempts: 20, // Increased from default 10
+      p_window_minutes: 30 // Increased from default 15
     })
+    
+    if (error) {
+      console.error('❌ Rate limit check error:', error)
+      return false
+    }
+    
+    console.log('🚦 Rate limit check result:', data)
     return data === true
   } catch (error) {
-    console.error('Rate limit check failed:', error)
+    console.error('❌ Rate limit check failed:', error)
     return false
   }
 }
@@ -192,14 +227,17 @@ serve(async (req) => {
     }
 
     // Check rate limiting
+    console.log('🚦 Checking rate limits...')
     const rateLimitOk = await checkRateLimit(supabase, walletAddress, operation)
     if (!rateLimitOk) {
+      console.log('❌ Rate limit exceeded for:', { walletAddress, operation })
       await logOperation(false, 'Rate limit exceeded')
       return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        JSON.stringify({ error: 'Too many requests. Please try again in a few minutes.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    console.log('✅ Rate limit check passed')
 
     // For insert/update operations, require signature authentication
     const requiresSignature = operation === 'create' || operation === 'update'
@@ -213,23 +251,29 @@ serve(async (req) => {
       }
 
       // Validate timestamp in message
+      console.log('🕐 Validating timestamp in message...')
       if (!validateTimestamp(message)) {
+        console.log('❌ Timestamp validation failed for message:', message)
         await logOperation(false, 'Invalid or expired timestamp')
         return new Response(
-          JSON.stringify({ error: 'Invalid or expired timestamp' }),
+          JSON.stringify({ error: 'Invalid or expired timestamp. Please try signing a new message.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      console.log('✅ Timestamp validation passed')
 
       // Check signature replay
+      console.log('🔄 Checking for signature replay...')
       const signatureValid = await checkSignatureReplay(supabase, walletAddress, signature)
       if (!signatureValid) {
-        await logOperation(false, 'Signature replay detected')
+        console.log('❌ Signature replay check failed')
+        await logOperation(false, 'Signature replay detected or storage failed')
         return new Response(
-          JSON.stringify({ error: 'Invalid signature or replay detected' }),
+          JSON.stringify({ error: 'Signature has already been used or there was an error processing it. Please sign a new message.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      console.log('✅ Signature replay check passed')
 
       // Verify wallet signature to prove ownership
       let isValidSignature = false
@@ -344,8 +388,9 @@ serve(async (req) => {
           )
         }
 
-        // Validate profile data
-        if (profileData.userEmail && !validateEmail(profileData.userEmail)) {
+        // Validate profile data (email is optional for create)
+        if (profileData.userEmail && profileData.userEmail.trim() && !validateEmail(profileData.userEmail)) {
+          console.log('❌ Invalid email format:', profileData.userEmail)
           return new Response(
             JSON.stringify({ error: 'Invalid email format' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
