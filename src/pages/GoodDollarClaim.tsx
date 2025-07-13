@@ -29,25 +29,34 @@ const GoodDollarClaim = () => {
 
     // Check claim status
     checkClaimStatus();
-  }, [authenticated, navigate]);
+  }, [authenticated, navigate, wallets]);
 
   const checkClaimStatus = async () => {
-    // TODO: Integrate with GoodDollar SDK to check claim status
-    // For now, simulate the check
-    const lastClaim = localStorage.getItem('lastGoodDollarClaim');
-    if (lastClaim) {
-      const lastClaimTime = new Date(lastClaim);
-      const now = new Date();
-      const timeDiff = now.getTime() - lastClaimTime.getTime();
-      const hoursDiff = timeDiff / (1000 * 3600);
+    if (!wallets || wallets.length === 0) return;
 
-      if (hoursDiff < 24) {
-        setClaimStatus('cooldown');
-        const nextClaim = new Date(lastClaimTime.getTime() + 24 * 60 * 60 * 1000);
-        setNextClaimTime(nextClaim);
-      } else {
-        setClaimStatus('available');
+    try {
+      const { data, error } = await supabase.functions.invoke('gooddollar-claim', {
+        body: { 
+          walletAddress: wallets[0].address,
+          action: 'checkStatus'
+        }
+      });
+
+      if (error) {
+        console.error('Error checking claim status:', error);
+        return;
       }
+
+      if (data.canClaim) {
+        setClaimStatus('available');
+      } else {
+        setClaimStatus('cooldown');
+        if (data.nextClaimTime) {
+          setNextClaimTime(new Date(data.nextClaimTime));
+        }
+      }
+    } catch (error) {
+      console.error('Error checking claim status:', error);
     }
   };
 
@@ -76,8 +85,6 @@ const GoodDollarClaim = () => {
       }
 
       if (data.success) {
-        // Mark as claimed
-        localStorage.setItem('lastGoodDollarClaim', new Date().toISOString());
         setClaimStatus('claimed');
         
         toast({

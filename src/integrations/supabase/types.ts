@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      gooddollar_claims: {
+        Row: {
+          amount: number
+          claimed_at: string
+          created_at: string
+          id: string
+          transaction_hash: string | null
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          transaction_hash?: string | null
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          transaction_hash?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
