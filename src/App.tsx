@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Wallet from "./pages/Wallet";
+import GoodDollarClaim from "./pages/GoodDollarClaim";
 import Subscription from "./pages/Subscription";
 import ServiceProviderMotivation from "./pages/ServiceProviderMotivation";
 import Terms from "./pages/Terms";
@@ -55,6 +56,7 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/wallet" element={<Wallet />} />
+                <Route path="/claim" element={<GoodDollarClaim />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
                 <Route path="/terms" element={<Terms />} />

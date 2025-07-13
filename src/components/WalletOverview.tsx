@@ -1,5 +1,6 @@
 
-import { Banknote, Eye, EyeOff } from "lucide-react";
+import { Banknote, Eye, EyeOff, Coins } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 const WalletOverview = () => {
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
   const [balance, setBalance] = useState("0.00");
   const [gooddollarBalance, setGooddollarBalance] = useState("0.00");
@@ -176,13 +178,21 @@ const WalletOverview = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
           disabled={isServiceProvider}
           onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>
+        </Button>
+        <Button 
+          variant="outline" 
+          className="h-12 flex flex-col gap-1"
+          onClick={() => navigate('/claim')}
+        >
+          <Coins className="w-4 h-4" />
+          <span className="text-xs">Claim G$</span>
         </Button>
         {isLender && hasSignedTerms && (
           <Button 
