@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { useNetworkManager } from '@/hooks/useNetworkManager';
+// import { useNetworkManager } from '@/hooks/useNetworkManager';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,7 +19,7 @@ const GoodDollarClaim = () => {
   const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
 
   // Auto-switch to Celo network when entering this page
-  useNetworkManager('celo', authenticated);
+  // useNetworkManager('celo', authenticated);
 
   useEffect(() => {
     if (!authenticated) {
