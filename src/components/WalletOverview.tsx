@@ -11,7 +11,9 @@ const WalletOverview = () => {
   const { wallets } = useWallets();
   const [showBalance, setShowBalance] = useState(true);
   const [balance, setBalance] = useState("0.00");
+  const [gooddollarBalance, setGooddollarBalance] = useState("0.00");
   const [isLoading, setIsLoading] = useState(true);
+  const [isGooddollarLoading, setIsGooddollarLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -83,7 +85,38 @@ const WalletOverview = () => {
     fetchBalance();
   }, [wallets]);
 
+  useEffect(() => {
+    const fetchGooddollarBalance = async () => {
+      if (!wallets[0]?.address) {
+        setIsGooddollarLoading(false);
+        return;
+      }
+
+      try {
+        setIsGooddollarLoading(true);
+        const { data, error } = await supabase.functions.invoke('get-gooddollar-balance', {
+          body: { walletAddress: wallets[0].address }
+        });
+
+        if (error) {
+          console.error('Error fetching GoodDollar balance:', error);
+          setGooddollarBalance('0.00');
+        } else {
+          setGooddollarBalance(data.balanceFormatted || '0.00');
+        }
+      } catch (error) {
+        console.error('Error fetching GoodDollar balance:', error);
+        setGooddollarBalance('0.00');
+      } finally {
+        setIsGooddollarLoading(false);
+      }
+    };
+
+    fetchGooddollarBalance();
+  }, [wallets]);
+
   const displayBalance = isLoading ? "Loading..." : `$${balance}`;
+  const displayGooddollarBalance = isGooddollarLoading ? "Loading..." : `${gooddollarBalance} G$`;
 
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';
@@ -109,7 +142,7 @@ const WalletOverview = () => {
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="text-sm text-muted-foreground">Total Balance</span>
+          <span className="text-sm text-muted-foreground">Wallet Balances</span>
           <Button
             variant="ghost"
             size="icon"
@@ -119,11 +152,27 @@ const WalletOverview = () => {
             {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </Button>
         </div>
-        <div className="flex items-center justify-center mb-2">
-          <Banknote className="w-8 h-8 mr-2 text-green-500" />
-          <span className="text-3xl font-bold">
-            {showBalance ? displayBalance : "••••••"}
-          </span>
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-center">
+            <Banknote className="w-6 h-6 mr-2 text-blue-500" />
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {showBalance ? displayBalance : "••••••"}
+              </div>
+              <div className="text-xs text-muted-foreground">USDC</div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-center">
+            <Banknote className="w-6 h-6 mr-2 text-green-500" />
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {showBalance ? displayGooddollarBalance : "••••••"}
+              </div>
+              <div className="text-xs text-muted-foreground">GoodDollar</div>
+            </div>
+          </div>
         </div>
       </div>
 
