@@ -234,7 +234,7 @@ const GoodDollarClaim = () => {
             <div className="text-xs text-muted-foreground space-y-1">
               <p>• Daily claims reset every 24 hours</p>
               <p>• Claims are processed on the Celo network</p>
-              <p>• Face verification may be required for new users</p>
+              <p>• Verification handled through secure backend</p>
             </div>
           </CardContent>
         </Card>
