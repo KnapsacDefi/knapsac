@@ -1,144 +1,150 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-// import { useNetworkManager } from '@/hooks/useNetworkManager';
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
+import { useGoodDollarClaim } from '@/hooks/useGoodDollarClaim';
 
-const GoodDollarClaim = () => {
+const GoodDollarClaim = (): JSX.Element => {
   const navigate = useNavigate();
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
-  const [claimStatus, setClaimStatus] = useState<'available' | 'claimed' | 'cooldown'>('available');
-  const [isLoading, setIsLoading] = useState(false);
-  const [estimatedAmount, setEstimatedAmount] = useState('100'); // G$ amount
+  
+  const [claimStatus, setClaimStatus] = useState<'available' | 'claimed' | 'cooldown' | 'loading' | 'not-eligible' | 'not-verified'>('loading');
+  const [estimatedAmount, setEstimatedAmount] = useState<string>('');
   const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
 
-  // Auto-switch to Celo network when entering this page
-  // useNetworkManager('celo', authenticated);
+  const { identityStatus, checkIdentityVerification, startIdentityVerification } = useGoodDollarIdentity();
+  const { claimGoodDollar, checkClaimEligibility, claiming } = useGoodDollarClaim();
 
   useEffect(() => {
     if (!authenticated) {
       navigate('/');
       return;
     }
+    
+    if (wallets.length > 0) {
+      checkClaimStatus();
+    }
+  }, [authenticated, wallets, navigate, identityStatus.isVerified]);
 
-    // Check claim status
-    checkClaimStatus();
-  }, [authenticated, navigate, wallets]);
-
-  const checkClaimStatus = async () => {
-    if (!wallets || wallets.length === 0) return;
+  const checkClaimStatus = async (): Promise<void> => {
+    if (!wallets[0]) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('gooddollar-claim', {
-        body: { 
-          walletAddress: wallets[0].address,
-          action: 'checkStatus'
-        }
-      });
+      setClaimStatus('loading');
 
-      if (error) {
-        console.error('Error checking claim status:', error);
+      // First check identity verification
+      if (!identityStatus.isVerified) {
+        setClaimStatus('not-verified');
         return;
       }
 
-      if (data.canClaim) {
+      // Check claim eligibility from GoodDollar contracts
+      const { canClaim, amount } = await checkClaimEligibility();
+
+      if (canClaim) {
         setClaimStatus('available');
+        setEstimatedAmount(amount);
       } else {
-        setClaimStatus('cooldown');
-        if (data.nextClaimTime) {
+        // Check if there's a cooldown period from previous claims
+        const walletAddress = wallets[0].address;
+        const { data } = await supabase.functions.invoke('gooddollar-claim', {
+          body: { 
+            walletAddress,
+            action: 'checkStatus'
+          }
+        });
+
+        if (data?.nextClaimTime) {
           setNextClaimTime(new Date(data.nextClaimTime));
+          setClaimStatus('cooldown');
+        } else {
+          setClaimStatus('not-eligible');
         }
       }
     } catch (error) {
-      console.error('Error checking claim status:', error);
+      console.error('Error in checkClaimStatus:', error);
+      setClaimStatus('not-eligible');
     }
   };
 
-  const handleClaim = async () => {
-    if (!wallets || wallets.length === 0) {
+  const handleClaim = async (): Promise<void> => {
+    if (!identityStatus.isVerified) {
       toast({
-        title: "No Wallet Connected",
-        description: "Please connect a wallet to claim G$ tokens.",
+        title: "Identity Verification Required",
+        description: "Please complete identity verification before claiming G$ tokens.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsLoading(true);
-    try {
-      // Call our edge function to process the claim
-      const { data, error } = await supabase.functions.invoke('gooddollar-claim', {
-        body: { 
-          walletAddress: wallets[0].address,
-          action: 'claim'
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data.success) {
-        setClaimStatus('claimed');
-        
-        toast({
-          title: "Claim Successful!",
-          description: `You've successfully claimed ${data.amount || estimatedAmount} G$ tokens.`,
-        });
-
-        // Redirect back to wallet page after successful claim
-        setTimeout(() => {
-          navigate('/wallet');
-        }, 2000);
-      } else {
-        throw new Error(data.message || 'Claim failed');
-      }
-
-    } catch (error) {
-      console.error('Claim failed:', error);
+    const result = await claimGoodDollar();
+    
+    if (result.success) {
+      setClaimStatus('claimed');
       toast({
-        title: "Claim Failed",
-        description: error instanceof Error ? error.message : "Failed to claim G$ tokens. Please try again.",
-        variant: "destructive",
+        title: "Claim Successful!",
+        description: `Successfully claimed G$ tokens! TX: ${result.transactionHash}`,
       });
-    } finally {
-      setIsLoading(false);
+      
+      // Redirect to wallet after successful claim
+      setTimeout(() => {
+        navigate('/wallet');
+      }, 3000);
+    } else {
+      setClaimStatus('not-eligible');
     }
   };
 
-  const formatTimeRemaining = (targetTime: Date) => {
+  const formatTimeRemaining = (targetTime: Date): string => {
     const now = new Date();
     const diff = targetTime.getTime() - now.getTime();
+    
+    if (diff <= 0) return "Available now";
+    
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
     return `${hours}h ${minutes}m`;
   };
 
-  const getStatusBadge = () => {
+  const getStatusBadge = (): JSX.Element => {
     switch (claimStatus) {
       case 'available':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Available</Badge>;
+        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Available</Badge>;
       case 'claimed':
-        return <Badge variant="default" className="bg-blue-100 text-blue-800">Claimed</Badge>;
+        return <Badge variant="default" className="bg-blue-500"><CheckCircle className="w-3 h-3 mr-1" />Claimed</Badge>;
       case 'cooldown':
-        return <Badge variant="secondary">Cooldown</Badge>;
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Cooldown</Badge>;
+      case 'not-verified':
+        return <Badge variant="destructive"><ShieldCheck className="w-3 h-3 mr-1" />Not Verified</Badge>;
+      case 'loading':
+        return <Badge variant="outline">Loading...</Badge>;
+      default:
+        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Not Eligible</Badge>;
     }
   };
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): JSX.Element => {
     switch (claimStatus) {
       case 'available':
-        return <CheckCircle className="h-6 w-6 text-green-600" />;
+        return <CheckCircle className="w-16 h-16 text-green-500" />;
       case 'claimed':
-        return <CheckCircle className="h-6 w-6 text-blue-600" />;
+        return <CheckCircle className="w-16 h-16 text-blue-500" />;
       case 'cooldown':
-        return <Clock className="h-6 w-6 text-orange-600" />;
+        return <Clock className="w-16 h-16 text-yellow-500" />;
+      case 'not-verified':
+        return <ShieldCheck className="w-16 h-16 text-red-500" />;
+      case 'loading':
+        return <Clock className="w-16 h-16 text-gray-400 animate-spin" />;
+      default:
+        return <AlertCircle className="w-16 h-16 text-red-500" />;
     }
   };
 
@@ -161,80 +167,108 @@ const GoodDollarClaim = () => {
           <h1 className="text-2xl font-bold">Claim GoodDollar</h1>
         </div>
 
-        {/* Network Notice */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-muted-foreground">
-                Connected to Celo Network
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Identity Status Card */}
+        {!identityStatus.loading && (
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                {identityStatus.isVerified ? (
+                  <>
+                    <div className="h-3 w-3 bg-green-500 rounded-full" />
+                    <span className="text-sm text-green-600 font-medium">Identity Verified</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-3 w-3 bg-red-500 rounded-full" />
+                    <span className="text-sm text-red-600 font-medium">Identity Not Verified</span>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Claim Card */}
+        {/* Claim Status Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-3">
                 {getStatusIcon()}
-                Daily G$ Claim
+                <div>
+                  <div>GoodDollar Claim</div>
+                  <div className="text-sm font-normal text-muted-foreground">
+                    Daily UBI tokens
+                  </div>
+                </div>
               </CardTitle>
               {getStatusBadge()}
             </div>
-            <CardDescription>
-              Claim your daily allocation of GoodDollar (G$) tokens
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Estimated Amount */}
-            <div className="text-center p-6 bg-muted rounded-lg">
-              <div className="text-3xl font-bold text-primary">
-                {estimatedAmount} G$
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Estimated daily claim
-              </div>
+          <CardContent>
+            <div className="space-y-6">
+              {!identityStatus.isVerified && !identityStatus.loading && (
+                <div className="text-center space-y-4">
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <UserCheck className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                    <h3 className="font-semibold text-yellow-800">Identity Verification Required</h3>
+                    <p className="text-sm text-yellow-700 mt-2">
+                      You must complete GoodDollar's identity verification (face verification) before claiming G$ tokens.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={startIdentityVerification}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600"
+                  >
+                    Start Identity Verification
+                  </Button>
+                </div>
+              )}
+
+              {identityStatus.isVerified && claimStatus === 'available' && (
+                <Button 
+                  onClick={handleClaim} 
+                  disabled={claiming}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
+                >
+                  {claiming ? 'Claiming G$ Tokens...' : `Claim ${estimatedAmount} G$ Tokens`}
+                </Button>
+              )}
+
+              {claimStatus === 'claimed' && (
+                <div className="text-center space-y-4">
+                  <p className="text-green-600 font-semibold">Claim successful!</p>
+                  <p className="text-sm text-gray-600">Redirecting to wallet...</p>
+                </div>
+              )}
+
+              {claimStatus === 'cooldown' && nextClaimTime && (
+                <div className="text-center space-y-4">
+                  <p className="text-yellow-600 font-semibold">Next claim available in:</p>
+                  <p className="text-lg font-mono">{formatTimeRemaining(nextClaimTime)}</p>
+                </div>
+              )}
+
+              {claimStatus === 'not-eligible' && identityStatus.isVerified && (
+                <div className="text-center space-y-4">
+                  <p className="text-red-600 font-semibold">No G$ tokens available to claim at this time.</p>
+                  <p className="text-sm text-gray-600">Please check back later for your next claim.</p>
+                </div>
+              )}
+
+              {claimStatus === 'loading' && (
+                <div className="text-center">
+                  <p className="text-gray-600">Checking claim status...</p>
+                </div>
+              )}
             </div>
 
-            {/* Status Information */}
-            {claimStatus === 'cooldown' && nextClaimTime && (
-              <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <span className="text-sm text-orange-800">
-                  Next claim available in {formatTimeRemaining(nextClaimTime)}
-                </span>
-              </div>
-            )}
-
-            {claimStatus === 'claimed' && (
-              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                <CheckCircle className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-blue-800">
-                  Successfully claimed today's G$ tokens!
-                </span>
-              </div>
-            )}
-
-            {/* Claim Button */}
-            <Button 
-              onClick={handleClaim}
-              disabled={claimStatus !== 'available' || isLoading}
-              className="w-full"
-              size="lg"
-            >
-              {isLoading ? 'Claiming...' : 
-               claimStatus === 'available' ? 'Claim G$ Tokens' :
-               claimStatus === 'claimed' ? 'Already Claimed Today' :
-               'Claim Not Available'}
-            </Button>
-
             {/* Information */}
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>• Daily claims reset every 24 hours</p>
-              <p>• Claims are processed on the Celo network</p>
-              <p>• Verification handled through secure backend</p>
+            <div className="mt-6 pt-4 border-t">
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Identity verification required for all claims</p>
+                <p>• Claims processed on Celo network</p>
+                <p>• Daily claim amounts determined by GoodDollar protocol</p>
+              </div>
             </div>
           </CardContent>
         </Card>

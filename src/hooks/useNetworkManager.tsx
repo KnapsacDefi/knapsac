@@ -1,26 +1,32 @@
 import { useEffect } from 'react';
+import { useWallets } from '@privy-io/react-auth';
+import { celo, mainnet } from 'viem/chains';
 import { toast } from '@/hooks/use-toast';
 
 export const useNetworkManager = (targetChain: 'celo' | 'ethereum', shouldSwitch: boolean = true) => {
+  const { wallets } = useWallets();
+
   useEffect(() => {
-    if (!shouldSwitch) return;
+    if (!shouldSwitch || !wallets[0]) return;
 
-    // Show a toast notification about network switching
-    if (targetChain === 'celo') {
-      toast({
-        title: "Network Switch Required",
-        description: "Please switch to Celo network in your wallet for GoodDollar claims.",
-      });
-    }
-
-    // Return cleanup function
-    return () => {
-      if (targetChain === 'celo') {
+    const switchToTargetChain = async () => {
+      try {
+        const chainId = targetChain === 'celo' ? celo.id : mainnet.id;
+        await wallets[0].switchChain(chainId);
+        
         toast({
-          title: "Network Switch",
-          description: "You can now switch back to Ethereum network.",
+          title: "Network Switched",
+          description: `Successfully switched to ${targetChain} network.`,
+        });
+      } catch (error) {
+        console.error(`Failed to switch to ${targetChain}:`, error);
+        toast({
+          title: "Network Switch Required",
+          description: `Please manually switch to ${targetChain} network in your wallet.`,
         });
       }
     };
-  }, [targetChain, shouldSwitch]);
+
+    switchToTargetChain();
+  }, [wallets, targetChain, shouldSwitch]);
 };
