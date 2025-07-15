@@ -36,7 +36,7 @@ export const useGoodDollarIdentity = () => {
       
       const walletAddress = wallets[0].address;
       
-      // Call Supabase edge function to check identity status
+      // Call Supabase edge function to check identity status with GoodDollar contracts
       const { data, error } = await supabase.functions.invoke('gooddollar-identity-check', {
         body: { walletAddress }
       });
@@ -64,22 +64,39 @@ export const useGoodDollarIdentity = () => {
     if (!wallets[0]) return;
 
     try {
-      // Open GoodDollar identity verification flow
-      const verificationUrl = `https://wallet.gooddollar.org/AppNavigation/Dashboard/FaceVerification?wallet=${wallets[0].address}`;
+      // Use GoodDollar's official identity verification flow
+      const verificationUrl = `https://wallet.gooddollar.org/AppNavigation/Dashboard/FaceVerification?redirectTo=${encodeURIComponent(window.location.origin)}&wallet=${wallets[0].address}`;
       
       toast({
         title: "Identity Verification Required",
         description: "Redirecting to GoodDollar for face verification...",
       });
 
-      // Open in new window/tab
-      window.open(verificationUrl, '_blank');
+      // Open in new window/tab with proper redirect handling
+      const popup = window.open(verificationUrl, 'gooddollar-verification', 'width=500,height=700');
       
-      // Show instructions to user
-      toast({
-        title: "Complete Verification",
-        description: "Complete face verification in GoodDollar app, then return here to claim G$.",
-      });
+      // Listen for verification completion
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin === 'https://wallet.gooddollar.org' && event.data.type === 'VERIFICATION_COMPLETE') {
+          popup?.close();
+          checkIdentityVerification(); // Refresh verification status
+          toast({
+            title: "Verification Complete",
+            description: "Identity verification completed successfully!",
+          });
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+      
+      window.addEventListener('message', handleMessage);
+      
+      // Fallback instructions
+      setTimeout(() => {
+        toast({
+          title: "Complete Verification",
+          description: "Complete face verification in GoodDollar app, then return here to refresh your status.",
+        });
+      }, 2000);
 
     } catch (error) {
       console.error('Error starting verification:', error);

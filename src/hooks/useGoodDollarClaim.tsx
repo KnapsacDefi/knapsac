@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { createPublicClient, http, parseAbi } from 'viem';
-import { celo } from 'viem/chains';
+import { useNetworkManager } from './useNetworkManager';
 
 interface ClaimResult {
   success: boolean;
@@ -12,25 +11,16 @@ interface ClaimResult {
   error?: string;
 }
 
-// GoodDollar contract addresses on Celo
-const GOODDOLLAR_CONTRACT = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A';
-const UBI_SCHEME_CONTRACT = '0xAACbaaB8571cbECEB46ba85B5981efDB8928545e';
-
-const claimAbi = parseAbi([
-  'function claim() external returns (uint256)',
-  'function checkEntitlement() external view returns (uint256)',
-  'function isClaimer(address) external view returns (bool)'
-]);
+// GoodDollar UBI contract on Celo mainnet
+const UBI_SCHEME_CONTRACT = '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D';
 
 export const useGoodDollarClaim = () => {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [claiming, setClaiming] = useState(false);
-
-  const client = createPublicClient({
-    chain: celo,
-    transport: http()
-  });
+  
+  // Use network manager to ensure we're on Celo
+  useNetworkManager('celo', true);
 
   const checkClaimEligibility = async (): Promise<{ canClaim: boolean; amount: string }> => {
     if (!authenticated || !wallets[0]) {
@@ -38,32 +28,25 @@ export const useGoodDollarClaim = () => {
     }
 
     try {
-      // Check if user is a claimer in the UBI scheme
-      const isClaimer = await client.readContract({
-        address: UBI_SCHEME_CONTRACT,
-        abi: claimAbi,
-        functionName: 'isClaimer',
-        args: [wallets[0].address as `0x${string}`]
+      // Check eligibility using GoodDollar contracts via edge function
+      const { data, error } = await supabase.functions.invoke('gooddollar-claim', {
+        body: { 
+          action: 'checkEligibility',
+          walletAddress: wallets[0].address 
+        }
       });
 
-      if (!isClaimer) {
+      if (error) {
+        console.error('Error checking claim eligibility:', error);
         return { canClaim: false, amount: '0' };
       }
 
-      // Check entitlement amount
-      const entitlement = await client.readContract({
-        address: UBI_SCHEME_CONTRACT,
-        abi: claimAbi,
-        functionName: 'checkEntitlement'
-      });
-
       return {
-        canClaim: Number(entitlement) > 0,
-        amount: entitlement.toString()
+        canClaim: data.canClaim || false,
+        amount: data.amount || '0'
       };
-
     } catch (error) {
-      console.error('Error checking claim eligibility:', error);
+      console.error('Error in checkClaimEligibility:', error);
       return { canClaim: false, amount: '0' };
     }
   };
@@ -76,43 +59,48 @@ export const useGoodDollarClaim = () => {
     setClaiming(true);
 
     try {
-      // First switch to Celo network
-      await wallets[0].switchChain(celo.id);
-
-      // Check if user can claim
-      const { canClaim, amount } = await checkClaimEligibility();
+      // Switch to Celo network if needed
+      await wallets[0].switchChain(42220); // Celo mainnet
       
-      if (!canClaim) {
+      // First check if user is eligible
+      const eligibility = await checkClaimEligibility();
+      if (!eligibility.canClaim) {
         setClaiming(false);
-        return { success: false, error: 'No G$ tokens available to claim' };
+        return { success: false, error: 'Not eligible to claim' };
       }
 
-      // Get the embedded wallet provider
-      const provider = await wallets[0].getEthereumProvider();
-      
-      // Prepare transaction data
+      // Use GoodDollar's UBI claiming contract
       const txData = {
         to: UBI_SCHEME_CONTRACT,
         data: '0x4e71d92d', // claim() function selector
-        value: '0x0',
-        from: wallets[0].address
+        value: '0x0'
       };
 
-      // Sign and send transaction using provider
+      // Get the Ethereum provider and send transaction
+      const provider = await wallets[0].getEthereumProvider();
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
-        params: [txData]
+        params: [{
+          from: wallets[0].address,
+          to: txData.to,
+          data: txData.data,
+          value: txData.value
+        }]
       });
 
-      // Record successful claim in database
-      await supabase.functions.invoke('gooddollar-claim', {
+      // Record the claim in our database
+      const { error: dbError } = await supabase.functions.invoke('gooddollar-claim', {
         body: {
+          action: 'recordClaim',
           walletAddress: wallets[0].address,
-          action: 'claim',
           transactionHash: txHash,
-          amount: amount
+          amount: eligibility.amount
         }
       });
+
+      if (dbError) {
+        console.error('Error recording claim:', dbError);
+      }
 
       toast({
         title: "Claim Successful!",
@@ -122,12 +110,12 @@ export const useGoodDollarClaim = () => {
       setClaiming(false);
       return { 
         success: true, 
-        transactionHash: txHash as string,
-        amount: amount
+        transactionHash: txHash,
+        amount: eligibility.amount
       };
 
     } catch (error: any) {
-      console.error('Claim failed:', error);
+      console.error('Error claiming GoodDollar:', error);
       setClaiming(false);
       
       const errorMessage = error.message || 'Failed to claim G$ tokens';
