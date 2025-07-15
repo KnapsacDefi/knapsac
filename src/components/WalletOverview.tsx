@@ -6,6 +6,8 @@ import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
 import { supabase } from "@/integrations/supabase/client";
+import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
+import { toast } from "@/hooks/use-toast";
 
 const WalletOverview = () => {
   const { user } = usePrivy();
@@ -17,6 +19,7 @@ const WalletOverview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGooddollarLoading, setIsGooddollarLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const { startIdentityVerification, isVerifying, checkIdentityVerification } = useGoodDollarIdentity();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -189,10 +192,21 @@ const WalletOverview = () => {
         <Button 
           variant="outline" 
           className="h-12 flex flex-col gap-1"
-          onClick={() => navigate('/claim')}
+          onClick={async () => {
+            // Check if identity is verified first
+            const identityStatus = await checkIdentityVerification();
+            if (!identityStatus.isVerified) {
+              // Start verification process
+              await startIdentityVerification();
+            } else {
+              // Navigate to claim page if verified
+              navigate('/claim');
+            }
+          }}
+          disabled={isVerifying}
         >
           <Coins className="w-4 h-4" />
-          <span className="text-xs">Claim G$</span>
+          <span className="text-xs">{isVerifying ? 'Verifying...' : 'Claim G$'}</span>
         </Button>
         {isLender && hasSignedTerms && (
           <Button 

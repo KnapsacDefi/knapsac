@@ -3,6 +3,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
+import { useGoodDollarIdentity } from './useGoodDollarIdentity';
 
 interface ClaimResult {
   success: boolean;
@@ -18,6 +19,7 @@ export const useGoodDollarClaim = () => {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [claiming, setClaiming] = useState(false);
+  const { checkIdentityVerification } = useGoodDollarIdentity();
   
   // Use network manager to ensure we're on Celo
   useNetworkManager('celo', true);
@@ -28,6 +30,16 @@ export const useGoodDollarClaim = () => {
     }
 
     try {
+      // First check if identity is verified
+      const identityResult = await checkIdentityVerification();
+      
+      if (!identityResult.isVerified) {
+        return {
+          canClaim: false,
+          amount: '0'
+        };
+      }
+
       // Check eligibility using GoodDollar contracts via edge function
       const { data, error } = await supabase.functions.invoke('gooddollar-claim', {
         body: { 
@@ -42,7 +54,7 @@ export const useGoodDollarClaim = () => {
       }
 
       return {
-        canClaim: data.canClaim || false,
+        canClaim: data.canClaim && identityResult.canClaim,
         amount: data.amount || '0'
       };
     } catch (error) {
@@ -59,10 +71,33 @@ export const useGoodDollarClaim = () => {
     setClaiming(true);
 
     try {
+      // First verify identity
+      const identityResult = await checkIdentityVerification();
+      
+      if (!identityResult.isVerified) {
+        setClaiming(false);
+        toast({
+          title: "Identity Verification Required",
+          description: "Please complete identity verification before claiming.",
+          variant: "destructive"
+        });
+        return { success: false, error: 'Identity not verified' };
+      }
+
+      if (!identityResult.canClaim) {
+        setClaiming(false);
+        toast({
+          title: "Not Eligible",
+          description: "You are not eligible to claim at this time.",
+          variant: "destructive"
+        });
+        return { success: false, error: 'Not eligible to claim' };
+      }
+
       // Switch to Celo network if needed
       await wallets[0].switchChain(42220); // Celo mainnet
       
-      // First check if user is eligible
+      // Check if user is eligible for claiming
       const eligibility = await checkClaimEligibility();
       if (!eligibility.canClaim) {
         setClaiming(false);

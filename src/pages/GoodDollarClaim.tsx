@@ -19,7 +19,8 @@ const GoodDollarClaim = (): JSX.Element => {
   const [estimatedAmount, setEstimatedAmount] = useState<string>('');
   const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
 
-  const { identityStatus, checkIdentityVerification, startIdentityVerification } = useGoodDollarIdentity();
+  const { checkIdentityVerification, startIdentityVerification, isVerifying, isChecking } = useGoodDollarIdentity();
+  const [identityStatus, setIdentityStatus] = useState({ isVerified: false, loading: true });
   const { claimGoodDollar, checkClaimEligibility, claiming } = useGoodDollarClaim();
 
   useEffect(() => {
@@ -29,9 +30,28 @@ const GoodDollarClaim = (): JSX.Element => {
     }
     
     if (wallets.length > 0) {
-      checkClaimStatus();
+      checkIdentityAndClaimStatus();
     }
-  }, [authenticated, wallets, navigate, identityStatus.isVerified]);
+  }, [authenticated, wallets, navigate]);
+
+  const checkIdentityAndClaimStatus = async (): Promise<void> => {
+    if (!wallets[0]) return;
+
+    try {
+      // Check identity verification
+      const identity = await checkIdentityVerification();
+      setIdentityStatus({
+        isVerified: identity.isVerified,
+        loading: false
+      });
+
+      // Then check claim status
+      await checkClaimStatus();
+    } catch (error) {
+      console.error('Error checking identity and claim status:', error);
+      setIdentityStatus({ isVerified: false, loading: false });
+    }
+  };
 
   const checkClaimStatus = async (): Promise<void> => {
     if (!wallets[0]) return;
@@ -215,11 +235,12 @@ const GoodDollarClaim = (): JSX.Element => {
                       You must complete GoodDollar's identity verification (face verification) before claiming G$ tokens.
                     </p>
                   </div>
-                  <Button 
+                   <Button 
                     onClick={startIdentityVerification}
+                    disabled={isVerifying}
                     className="w-full bg-yellow-500 hover:bg-yellow-600"
                   >
-                    Start Identity Verification
+                    {isVerifying ? 'Starting Verification...' : 'Start Identity Verification'}
                   </Button>
                 </div>
               )}

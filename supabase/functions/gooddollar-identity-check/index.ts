@@ -1,9 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 interface IdentityRequest {
   walletAddress: string;
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   try {
     const { walletAddress }: IdentityRequest = await req.json();
-
+    
     if (!walletAddress) {
       return new Response(
         JSON.stringify({ error: 'Wallet address is required' }),
@@ -41,77 +41,98 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check GoodDollar identity verification via their API
-    const identityApiUrl = `https://api.gooddollar.org/verify/face/${walletAddress}`;
-    
+    console.log('Checking identity verification for address:', walletAddress);
+
     let isVerified = false;
-    let whitelistedAddress = undefined;
+    let whitelistedAddress: string | undefined;
+    let canClaim = false;
 
     try {
-      const identityResponse = await fetch(identityApiUrl, {
+      // Try GoodDollar API first
+      console.log('Checking GoodDollar API for verification...');
+      const apiResponse = await fetch(`https://api.gooddollar.org/api/v1/identity/check/${walletAddress}`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (identityResponse.ok) {
-        const identityData = await identityResponse.json();
-        isVerified = identityData.isVerified || false;
-        whitelistedAddress = identityData.whitelistedAddress;
+      if (apiResponse.ok) {
+        const apiData = await apiResponse.json();
+        console.log('GoodDollar API response:', apiData);
+        
+        if (apiData.verified) {
+          isVerified = true;
+          whitelistedAddress = apiData.whitelistedAddress || walletAddress;
+          canClaim = apiData.canClaim || false;
+        }
+      } else {
+        console.log('GoodDollar API returned non-OK status:', apiResponse.status);
       }
     } catch (apiError) {
-      console.error('GoodDollar API error:', apiError);
-      // Continue with verification check from on-chain data
+      console.log('GoodDollar API error:', apiError);
+      // Continue to on-chain check if API fails
     }
 
-    // If not verified via API, check on-chain identity contracts
+    // If not verified via API, check on-chain
     if (!isVerified) {
+      console.log('Checking on-chain identity verification...');
       try {
-        // Check Celo blockchain for identity verification
-        const celoApiUrl = `https://forno.celo.org`;
+        // GoodDollar Identity contract on Celo mainnet
+        const IDENTITY_CONTRACT = '0x76e76e10Ac308A1D54a00f9df27EdCE4801F288b';
+        const RPC_URL = 'https://forno.celo.org';
         
-        // Call identity contract to check if address is verified
-        const contractCall = {
-          jsonrpc: "2.0",
-          method: "eth_call",
-          params: [{
-            to: "0x76598b7bf16fa5a4b8b71dd86e9d7eb233afbe68", // GoodDollar Identity contract
-            data: `0x9a50400e000000000000000000000000${walletAddress.slice(2)}` // isVerified(address) function
-          }, "latest"],
-          id: 1
-        };
-
-        const response = await fetch(celoApiUrl, {
+        // Check if address is whitelisted in the identity contract
+        const response = await fetch(RPC_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(contractCall)
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_call',
+            params: [
+              {
+                to: IDENTITY_CONTRACT,
+                data: `0x3af32abf${walletAddress.slice(2).padStart(64, '0')}` // isWhitelisted(address)
+              },
+              'latest'
+            ],
+            id: 1
+          })
         });
 
-        if (response.ok) {
-          const result = await response.json();
-          // Parse boolean result from contract
-          isVerified = result.result === '0x0000000000000000000000000000000000000000000000000000000000000001';
+        const result = await response.json();
+        console.log('On-chain verification result:', result);
+        
+        if (result.result && result.result !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          isVerified = true;
+          whitelistedAddress = walletAddress;
+          canClaim = true;
         }
-      } catch (chainError) {
-        console.error('Blockchain verification error:', chainError);
+      } catch (onChainError) {
+        console.error('On-chain verification error:', onChainError);
       }
     }
 
-    // Check claim eligibility based on verification status
-    const canClaim = isVerified;
-
-    // Log identity check
-    await supabase.from('security_audit_log').insert({
-      wallet_address: walletAddress,
-      operation_type: 'identity_check',
-      success: true,
-      additional_data: { 
-        isVerified, 
-        whitelistedAddress,
-        canClaim,
-        timestamp: new Date().toISOString()
-      }
-    });
+    // Log the identity check for security audit
+    try {
+      await supabase
+        .from('security_audit_log')
+        .insert({
+          wallet_address: walletAddress,
+          operation_type: 'identity_verification_check',
+          success: true,
+          additional_data: {
+            isVerified,
+            whitelistedAddress,
+            canClaim,
+            timestamp: new Date().toISOString()
+          }
+        });
+    } catch (logError) {
+      console.error('Failed to log identity check:', logError);
+    }
 
     const response: IdentityResponse = {
       isVerified,
@@ -119,26 +140,28 @@ Deno.serve(async (req) => {
       canClaim
     };
 
+    console.log('Final identity verification result:', response);
+
     return new Response(
       JSON.stringify(response),
       { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
-    console.error('Identity check error:', error);
+    console.error('Identity verification error:', error);
     
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error',
+        error: 'Internal server error during identity verification',
         isVerified: false,
         canClaim: false
       }),
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
