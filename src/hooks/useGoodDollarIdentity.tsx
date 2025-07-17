@@ -108,15 +108,15 @@ export const useGoodDollarIdentity = () => {
       }
 
       // Start new verification process through GoodDollar
-      const verificationUrl = `https://gooddollar.org/face-verification?address=${walletAddress}&redirect=${encodeURIComponent(window.location.origin + '/wallet')}`;
+      const verificationUrl = `https://wallet.gooddollar.org/?screen=FaceVerification&web3Provider=WalletConnect&address=${walletAddress}&redirect=${encodeURIComponent(window.location.origin + '/claim')}`;
       
       toast({
-        title: "Identity Verification Required",
-        description: "You'll be redirected to GoodDollar for face verification.",
+        title: "Identity Verification Starting",
+        description: "You'll be redirected to GoodDollar for face verification. Please complete the process and return to this page.",
       });
 
-      // Open verification in new tab
-      window.open(verificationUrl, '_blank');
+      // Redirect to verification URL (same tab for better UX)
+      window.location.href = verificationUrl;
       
       return {
         isVerified: false,

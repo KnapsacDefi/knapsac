@@ -38,29 +38,33 @@ const GoodDollarClaim = (): JSX.Element => {
     if (!wallets[0]) return;
 
     try {
-      // Check identity verification
+      // Check identity verification first
       const identity = await checkIdentityVerification();
       setIdentityStatus({
         isVerified: identity.isVerified,
         loading: false
       });
 
-      // Then check claim status
-      await checkClaimStatus();
+      // Then check claim status based on the actual identity result
+      await checkClaimStatus(identity.isVerified);
     } catch (error) {
       console.error('Error checking identity and claim status:', error);
       setIdentityStatus({ isVerified: false, loading: false });
+      setClaimStatus('not-verified');
     }
   };
 
-  const checkClaimStatus = async (): Promise<void> => {
+  const checkClaimStatus = async (isIdentityVerified?: boolean): Promise<void> => {
     if (!wallets[0]) return;
 
     try {
       setClaimStatus('loading');
 
+      // Use the passed parameter or current state
+      const verified = isIdentityVerified !== undefined ? isIdentityVerified : identityStatus.isVerified;
+      
       // First check identity verification
-      if (!identityStatus.isVerified) {
+      if (!verified) {
         setClaimStatus('not-verified');
         return;
       }
@@ -235,12 +239,20 @@ const GoodDollarClaim = (): JSX.Element => {
                       You must complete GoodDollar's identity verification (face verification) before claiming G$ tokens.
                     </p>
                   </div>
-                   <Button 
+                  <Button 
                     onClick={startIdentityVerification}
                     disabled={isVerifying}
                     className="w-full bg-yellow-500 hover:bg-yellow-600"
                   >
-                    {isVerifying ? 'Starting Verification...' : 'Start Identity Verification'}
+                    {isVerifying ? 'Redirecting to GoodDollar...' : 'Start Identity Verification'}
+                  </Button>
+                  <Button 
+                    onClick={() => checkIdentityAndClaimStatus()}
+                    disabled={isChecking}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isChecking ? 'Checking Status...' : 'Check Verification Status'}
                   </Button>
                 </div>
               )}

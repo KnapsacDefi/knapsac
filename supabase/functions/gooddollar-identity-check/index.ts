@@ -48,29 +48,43 @@ Deno.serve(async (req) => {
     let canClaim = false;
 
     try {
-      // Try GoodDollar API first
-      console.log('Checking GoodDollar API for verification...');
-      const apiResponse = await fetch(`https://api.gooddollar.org/api/v1/identity/check/${walletAddress}`, {
-        method: 'GET',
+      // Try GoodDollar Graph API first (more reliable than REST API)
+      console.log('Checking GoodDollar Graph API for verification...');
+      const graphQuery = `
+        query GetUser($address: String!) {
+          user(id: $address) {
+            id
+            isVerified
+            whitelistedAddress
+          }
+        }
+      `;
+      
+      const graphResponse = await fetch('https://api.thegraph.com/subgraphs/name/gooddollar/gooddollar-v2', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          query: graphQuery,
+          variables: { address: walletAddress.toLowerCase() }
+        })
       });
 
-      if (apiResponse.ok) {
-        const apiData = await apiResponse.json();
-        console.log('GoodDollar API response:', apiData);
+      if (graphResponse.ok) {
+        const graphData = await graphResponse.json();
+        console.log('GoodDollar Graph API response:', graphData);
         
-        if (apiData.verified) {
+        if (graphData.data?.user?.isVerified) {
           isVerified = true;
-          whitelistedAddress = apiData.whitelistedAddress || walletAddress;
-          canClaim = apiData.canClaim || false;
+          whitelistedAddress = graphData.data.user.whitelistedAddress || walletAddress;
+          canClaim = true;
         }
       } else {
-        console.log('GoodDollar API returned non-OK status:', apiResponse.status);
+        console.log('GoodDollar Graph API returned non-OK status:', graphResponse.status);
       }
     } catch (apiError) {
-      console.log('GoodDollar API error:', apiError);
+      console.log('GoodDollar Graph API error:', apiError);
       // Continue to on-chain check if API fails
     }
 
