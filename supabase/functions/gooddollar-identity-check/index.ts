@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { ethers } from 'https://esm.sh/ethers@5.7.2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -92,37 +93,30 @@ Deno.serve(async (req) => {
     if (!isVerified) {
       console.log('Checking on-chain identity verification...');
       try {
-        // GoodDollar Identity contract on Celo mainnet
-        const IDENTITY_CONTRACT = '0x76e76e10Ac308A1D54a00f9df27EdCE4801F288b';
+        // GoodDollar Identity contract on Celo mainnet (correct address from deployment.json)
+        const IDENTITY_CONTRACT = '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42';
         const RPC_URL = 'https://forno.celo.org';
         
-        // Check if address is whitelisted in the identity contract
-        const response = await fetch(RPC_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_call',
-            params: [
-              {
-                to: IDENTITY_CONTRACT,
-                data: `0x3af32abf${walletAddress.slice(2).padStart(64, '0')}` // isWhitelisted(address)
-              },
-              'latest'
-            ],
-            id: 1
-          })
-        });
-
-        const result = await response.json();
-        console.log('On-chain verification result:', result);
+        // Identity contract ABI for the isWhitelisted function
+        const IDENTITY_ABI = [
+          "function isWhitelisted(address account) public view returns (bool)"
+        ];
         
-        if (result.result && result.result !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        // Initialize ethers provider and contract
+        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+        const identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, provider);
+        
+        // Check if the address is whitelisted (face verified)
+        const isWhitelistedResult = await identityContract.isWhitelisted(walletAddress);
+        console.log('On-chain isWhitelisted result for', walletAddress, ':', isWhitelistedResult);
+        
+        if (isWhitelistedResult) {
           isVerified = true;
           whitelistedAddress = walletAddress;
           canClaim = true;
+          console.log('Address is verified on-chain');
+        } else {
+          console.log('Address is NOT verified on-chain');
         }
       } catch (onChainError) {
         console.error('On-chain verification error:', onChainError);
