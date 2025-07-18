@@ -6,12 +6,13 @@ const corsHeaders = {
 }
 
 interface TatumTokenBalance {
-  tokenAddress: string;
+  chain: string;
+  address: string;
   balance: string;
-  balanceUsd: string;
-  name: string;
-  symbol: string;
+  denominatedBalance: string;
   decimals: number;
+  tokenAddress: string;
+  type: string;
 }
 
 interface TatumPortfolioResponse {
@@ -102,8 +103,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Format the balance (assuming 18 decimals for GoodDollar)
-    const balanceNumber = parseFloat(gooddollarToken.balance) / Math.pow(10, gooddollarToken.decimals || 18);
+    // Format the balance using denominatedBalance (which is already in proper decimal format)
+    const balanceNumber = parseFloat(gooddollarToken.denominatedBalance) / Math.pow(10, gooddollarToken.decimals);
     const balanceFormatted = balanceNumber.toFixed(2);
 
     console.log('GoodDollar balance found:', {
@@ -114,11 +115,11 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        balance: gooddollarToken.balance,
-        symbol: gooddollarToken.symbol || 'G$',
-        decimals: gooddollarToken.decimals || 18,
+        balance: gooddollarToken.denominatedBalance,
+        symbol: 'G$',
+        decimals: gooddollarToken.decimals,
         balanceFormatted: balanceFormatted,
-        name: gooddollarToken.name || 'GoodDollar'
+        name: 'GoodDollar'
       }),
       { 
         status: 200, 
