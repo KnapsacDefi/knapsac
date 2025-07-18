@@ -15,7 +15,7 @@ interface TatumTokenBalance {
 }
 
 interface TatumPortfolioResponse {
-  data: TatumTokenBalance[];
+  result: TatumTokenBalance[];
 }
 
 Deno.serve(async (req) => {
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     // Find GoodDollar token (G$) with the specific token address
     const gooddollarTokenAddress = '0x62b8b11039fcfe5ab0c56e502b1c372a3d2a9c7a';
-    const gooddollarToken = portfolioData.data?.find(
+    const gooddollarToken = portfolioData.result?.find(
       token => token.tokenAddress.toLowerCase() === gooddollarTokenAddress.toLowerCase()
     );
 
