@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
 import { useGoodDollarClaim } from '@/hooks/useGoodDollarClaim';
+import { GoodDollarVerificationModal } from '@/components/GoodDollarVerificationModal';
 
 const GoodDollarClaim = (): JSX.Element => {
   const navigate = useNavigate();
@@ -19,7 +20,15 @@ const GoodDollarClaim = (): JSX.Element => {
   const [estimatedAmount, setEstimatedAmount] = useState<string>('');
   const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
 
-  const { checkIdentityVerification, startIdentityVerification, isVerifying, isChecking } = useGoodDollarIdentity();
+  const { 
+    checkIdentityVerification, 
+    startIdentityVerification, 
+    isVerifying, 
+    isChecking,
+    showVerificationModal,
+    handleVerificationComplete,
+    handleModalClose
+  } = useGoodDollarIdentity();
   const [identityStatus, setIdentityStatus] = useState({ isVerified: false, loading: true });
   const { claimGoodDollar, checkClaimEligibility, claiming } = useGoodDollarClaim();
 
@@ -244,7 +253,7 @@ const GoodDollarClaim = (): JSX.Element => {
                     disabled={isVerifying}
                     className="w-full bg-yellow-500 hover:bg-yellow-600"
                   >
-                    {isVerifying ? 'Redirecting to GoodDollar...' : 'Start Identity Verification'}
+                    {isVerifying ? 'Opening Verification...' : 'Start Identity Verification'}
                   </Button>
                   <Button 
                     onClick={() => checkIdentityAndClaimStatus()}
@@ -306,6 +315,16 @@ const GoodDollarClaim = (): JSX.Element => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Verification Modal */}
+      {wallets[0] && (
+        <GoodDollarVerificationModal
+          isOpen={showVerificationModal}
+          onClose={handleModalClose}
+          onVerificationComplete={handleVerificationComplete}
+          walletAddress={wallets[0].address}
+        />
+      )}
     </div>
   );
 };

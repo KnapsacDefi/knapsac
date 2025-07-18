@@ -22,6 +22,7 @@ export interface IdentityCheckResult {
 export const useGoodDollarIdentity = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const { user } = usePrivy();
   const { wallets } = useWallets();
   
@@ -107,21 +108,18 @@ export const useGoodDollarIdentity = () => {
         };
       }
 
-      // Start new verification process through GoodDollar
-      const verificationUrl = `https://wallet.gooddollar.org/?screen=FaceVerification&web3Provider=WalletConnect&address=${walletAddress}&redirect=${encodeURIComponent(window.location.origin + '/claim')}`;
-      
+      // Start new verification process through embedded modal
       toast({
         title: "Identity Verification Starting",
-        description: "You'll be redirected to GoodDollar for face verification. Please complete the process and return to this page.",
+        description: "Complete the face verification process in the modal that will open.",
       });
 
-      // Redirect to verification URL (same tab for better UX)
-      window.location.href = verificationUrl;
+      // Open verification modal instead of redirecting
+      setShowVerificationModal(true);
       
       return {
         isVerified: false,
-        canClaim: false,
-        verificationUrl
+        canClaim: false
       };
       
     } catch (error) {
@@ -141,10 +139,24 @@ export const useGoodDollarIdentity = () => {
     }
   }, [user, wallets, checkIdentityVerification]);
 
+  const handleVerificationComplete = async () => {
+    setShowVerificationModal(false);
+    // Check verification status after completion
+    await checkIdentityVerification();
+  };
+
+  const handleModalClose = () => {
+    setShowVerificationModal(false);
+    setIsVerifying(false);
+  };
+
   return {
     checkIdentityVerification,
     startIdentityVerification,
     isVerifying,
-    isChecking
+    isChecking,
+    showVerificationModal,
+    handleVerificationComplete,
+    handleModalClose
   };
 };
