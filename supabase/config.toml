@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.test-privy-secrets]
 verify_jwt = false
+
+[functions.get-gooddollar-balance]
+verify_jwt = false
+
+[functions.gooddollar-identity-check]
+verify_jwt = false
+
+[functions.gooddollar-claim]
+verify_jwt = false
