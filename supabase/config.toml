@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.gooddollar-claim]
 verify_jwt = false
+
+[functions.get-privy-config]
+verify_jwt = false
