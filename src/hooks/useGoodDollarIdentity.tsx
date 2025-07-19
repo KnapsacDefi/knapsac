@@ -112,7 +112,9 @@ export const useGoodDollarIdentity = () => {
       });
 
       setShowVerificationModal(true);
-      console.log('✅ Modal state set to true, isVerifying remains true');
+      // Reset isVerifying immediately after modal opens successfully
+      setIsVerifying(false);
+      console.log('✅ Modal state set to true, isVerifying reset to false');
       
       return {
         isVerified: false,
@@ -134,7 +136,7 @@ export const useGoodDollarIdentity = () => {
         error: 'Failed to start verification' 
       };
     }
-  }, [user, wallets]);
+  }, [user, wallets, checkIdentityVerification]);
 
   const handleVerificationComplete = async () => {
     console.log('✅ Verification completed, closing modal...');
@@ -188,7 +190,6 @@ export const useGoodDollarIdentity = () => {
     openVerificationInNewTab,
     
     // Direct access to Wagmi state
-    
     identityLoading
   };
 };

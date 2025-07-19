@@ -25,7 +25,10 @@ const Wallet = () => {
     showVerificationModal,
     handleVerificationComplete,
     handleModalClose,
-    openVerificationInNewTab
+    openVerificationInNewTab,
+    startIdentityVerification,
+    isVerifying,
+    checkIdentityVerification
   } = useGoodDollarIdentity();
 
   useEffect(() => {
@@ -75,7 +78,6 @@ const Wallet = () => {
         } else if (profileResult?.profile) {
           profile = profileResult.profile;
         }
-
 
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('Error fetching profile:', profileError);
@@ -171,7 +173,11 @@ const Wallet = () => {
         {/* Show lender coming soon banner for lender profiles */}
         {userProfile?.profile_type === 'Lender' && <LenderComingSoonBanner />}
         
-        <WalletOverview />
+        <WalletOverview 
+          startIdentityVerification={startIdentityVerification}
+          isVerifying={isVerifying}
+          checkIdentityVerification={checkIdentityVerification}
+        />
         <UserAddressDisplay />
         
         {/* Show credit score for startups only */}

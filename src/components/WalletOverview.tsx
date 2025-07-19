@@ -4,11 +4,19 @@ import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
 import { useGoodDollarWagmi } from "@/hooks/useGoodDollarWagmi";
-import { toast } from "@/hooks/use-toast";
 
-const WalletOverview = () => {
+interface WalletOverviewProps {
+  startIdentityVerification: () => Promise<any>;
+  isVerifying: boolean;
+  checkIdentityVerification: () => Promise<any>;
+}
+
+const WalletOverview = ({ 
+  startIdentityVerification, 
+  isVerifying, 
+  checkIdentityVerification 
+}: WalletOverviewProps) => {
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const navigate = useNavigate();
@@ -18,9 +26,6 @@ const WalletOverview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGooddollarLoading, setIsGooddollarLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
-  
-  const { startIdentityVerification, isVerifying } = useGoodDollarIdentity();
-  const {  checkIdentityVerification } = useGoodDollarWagmi();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -87,7 +92,7 @@ const WalletOverview = () => {
     };
 
     fetchBalance();
-  }, [wallets]);
+  }, [wallets, user]);
 
   useEffect(() => {
     const fetchGooddollarBalance = async () => {
@@ -141,6 +146,21 @@ const WalletOverview = () => {
     }
   };
 
+  const handleClaimClick = async () => {
+    console.log('🎯 Claim button clicked, checking identity...');
+    // Check if identity is verified first
+    const identityCheck = await checkIdentityVerification();
+    if (!identityCheck.isVerified) {
+      console.log('🔐 Identity not verified, starting verification process...');
+      // Start verification process
+      await startIdentityVerification();
+    } else {
+      console.log('✅ Identity verified, navigating to claim page...');
+      // Navigate to claim page if verified
+      navigate('/claim');
+    }
+  };
+
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
@@ -190,17 +210,7 @@ const WalletOverview = () => {
         <Button 
           variant="outline" 
           className="h-12 flex flex-col gap-1"
-          onClick={async () => {
-            // Use Wagmi hook to check if identity is verified
-            const identityCheck = await checkIdentityVerification();
-            if (!identityCheck.isVerified) {
-              // Start verification process
-              await startIdentityVerification();
-            } else {
-              // Navigate to claim page if verified
-              navigate('/claim');
-            }
-          }}
+          onClick={handleClaimClick}
           disabled={isVerifying}
         >
           <Coins className="w-4 h-4" />
