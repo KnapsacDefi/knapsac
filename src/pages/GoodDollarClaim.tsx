@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, ShieldCheck, UserCheck, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
@@ -29,8 +28,10 @@ const GoodDollarClaim = (): JSX.Element => {
     isVerifying, 
     isChecking,
     showVerificationModal,
+    verificationError,
     handleVerificationComplete,
-    handleModalClose
+    handleModalClose,
+    openVerificationInNewTab
   } = useGoodDollarIdentity();
   
   const [identityStatus, setIdentityStatus] = useState({ isVerified: false, loading: true });
@@ -52,8 +53,11 @@ const GoodDollarClaim = (): JSX.Element => {
     if (!wallets[0]) return;
 
     try {
+      console.log('🔄 Checking identity and claim status...');
       // Use the improved SDK-based identity check
       const identity = await sdkCheckIdentity();
+      console.log('📋 Identity result:', identity);
+      
       setIdentityStatus({
         isVerified: identity.isVerified,
         loading: false
@@ -62,7 +66,7 @@ const GoodDollarClaim = (): JSX.Element => {
       // Then check claim status based on the actual identity result
       await checkClaimStatus(identity.isVerified);
     } catch (error) {
-      console.error('Error checking identity and claim status:', error);
+      console.error('❌ Error checking identity and claim status:', error);
       setIdentityStatus({ isVerified: false, loading: false });
       setClaimStatus('not-verified');
     }
@@ -205,6 +209,20 @@ const GoodDollarClaim = (): JSX.Element => {
           <h1 className="text-2xl font-bold">Claim GoodDollar</h1>
         </div>
 
+        {/* Debug info for verification state */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="mb-4 bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4 text-xs">
+              <div className="font-mono space-y-1">
+                <div>isVerifying: {isVerifying.toString()}</div>
+                <div>showModal: {showVerificationModal.toString()}</div>
+                <div>hasError: {!!verificationError}</div>
+                <div>error: {verificationError}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Identity Status Card */}
         {!identityStatus.loading && (
           <Card className="mb-6">
@@ -253,21 +271,40 @@ const GoodDollarClaim = (): JSX.Element => {
                       You must complete GoodDollar's identity verification (face verification) before claiming G$ tokens.
                     </p>
                   </div>
-                  <Button 
-                    onClick={startIdentityVerification}
-                    disabled={isVerifying}
-                    className="w-full bg-yellow-500 hover:bg-yellow-600"
-                  >
-                    {isVerifying ? 'Opening Verification...' : 'Start Identity Verification'}
-                  </Button>
-                  <Button 
-                    onClick={() => checkIdentityAndClaimStatus()}
-                    disabled={isChecking}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {isChecking ? 'Checking Status...' : 'Check Verification Status'}
-                  </Button>
+                  
+                  {verificationError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700">{verificationError}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col gap-3">
+                    <Button 
+                      onClick={startIdentityVerification}
+                      disabled={isVerifying}
+                      className="w-full bg-yellow-500 hover:bg-yellow-600"
+                    >
+                      {isVerifying ? 'Opening Verification...' : 'Start Identity Verification'}
+                    </Button>
+                    
+                    <Button 
+                      onClick={openVerificationInNewTab}
+                      variant="outline"
+                      className="w-full flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open Verification in New Tab
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => checkIdentityAndClaimStatus()}
+                      disabled={isChecking}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {isChecking ? 'Checking Status...' : 'Check Verification Status'}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -331,6 +368,7 @@ const GoodDollarClaim = (): JSX.Element => {
           onClose={handleModalClose}
           onVerificationComplete={handleVerificationComplete}
           walletAddress={wallets[0].address}
+          onOpenInNewTab={openVerificationInNewTab}
         />
       )}
     </div>

@@ -23,6 +23,7 @@ export const useGoodDollarIdentity = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const { user } = usePrivy();
   const { wallets } = useWallets();
   
@@ -30,7 +31,10 @@ export const useGoodDollarIdentity = () => {
   useNetworkManager('celo', true);
 
   const checkIdentityVerification = useCallback(async (): Promise<IdentityCheckResult> => {
+    console.log('🔍 Starting identity verification check...');
+    
     if (!user || !wallets[0]) {
+      console.log('❌ No user or wallet found');
       return { 
         isVerified: false, 
         canClaim: false, 
@@ -42,6 +46,7 @@ export const useGoodDollarIdentity = () => {
     
     try {
       const walletAddress = wallets[0].address;
+      console.log('📋 Checking identity for wallet:', walletAddress);
       
       // Call our Supabase edge function for identity verification
       const { data, error } = await supabase.functions.invoke('gooddollar-identity-check', {
@@ -49,7 +54,7 @@ export const useGoodDollarIdentity = () => {
       });
 
       if (error) {
-        console.error('Identity check error:', error);
+        console.error('❌ Identity check error:', error);
         return { 
           isVerified: false, 
           canClaim: false, 
@@ -57,6 +62,7 @@ export const useGoodDollarIdentity = () => {
         };
       }
 
+      console.log('✅ Identity check result:', data);
       return {
         isVerified: data.isVerified,
         canClaim: data.canClaim,
@@ -64,7 +70,7 @@ export const useGoodDollarIdentity = () => {
       };
       
     } catch (error) {
-      console.error('Failed to check identity verification:', error);
+      console.error('❌ Failed to check identity verification:', error);
       return { 
         isVerified: false, 
         canClaim: false, 
@@ -76,7 +82,10 @@ export const useGoodDollarIdentity = () => {
   }, [user, wallets]);
 
   const startIdentityVerification = useCallback(async (): Promise<IdentityVerificationResult> => {
+    console.log('🚀 Starting identity verification process...');
+    
     if (!user || !wallets[0]) {
+      console.log('❌ No user or wallet for verification');
       toast({
         title: "Wallet Required",
         description: "Please connect your wallet to start verification.",
@@ -90,17 +99,21 @@ export const useGoodDollarIdentity = () => {
     }
 
     setIsVerifying(true);
+    setVerificationError(null);
 
     try {
       const walletAddress = wallets[0].address;
+      console.log('📋 Starting verification for wallet:', walletAddress);
       
       // First check if already verified
       const currentStatus = await checkIdentityVerification();
       if (currentStatus.isVerified) {
+        console.log('✅ Already verified, no need for modal');
         toast({
           title: "Already Verified",
           description: "Your identity is already verified with GoodDollar.",
         });
+        setIsVerifying(false);
         return {
           isVerified: true,
           canClaim: currentStatus.canClaim,
@@ -109,13 +122,15 @@ export const useGoodDollarIdentity = () => {
       }
 
       // Start new verification process through embedded modal
+      console.log('🔄 Opening verification modal...');
       toast({
-        title: "Identity Verification Starting",
-        description: "Complete the face verification process in the modal that will open.",
+        title: "Opening Verification",
+        description: "Opening GoodDollar face verification modal...",
       });
 
-      // Open verification modal instead of redirecting
+      // Open verification modal - keep isVerifying true until modal closes
       setShowVerificationModal(true);
+      console.log('✅ Modal state set to true, isVerifying remains true');
       
       return {
         isVerified: false,
@@ -123,7 +138,9 @@ export const useGoodDollarIdentity = () => {
       };
       
     } catch (error) {
-      console.error('Failed to start identity verification:', error);
+      console.error('❌ Failed to start identity verification:', error);
+      setVerificationError(error instanceof Error ? error.message : 'Unknown error');
+      setIsVerifying(false);
       toast({
         title: "Verification Failed",
         description: "Failed to start identity verification process.",
@@ -134,19 +151,46 @@ export const useGoodDollarIdentity = () => {
         canClaim: false, 
         error: 'Failed to start verification' 
       };
-    } finally {
-      setIsVerifying(false);
     }
   }, [user, wallets, checkIdentityVerification]);
 
   const handleVerificationComplete = async () => {
+    console.log('✅ Verification completed, closing modal...');
     setShowVerificationModal(false);
+    setIsVerifying(false);
+    setVerificationError(null);
+    
     // Check verification status after completion
-    await checkIdentityVerification();
+    const result = await checkIdentityVerification();
+    if (result.isVerified) {
+      toast({
+        title: "Verification Successful!",
+        description: "Your identity has been verified with GoodDollar.",
+      });
+    }
   };
 
   const handleModalClose = () => {
+    console.log('🔄 Modal closed by user');
     setShowVerificationModal(false);
+    setIsVerifying(false);
+    setVerificationError(null);
+  };
+
+  const openVerificationInNewTab = () => {
+    if (!wallets[0]) return;
+    
+    const walletAddress = wallets[0].address;
+    const verificationUrl = `https://wallet.gooddollar.org/?screen=FaceVerification&web3Provider=WalletConnect&address=${walletAddress}&redirect=${encodeURIComponent(window.location.origin + '/wallet')}`;
+    
+    console.log('🔗 Opening verification in new tab:', verificationUrl);
+    window.open(verificationUrl, '_blank');
+    
+    toast({
+      title: "Verification Opened",
+      description: "Complete the verification in the new tab, then return to check your status.",
+    });
+    
     setIsVerifying(false);
   };
 
@@ -156,7 +200,9 @@ export const useGoodDollarIdentity = () => {
     isVerifying,
     isChecking,
     showVerificationModal,
+    verificationError,
     handleVerificationComplete,
-    handleModalClose
+    handleModalClose,
+    openVerificationInNewTab
   };
 };
