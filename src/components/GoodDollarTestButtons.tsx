@@ -2,110 +2,22 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useGoodDollarSDK } from '@/hooks/useGoodDollarSDK';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useGoodDollarWagmi } from '@/hooks/useGoodDollarWagmi';
 import { toast } from '@/hooks/use-toast';
 
 export const GoodDollarTestButtons = () => {
-  const { address } = useAccount();
-  const publicClient = usePublicClient();
   const { 
-    initializeClaimSDK, 
-    initializeIdentitySDK,
+    isWhitelisted,
     checkIdentityVerification,
     checkClaimEligibility,
     claimGoodDollar,
-    claiming,
-    checking
-  } = useGoodDollarSDK();
+    identityLoading,
+    address,
+    isConnected
+  } = useGoodDollarWagmi();
   
   const [testResults, setTestResults] = useState<any>({});
   const [loading, setLoading] = useState<string | null>(null);
-
-  const checkEntitlement = async () => {
-    if (!address || !publicClient) {
-      toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading('entitlement');
-    try {
-      const claimSDK = await initializeClaimSDK();
-      if (!claimSDK) {
-        throw new Error('Failed to initialize ClaimSDK');
-      }
-
-      const entitlement = await claimSDK.checkEntitlement(publicClient);
-      const result = {
-        entitlement: entitlement.toString(),
-        canClaim: entitlement > 0n,
-        timestamp: new Date().toISOString()
-      };
-      
-      setTestResults(prev => ({ ...prev, entitlement: result }));
-      
-      toast({
-        title: "Entitlement Check Complete",
-        description: `Entitlement: ${entitlement.toString()} G$`,
-      });
-    } catch (error: any) {
-      console.error('Entitlement check error:', error);
-      setTestResults(prev => ({ ...prev, entitlement: { error: error.message } }));
-      
-      toast({
-        title: "Entitlement Check Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const claimUBI = async () => {
-    if (!address) {
-      toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading('claim');
-    try {
-      const result = await claimGoodDollar();
-      setTestResults(prev => ({ ...prev, claim: result }));
-      
-      if (result.success) {
-        toast({
-          title: "Claim Successful!",
-          description: `Transaction: ${result.transactionHash}`,
-        });
-      } else {
-        toast({
-          title: "Claim Failed",
-          description: result.error,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      console.error('Claim error:', error);
-      setTestResults(prev => ({ ...prev, claim: { error: error.message } }));
-      
-      toast({
-        title: "Claim Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
 
   const checkIdentity = async () => {
     setLoading('identity');
@@ -155,43 +67,86 @@ export const GoodDollarTestButtons = () => {
     }
   };
 
+  const claimUBI = async () => {
+    if (!isConnected) {
+      toast({
+        title: "Wallet Required",
+        description: "Please connect your wallet first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading('claim');
+    try {
+      const result = await claimGoodDollar();
+      setTestResults(prev => ({ ...prev, claim: result }));
+      
+      if (result.success) {
+        toast({
+          title: "Claim Successful!",
+          description: `Transaction: ${result.transactionHash}`,
+        });
+      } else {
+        toast({
+          title: "Claim Failed",
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error('Claim error:', error);
+      setTestResults(prev => ({ ...prev, claim: { error: error.message } }));
+      
+      toast({
+        title: "Claim Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <Card className="mt-6">
       <CardHeader>
-        <CardTitle>GoodDollar SDK Test Buttons</CardTitle>
+        <CardTitle>GoodDollar Wagmi SDK Test</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        {/* Current Status */}
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Current Status:</h4>
+          <div className="text-sm space-y-1">
+            <div>Connected: {isConnected ? '✅' : '❌'}</div>
+            <div>Address: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'None'}</div>
+            <div>Whitelisted: {identityLoading ? '⏳' : (isWhitelisted ? '✅' : '❌')}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
           <Button 
             onClick={checkIdentity}
-            disabled={loading === 'identity'}
+            disabled={loading === 'identity' || !isConnected}
             variant="outline"
           >
-            {loading === 'identity' ? 'Checking...' : 'Check Identity'}
+            {loading === 'identity' ? 'Checking...' : 'Check Identity (Wagmi)'}
           </Button>
           
           <Button 
             onClick={checkEligibility}
-            disabled={loading === 'eligibility' || checking}
+            disabled={loading === 'eligibility' || !isConnected}
             variant="outline"
           >
-            {loading === 'eligibility' || checking ? 'Checking...' : 'Check Eligibility'}
-          </Button>
-          
-          <Button 
-            onClick={checkEntitlement}
-            disabled={loading === 'entitlement'}
-            variant="outline"
-          >
-            {loading === 'entitlement' ? 'Checking...' : 'Check Entitlement'}
+            {loading === 'eligibility' ? 'Checking...' : 'Check Eligibility (Wagmi)'}
           </Button>
           
           <Button 
             onClick={claimUBI}
-            disabled={loading === 'claim' || claiming}
+            disabled={loading === 'claim' || !isConnected}
             className="bg-green-500 hover:bg-green-600"
           >
-            {loading === 'claim' || claiming ? 'Claiming...' : 'Claim UBI'}
+            {loading === 'claim' ? 'Claiming...' : 'Claim UBI (Wagmi)'}
           </Button>
         </div>
 

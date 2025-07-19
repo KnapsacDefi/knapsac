@@ -1,8 +1,9 @@
+
 import { useState, useCallback } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
+import { useGoodDollarWagmi } from './useGoodDollarWagmi';
 
 export interface IdentityVerificationResult {
   isVerified: boolean;
@@ -21,11 +22,16 @@ export interface IdentityCheckResult {
 
 export const useGoodDollarIdentity = () => {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  
+  const { 
+    isWhitelisted, 
+    checkIdentityVerification: wagmiCheckIdentity,
+    identityLoading 
+  } = useGoodDollarWagmi();
   
   // Ensure we're on Celo network for GoodDollar operations
   useNetworkManager('celo', true);
@@ -42,32 +48,12 @@ export const useGoodDollarIdentity = () => {
       };
     }
 
-    setIsChecking(true);
-    
     try {
-      const walletAddress = wallets[0].address;
-      console.log('📋 Checking identity for wallet:', walletAddress);
+      // Use the Wagmi-integrated identity check
+      const result = await wagmiCheckIdentity();
+      console.log('✅ Identity check result:', result);
       
-      // Call our Supabase edge function for identity verification
-      const { data, error } = await supabase.functions.invoke('gooddollar-identity-check', {
-        body: { walletAddress }
-      });
-
-      if (error) {
-        console.error('❌ Identity check error:', error);
-        return { 
-          isVerified: false, 
-          canClaim: false, 
-          error: error.message 
-        };
-      }
-
-      console.log('✅ Identity check result:', data);
-      return {
-        isVerified: data.isVerified,
-        canClaim: data.canClaim,
-        whitelistedAddress: data.whitelistedAddress
-      };
+      return result;
       
     } catch (error) {
       console.error('❌ Failed to check identity verification:', error);
@@ -76,10 +62,8 @@ export const useGoodDollarIdentity = () => {
         canClaim: false, 
         error: 'Failed to check verification status' 
       };
-    } finally {
-      setIsChecking(false);
     }
-  }, [user, wallets]);
+  }, [user, wallets, wagmiCheckIdentity]);
 
   const startIdentityVerification = useCallback(async (): Promise<IdentityVerificationResult> => {
     console.log('🚀 Starting identity verification process...');
@@ -105,10 +89,9 @@ export const useGoodDollarIdentity = () => {
       const walletAddress = wallets[0].address;
       console.log('📋 Starting verification for wallet:', walletAddress);
       
-      // First check if already verified
-      const currentStatus = await checkIdentityVerification();
-      if (currentStatus.isVerified) {
-        console.log('✅ Already verified, no need for modal');
+      // Check if already verified using Wagmi hook
+      if (isWhitelisted) {
+        console.log('✅ Already verified via Wagmi hook');
         toast({
           title: "Already Verified",
           description: "Your identity is already verified with GoodDollar.",
@@ -116,8 +99,8 @@ export const useGoodDollarIdentity = () => {
         setIsVerifying(false);
         return {
           isVerified: true,
-          canClaim: currentStatus.canClaim,
-          whitelistedAddress: currentStatus.whitelistedAddress
+          canClaim: true,
+          whitelistedAddress: walletAddress
         };
       }
 
@@ -128,7 +111,6 @@ export const useGoodDollarIdentity = () => {
         description: "Opening GoodDollar face verification modal...",
       });
 
-      // Open verification modal - keep isVerifying true until modal closes
       setShowVerificationModal(true);
       console.log('✅ Modal state set to true, isVerifying remains true');
       
@@ -152,7 +134,7 @@ export const useGoodDollarIdentity = () => {
         error: 'Failed to start verification' 
       };
     }
-  }, [user, wallets, checkIdentityVerification]);
+  }, [user, wallets, isWhitelisted]);
 
   const handleVerificationComplete = async () => {
     console.log('✅ Verification completed, closing modal...');
@@ -198,11 +180,15 @@ export const useGoodDollarIdentity = () => {
     checkIdentityVerification,
     startIdentityVerification,
     isVerifying,
-    isChecking,
+    isChecking: identityLoading,
     showVerificationModal,
     verificationError,
     handleVerificationComplete,
     handleModalClose,
-    openVerificationInNewTab
+    openVerificationInNewTab,
+    
+    // Direct access to Wagmi state
+    isWhitelisted,
+    identityLoading
   };
 };

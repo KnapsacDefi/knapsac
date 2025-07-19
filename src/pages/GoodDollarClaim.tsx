@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
 import { useGoodDollarClaim } from '@/hooks/useGoodDollarClaim';
-import { useGoodDollarSDK } from '@/hooks/useGoodDollarSDK';
+import { useGoodDollarWagmi } from '@/hooks/useGoodDollarWagmi';
 import { GoodDollarVerificationModal } from '@/components/GoodDollarVerificationModal';
 import { GoodDollarTestButtons } from '@/components/GoodDollarTestButtons';
 
@@ -26,17 +26,17 @@ const GoodDollarClaim = (): JSX.Element => {
     checkIdentityVerification, 
     startIdentityVerification, 
     isVerifying, 
-    isChecking,
     showVerificationModal,
     verificationError,
     handleVerificationComplete,
     handleModalClose,
-    openVerificationInNewTab
+    openVerificationInNewTab,
+    isWhitelisted,
+    identityLoading
   } = useGoodDollarIdentity();
   
-  const [identityStatus, setIdentityStatus] = useState({ isVerified: false, loading: true });
   const { claimGoodDollar, checkClaimEligibility, claiming } = useGoodDollarClaim();
-  const { checkIdentityVerification: sdkCheckIdentity } = useGoodDollarSDK();
+  const { isConnected } = useGoodDollarWagmi();
 
   useEffect(() => {
     if (!authenticated) {
@@ -44,30 +44,29 @@ const GoodDollarClaim = (): JSX.Element => {
       return;
     }
     
-    if (wallets.length > 0) {
+    if (wallets.length > 0 && isConnected) {
       checkIdentityAndClaimStatus();
     }
-  }, [authenticated, wallets, navigate]);
+  }, [authenticated, wallets, navigate, isConnected, isWhitelisted]);
 
   const checkIdentityAndClaimStatus = async (): Promise<void> => {
-    if (!wallets[0]) return;
+    if (!wallets[0] || !isConnected) return;
 
     try {
-      console.log('🔄 Checking identity and claim status...');
-      // Use the improved SDK-based identity check
-      const identity = await sdkCheckIdentity();
-      console.log('📋 Identity result:', identity);
+      console.log('🔄 Checking identity and claim status with Wagmi...');
       
-      setIdentityStatus({
-        isVerified: identity.isVerified,
-        loading: false
-      });
-
-      // Then check claim status based on the actual identity result
-      await checkClaimStatus(identity.isVerified);
+      // Wait for identity loading to complete
+      if (identityLoading) {
+        console.log('⏳ Waiting for identity verification to complete...');
+        return;
+      }
+      
+      console.log('📋 Identity result (Wagmi):', { isWhitelisted });
+      
+      // Then check claim status based on the Wagmi identity result
+      await checkClaimStatus(isWhitelisted);
     } catch (error) {
       console.error('❌ Error checking identity and claim status:', error);
-      setIdentityStatus({ isVerified: false, loading: false });
       setClaimStatus('not-verified');
     }
   };
@@ -78,8 +77,8 @@ const GoodDollarClaim = (): JSX.Element => {
     try {
       setClaimStatus('loading');
 
-      // Use the passed parameter or current state
-      const verified = isIdentityVerified !== undefined ? isIdentityVerified : identityStatus.isVerified;
+      // Use the passed parameter or Wagmi state
+      const verified = isIdentityVerified !== undefined ? isIdentityVerified : isWhitelisted;
       
       // First check identity verification
       if (!verified) {
@@ -87,7 +86,7 @@ const GoodDollarClaim = (): JSX.Element => {
         return;
       }
 
-      // Check claim eligibility from GoodDollar contracts
+      // Check claim eligibility from GoodDollar contracts using Wagmi
       const { canClaim, amount } = await checkClaimEligibility();
 
       if (canClaim) {
@@ -117,7 +116,7 @@ const GoodDollarClaim = (): JSX.Element => {
   };
 
   const handleClaim = async (): Promise<void> => {
-    if (!identityStatus.isVerified) {
+    if (!isWhitelisted) {
       toast({
         title: "Identity Verification Required",
         description: "Please complete identity verification before claiming G$ tokens.",
@@ -209,29 +208,31 @@ const GoodDollarClaim = (): JSX.Element => {
           <h1 className="text-2xl font-bold">Claim GoodDollar</h1>
         </div>
 
-        {/* Debug info for verification state */}
+        {/* Debug info for Wagmi state */}
         {process.env.NODE_ENV === 'development' && (
-          <Card className="mb-4 bg-yellow-50 border-yellow-200">
+          <Card className="mb-4 bg-blue-50 border-blue-200">
             <CardContent className="p-4 text-xs">
               <div className="font-mono space-y-1">
+                <div><strong>Wagmi Integration Status:</strong></div>
+                <div>isConnected: {isConnected.toString()}</div>
+                <div>isWhitelisted: {isWhitelisted.toString()}</div>
+                <div>identityLoading: {identityLoading.toString()}</div>
                 <div>isVerifying: {isVerifying.toString()}</div>
                 <div>showModal: {showVerificationModal.toString()}</div>
-                <div>hasError: {!!verificationError}</div>
-                <div>error: {verificationError}</div>
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Identity Status Card */}
-        {!identityStatus.loading && (
+        {!identityLoading && (
           <Card className="mb-6">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                {identityStatus.isVerified ? (
+                {isWhitelisted ? (
                   <>
                     <div className="h-3 w-3 bg-green-500 rounded-full" />
-                    <span className="text-sm text-green-600 font-medium">Identity Verified</span>
+                    <span className="text-sm text-green-600 font-medium">Identity Verified (Wagmi)</span>
                   </>
                 ) : (
                   <>
@@ -253,7 +254,7 @@ const GoodDollarClaim = (): JSX.Element => {
                 <div>
                   <div>GoodDollar Claim</div>
                   <div className="text-sm font-normal text-muted-foreground">
-                    Daily UBI tokens
+                    Daily UBI tokens (Wagmi SDK)
                   </div>
                 </div>
               </CardTitle>
@@ -262,7 +263,7 @@ const GoodDollarClaim = (): JSX.Element => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {!identityStatus.isVerified && !identityStatus.loading && (
+              {!isWhitelisted && !identityLoading && (
                 <div className="text-center space-y-4">
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <UserCheck className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
@@ -298,17 +299,17 @@ const GoodDollarClaim = (): JSX.Element => {
                     
                     <Button 
                       onClick={() => checkIdentityAndClaimStatus()}
-                      disabled={isChecking}
+                      disabled={identityLoading}
                       variant="outline"
                       className="w-full"
                     >
-                      {isChecking ? 'Checking Status...' : 'Check Verification Status'}
+                      {identityLoading ? 'Checking Status...' : 'Check Verification Status'}
                     </Button>
                   </div>
                 </div>
               )}
 
-              {identityStatus.isVerified && claimStatus === 'available' && (
+              {isWhitelisted && claimStatus === 'available' && (
                 <Button 
                   onClick={handleClaim} 
                   disabled={claiming}
@@ -332,7 +333,7 @@ const GoodDollarClaim = (): JSX.Element => {
                 </div>
               )}
 
-              {claimStatus === 'not-eligible' && identityStatus.isVerified && (
+              {claimStatus === 'not-eligible' && isWhitelisted && (
                 <div className="text-center space-y-4">
                   <p className="text-red-600 font-semibold">No G$ tokens available to claim at this time.</p>
                   <p className="text-sm text-gray-600">Please check back later for your next claim.</p>
@@ -349,6 +350,7 @@ const GoodDollarClaim = (): JSX.Element => {
             {/* Information */}
             <div className="mt-6 pt-4 border-t">
               <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Using official GoodDollar Wagmi SDK integration</p>
                 <p>• Identity verification required for all claims</p>
                 <p>• Claims processed on Celo network</p>
                 <p>• Daily claim amounts determined by GoodDollar protocol</p>

@@ -1,12 +1,11 @@
-
 import { Banknote, Eye, EyeOff, Coins } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
-import { formatEther } from "viem";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
+import { useGoodDollarWagmi } from "@/hooks/useGoodDollarWagmi";
 import { toast } from "@/hooks/use-toast";
 
 const WalletOverview = () => {
@@ -19,7 +18,9 @@ const WalletOverview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGooddollarLoading, setIsGooddollarLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const { startIdentityVerification, isVerifying, checkIdentityVerification } = useGoodDollarIdentity();
+  
+  const { startIdentityVerification, isVerifying } = useGoodDollarIdentity();
+  const { isWhitelisted, checkIdentityVerification } = useGoodDollarWagmi();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -54,7 +55,6 @@ const WalletOverview = () => {
         try {
           setIsLoading(true);
           
-          // Use the wallet ID from the Privy user object
           const walletId = user?.wallet?.id;
           console.log('Using wallet ID from user.wallet.id:', walletId);
           
@@ -64,7 +64,6 @@ const WalletOverview = () => {
             return;
           }
           
-          // Fetch USDC balance using our edge function with wallet ID
           const response = await supabase.functions.invoke('get-usdc-balance', {
             body: { walletId }
           });
@@ -130,7 +129,6 @@ const WalletOverview = () => {
 
   const { fundWallet } = useFundWallet({
     onUserExited: (params) => {
-      
       if (params.balance > 0) {
         alert(`Successfully funded wallet! New balance: ${params.balance}`);
       }
@@ -175,7 +173,7 @@ const WalletOverview = () => {
               <div className="text-2xl font-bold text-green-600">
                 {showBalance ? displayGooddollarBalance : "••••••"}
               </div>
-              <div className="text-xs text-muted-foreground">GoodDollar</div>
+              <div className="text-xs text-muted-foreground">GoodDollar (Wagmi)</div>
             </div>
           </div>
         </div>
@@ -193,9 +191,8 @@ const WalletOverview = () => {
           variant="outline" 
           className="h-12 flex flex-col gap-1"
           onClick={async () => {
-            // Check if identity is verified first
-            const identityStatus = await checkIdentityVerification();
-            if (!identityStatus.isVerified) {
+            // Use Wagmi hook to check if identity is verified
+            if (!isWhitelisted) {
               // Start verification process
               await startIdentityVerification();
             } else {

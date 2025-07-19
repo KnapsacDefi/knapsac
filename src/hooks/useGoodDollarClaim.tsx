@@ -4,7 +4,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
-import { useGoodDollarSDK } from './useGoodDollarSDK';
+import { useGoodDollarWagmi } from './useGoodDollarWagmi';
 
 interface ClaimResult {
   success: boolean;
@@ -17,28 +17,15 @@ export const useGoodDollarClaim = () => {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [claiming, setClaiming] = useState(false);
+  
   const { 
-    claimGoodDollar: sdkClaim, 
-    checkClaimEligibility: sdkCheckEligibility,
-    checkIdentityVerification: sdkCheckIdentity
-  } = useGoodDollarSDK();
+    checkClaimEligibility,
+    claimGoodDollar: wagmiClaim,
+    checkIdentityVerification
+  } = useGoodDollarWagmi();
   
   // Use network manager to ensure we're on Celo
   useNetworkManager('celo', true);
-
-  const checkClaimEligibility = async (): Promise<{ canClaim: boolean; amount: string }> => {
-    if (!authenticated || !wallets[0]) {
-      return { canClaim: false, amount: '0' };
-    }
-
-    try {
-      // Use the SDK's eligibility check which includes identity verification
-      return await sdkCheckEligibility();
-    } catch (error) {
-      console.error('Error in checkClaimEligibility:', error);
-      return { canClaim: false, amount: '0' };
-    }
-  };
 
   const claimGoodDollar = async (): Promise<ClaimResult> => {
     if (!authenticated || !wallets[0] || claiming) {
@@ -48,8 +35,8 @@ export const useGoodDollarClaim = () => {
     setClaiming(true);
 
     try {
-      // Use the SDK's claim function which handles all verification internally
-      const result = await sdkClaim();
+      // Use the Wagmi-integrated claim function
+      const result = await wagmiClaim();
       
       if (result.success && result.transactionHash) {
         // Record the claim in our database
@@ -89,6 +76,7 @@ export const useGoodDollarClaim = () => {
   return {
     claimGoodDollar,
     checkClaimEligibility,
+    checkIdentityVerification,
     claiming
   };
 };
