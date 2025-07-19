@@ -1,5 +1,7 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { ethers } from 'https://esm.sh/ethers@5.7.2'
+import { createPublicClient, http } from 'https://esm.sh/viem@2.32.0'
+import { celo } from 'https://esm.sh/viem@2.32.0/chains'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,78 +51,48 @@ Deno.serve(async (req) => {
     let canClaim = false;
 
     try {
-      // Try GoodDollar Graph API first (more reliable than REST API)
-      console.log('Checking GoodDollar Graph API for verification...');
-      const graphQuery = `
-        query GetUser($address: String!) {
-          user(id: $address) {
-            id
-            isVerified
-            whitelistedAddress
-          }
-        }
-      `;
-      
-      const graphResponse = await fetch('https://api.thegraph.com/subgraphs/name/gooddollar/gooddollar-v2', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: graphQuery,
-          variables: { address: walletAddress.toLowerCase() }
-        })
+      // Create Viem public client for Celo
+      const publicClient = createPublicClient({
+        chain: celo,
+        transport: http('https://forno.celo.org'),
       });
 
-      if (graphResponse.ok) {
-        const graphData = await graphResponse.json();
-        console.log('GoodDollar Graph API response:', graphData);
-        
-        if (graphData.data?.user?.isVerified) {
-          isVerified = true;
-          whitelistedAddress = graphData.data.user.whitelistedAddress || walletAddress;
-          canClaim = true;
+      // GoodDollar Identity contract on Celo mainnet
+      const IDENTITY_CONTRACT = '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42';
+      
+      // Identity contract ABI for the isWhitelisted function
+      const IDENTITY_ABI = [
+        {
+          "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+          "name": "isWhitelisted",
+          "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+          "stateMutability": "view",
+          "type": "function"
         }
+      ] as const;
+      
+      // Check if the address is whitelisted (face verified)
+      const isWhitelistedResult = await publicClient.readContract({
+        address: IDENTITY_CONTRACT as `0x${string}`,
+        abi: IDENTITY_ABI,
+        functionName: 'isWhitelisted',
+        args: [walletAddress as `0x${string}`]
+      });
+      
+      console.log('On-chain isWhitelisted result for', walletAddress, ':', isWhitelistedResult);
+      
+      if (isWhitelistedResult) {
+        isVerified = true;
+        whitelistedAddress = walletAddress;
+        canClaim = true;
+        console.log('Address is verified on-chain');
       } else {
-        console.log('GoodDollar Graph API returned non-OK status:', graphResponse.status);
+        console.log('Address is NOT verified on-chain');
       }
-    } catch (apiError) {
-      console.log('GoodDollar Graph API error:', apiError);
-      // Continue to on-chain check if API fails
-    }
-
-    // If not verified via API, check on-chain
-    if (!isVerified) {
-      console.log('Checking on-chain identity verification...');
-      try {
-        // GoodDollar Identity contract on Celo mainnet (correct address from deployment.json)
-        const IDENTITY_CONTRACT = '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42';
-        const RPC_URL = 'https://forno.celo.org';
-        
-        // Identity contract ABI for the isWhitelisted function
-        const IDENTITY_ABI = [
-          "function isWhitelisted(address account) public view returns (bool)"
-        ];
-        
-        // Initialize ethers provider and contract
-        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-        const identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, provider);
-        
-        // Check if the address is whitelisted (face verified)
-        const isWhitelistedResult = await identityContract.isWhitelisted(walletAddress);
-        console.log('On-chain isWhitelisted result for', walletAddress, ':', isWhitelistedResult);
-        
-        if (isWhitelistedResult) {
-          isVerified = true;
-          whitelistedAddress = walletAddress;
-          canClaim = true;
-          console.log('Address is verified on-chain');
-        } else {
-          console.log('Address is NOT verified on-chain');
-        }
-      } catch (onChainError) {
-        console.error('On-chain verification error:', onChainError);
-      }
+      
+    } catch (onChainError) {
+      console.error('On-chain verification error:', onChainError);
+      // Return false but don't throw - this is expected for unverified users
     }
 
     // Log the identity check for security audit

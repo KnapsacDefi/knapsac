@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
@@ -9,7 +10,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
 import { useGoodDollarClaim } from '@/hooks/useGoodDollarClaim';
+import { useGoodDollarSDK } from '@/hooks/useGoodDollarSDK';
 import { GoodDollarVerificationModal } from '@/components/GoodDollarVerificationModal';
+import { GoodDollarTestButtons } from '@/components/GoodDollarTestButtons';
 
 const GoodDollarClaim = (): JSX.Element => {
   const navigate = useNavigate();
@@ -29,8 +32,10 @@ const GoodDollarClaim = (): JSX.Element => {
     handleVerificationComplete,
     handleModalClose
   } = useGoodDollarIdentity();
+  
   const [identityStatus, setIdentityStatus] = useState({ isVerified: false, loading: true });
   const { claimGoodDollar, checkClaimEligibility, claiming } = useGoodDollarClaim();
+  const { checkIdentityVerification: sdkCheckIdentity } = useGoodDollarSDK();
 
   useEffect(() => {
     if (!authenticated) {
@@ -47,8 +52,8 @@ const GoodDollarClaim = (): JSX.Element => {
     if (!wallets[0]) return;
 
     try {
-      // Check identity verification first
-      const identity = await checkIdentityVerification();
+      // Use the improved SDK-based identity check
+      const identity = await sdkCheckIdentity();
       setIdentityStatus({
         isVerified: identity.isVerified,
         loading: false
@@ -314,6 +319,9 @@ const GoodDollarClaim = (): JSX.Element => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Test Buttons for Development */}
+        <GoodDollarTestButtons />
       </div>
 
       {/* Verification Modal */}

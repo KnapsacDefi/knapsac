@@ -4,7 +4,6 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
-import { useGoodDollarIdentity } from './useGoodDollarIdentity';
 import { useGoodDollarSDK } from './useGoodDollarSDK';
 
 interface ClaimResult {
@@ -18,8 +17,11 @@ export const useGoodDollarClaim = () => {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [claiming, setClaiming] = useState(false);
-  const { checkIdentityVerification } = useGoodDollarIdentity();
-  const { claimGoodDollar: sdkClaim, checkClaimEligibility: sdkCheckEligibility } = useGoodDollarSDK();
+  const { 
+    claimGoodDollar: sdkClaim, 
+    checkClaimEligibility: sdkCheckEligibility,
+    checkIdentityVerification: sdkCheckIdentity
+  } = useGoodDollarSDK();
   
   // Use network manager to ensure we're on Celo
   useNetworkManager('celo', true);
@@ -30,7 +32,7 @@ export const useGoodDollarClaim = () => {
     }
 
     try {
-      // Use the SDK's eligibility check
+      // Use the SDK's eligibility check which includes identity verification
       return await sdkCheckEligibility();
     } catch (error) {
       console.error('Error in checkClaimEligibility:', error);
@@ -46,7 +48,7 @@ export const useGoodDollarClaim = () => {
     setClaiming(true);
 
     try {
-      // Use the SDK's claim function
+      // Use the SDK's claim function which handles all verification internally
       const result = await sdkClaim();
       
       if (result.success && result.transactionHash) {

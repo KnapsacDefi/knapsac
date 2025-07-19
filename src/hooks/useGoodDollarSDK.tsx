@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { toast } from '@/hooks/use-toast';
-import { useGoodDollarIdentity } from './useGoodDollarIdentity';
 import { ClaimSDK, IdentitySDK } from '@goodsdks/citizen-sdk';
 
 interface SDKClaimResult {
@@ -19,16 +18,29 @@ export const useGoodDollarSDK = () => {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const [claiming, setClaiming] = useState(false);
-  const { checkIdentityVerification } = useGoodDollarIdentity();
+  const [checking, setChecking] = useState(false);
 
-  // Initialize ClaimSDK with actual GoodDollar SDK
-  const initializeSDK = useCallback(async () => {
+  // Initialize IdentitySDK
+  const initializeIdentitySDK = useCallback(async () => {
     if (!address || !publicClient || !walletClient) return null;
 
     try {
-      // Create IdentitySDK instance
       const identitySDK = new IdentitySDK(publicClient, walletClient, 'production');
-      
+      return identitySDK;
+    } catch (error) {
+      console.error('Failed to initialize GoodDollar IdentitySDK:', error);
+      return null;
+    }
+  }, [address, publicClient, walletClient]);
+
+  // Initialize ClaimSDK
+  const initializeClaimSDK = useCallback(async () => {
+    if (!address || !publicClient || !walletClient) return null;
+
+    try {
+      const identitySDK = await initializeIdentitySDK();
+      if (!identitySDK) return null;
+
       const claimSDK = new ClaimSDK({
         account: address,
         publicClient,
@@ -42,43 +54,76 @@ export const useGoodDollarSDK = () => {
       console.error('Failed to initialize GoodDollar ClaimSDK:', error);
       return null;
     }
-  }, [address, publicClient, walletClient]);
+  }, [address, publicClient, walletClient, initializeIdentitySDK]);
 
+  // Check if user is verified using IdentitySDK
+  const checkIdentityVerification = useCallback(async (): Promise<{ isVerified: boolean; canClaim: boolean }> => {
+    if (!authenticated || !address) {
+      return { isVerified: false, canClaim: false };
+    }
+
+    try {
+      const identitySDK = await initializeIdentitySDK();
+      if (!identitySDK) {
+        return { isVerified: false, canClaim: false };
+      }
+
+      // Use IdentitySDK to check if user is whitelisted
+      const isWhitelisted = await identitySDK.isWhitelisted(address);
+      
+      return {
+        isVerified: isWhitelisted,
+        canClaim: isWhitelisted
+      };
+    } catch (error) {
+      console.error('Error checking identity verification:', error);
+      return { isVerified: false, canClaim: false };
+    }
+  }, [authenticated, address, initializeIdentitySDK]);
+
+  // Check claim eligibility using ClaimSDK
   const checkClaimEligibility = useCallback(async (): Promise<{ canClaim: boolean; amount: string }> => {
     if (!authenticated || !address) {
       return { canClaim: false, amount: '0' };
     }
 
+    setChecking(true);
+    
     try {
       // First check if identity is verified
       const identityResult = await checkIdentityVerification();
       
       if (!identityResult.isVerified) {
+        setChecking(false);
         return {
           canClaim: false,
           amount: '0'
         };
       }
 
-      const claimSDK = await initializeSDK();
-      if (!claimSDK) {
+      const claimSDK = await initializeClaimSDK();
+      if (!claimSDK || !publicClient) {
+        setChecking(false);
         return { canClaim: false, amount: '0' };
       }
 
-      // Use actual SDK to check entitlement
+      // Use ClaimSDK to check entitlement
       const entitlement = await claimSDK.checkEntitlement(publicClient);
       const canClaim = entitlement > 0n;
       
+      setChecking(false);
       return {
         canClaim,
         amount: entitlement.toString()
       };
     } catch (error) {
       console.error('Error in checkClaimEligibility:', error);
+      setChecking(false);
       return { canClaim: false, amount: '0' };
     }
-  }, [authenticated, address, checkIdentityVerification, initializeSDK, publicClient]);
+  }, [authenticated, address, checkIdentityVerification, initializeClaimSDK, publicClient]);
 
+  // Claim UBI using ClaimSDK
   const claimGoodDollar = useCallback(async (): Promise<SDKClaimResult> => {
     if (!authenticated || !address || claiming) {
       return { success: false, error: 'Not authenticated or already claiming' };
@@ -110,21 +155,21 @@ export const useGoodDollarSDK = () => {
         return { success: false, error: 'Not eligible to claim' };
       }
 
-      // Initialize SDK
-      const claimSDK = await initializeSDK();
+      // Initialize ClaimSDK
+      const claimSDK = await initializeClaimSDK();
       if (!claimSDK) {
         setClaiming(false);
-        return { success: false, error: 'Failed to initialize SDK' };
+        return { success: false, error: 'Failed to initialize ClaimSDK' };
       }
 
-      // Check eligibility using SDK
+      // Check eligibility using ClaimSDK
       const eligibility = await checkClaimEligibility();
       if (!eligibility.canClaim) {
         setClaiming(false);
         return { success: false, error: 'Not eligible to claim' };
       }
 
-      // Use actual SDK to claim UBI
+      // Use ClaimSDK to claim UBI
       const receipt = await claimSDK.claim();
       
       toast({
@@ -153,12 +198,15 @@ export const useGoodDollarSDK = () => {
 
       return { success: false, error: errorMessage };
     }
-  }, [authenticated, address, claiming, checkIdentityVerification, initializeSDK, checkClaimEligibility]);
+  }, [authenticated, address, claiming, checkIdentityVerification, initializeClaimSDK, checkClaimEligibility]);
 
   return {
     claimGoodDollar,
     checkClaimEligibility,
+    checkIdentityVerification,
     claiming,
-    initializeSDK
+    checking,
+    initializeClaimSDK,
+    initializeIdentitySDK
   };
 };
