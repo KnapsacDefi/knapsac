@@ -1,4 +1,3 @@
-
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -10,7 +9,9 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
 import LenderComingSoonBanner from "@/components/LenderComingSoonBanner";
+import { GoodDollarVerificationModal } from "@/components/GoodDollarVerificationModal";
 import { supabase } from "@/integrations/supabase/client";
+import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
 
 const Wallet = () => {
   const { ready, authenticated, user } = usePrivy();
@@ -19,6 +20,13 @@ const Wallet = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const {
+    showVerificationModal,
+    handleVerificationComplete,
+    handleModalClose,
+    openVerificationInNewTab
+  } = useGoodDollarIdentity();
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -170,6 +178,17 @@ const Wallet = () => {
         {userProfile?.profile_type === 'Startup' && <CreditScore />}
       </main>
       <BottomNavigation />
+
+      {/* GoodDollar Verification Modal */}
+      {wallets[0] && (
+        <GoodDollarVerificationModal
+          isOpen={showVerificationModal}
+          onClose={handleModalClose}
+          onVerificationComplete={handleVerificationComplete}
+          walletAddress={wallets[0].address}
+          onOpenInNewTab={openVerificationInNewTab}
+        />
+      )}
     </div>
   );
 };
