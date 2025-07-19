@@ -35,22 +35,30 @@ export const useGoodDollarClaim = () => {
     setClaiming(true);
 
     try {
-      // Use the Wagmi-integrated claim function
+      console.log('🎯 Starting GoodDollar claim process...');
+      
+      // Use the simplified Wagmi-integrated claim function
       const result = await wagmiClaim();
+      console.log('✅ Claim result:', result);
       
       if (result.success && result.transactionHash) {
         // Record the claim in our database
-        const { error: dbError } = await supabase.functions.invoke('gooddollar-claim', {
-          body: {
-            action: 'recordClaim',
-            walletAddress: wallets[0].address,
-            transactionHash: result.transactionHash,
-            amount: result.amount || '0'
-          }
-        });
+        try {
+          const { error: dbError } = await supabase.functions.invoke('gooddollar-claim', {
+            body: {
+              action: 'recordClaim',
+              walletAddress: wallets[0].address,
+              transactionHash: result.transactionHash,
+              amount: result.amount || '0'
+            }
+          });
 
-        if (dbError) {
-          console.error('Error recording claim:', dbError);
+          if (dbError) {
+            console.error('Error recording claim:', dbError);
+          }
+        } catch (dbError) {
+          console.error('Error recording claim in database:', dbError);
+          // Don't fail the claim if database recording fails
         }
       }
 
@@ -58,7 +66,7 @@ export const useGoodDollarClaim = () => {
       return result;
 
     } catch (error: any) {
-      console.error('Error claiming GoodDollar:', error);
+      console.error('❌ Error claiming GoodDollar:', error);
       setClaiming(false);
       
       const errorMessage = error.message || 'Failed to claim G$ tokens';

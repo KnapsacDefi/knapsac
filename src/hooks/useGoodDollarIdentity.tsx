@@ -46,7 +46,7 @@ export const useGoodDollarIdentity = () => {
     }
 
     try {
-      // Use the Wagmi-integrated identity check
+      // Use the simplified Wagmi-integrated identity check
       const result = await wagmiCheckIdentity();
       console.log('✅ Identity check result:', result);
       
@@ -85,10 +85,10 @@ export const useGoodDollarIdentity = () => {
       const walletAddress = wallets[0].address;
       console.log('📋 Starting verification for wallet:', walletAddress);
       
-      // Check if already verified using Wagmi hook
+      // Check if already verified
       const identityCheck = await checkIdentityVerification();
       if (identityCheck.isVerified) {
-        console.log('✅ Already verified via Wagmi hook');
+        console.log('✅ Already verified');
         toast({
           title: "Already Verified",
           description: "Your identity is already verified with GoodDollar.",
@@ -148,8 +148,6 @@ export const useGoodDollarIdentity = () => {
     isVerifying,
     isChecking: identityLoading,
     openVerificationInNewTab,
-    
-    // Direct access to Wagmi state
     identityLoading
   };
 };
