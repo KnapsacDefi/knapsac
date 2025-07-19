@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ClaimRequest {
-  action: 'checkEligibility' | 'recordClaim';
+  action: 'checkEligibility' | 'recordClaim' | 'checkStatus';
   walletAddress: string;
   transactionHash?: string;
   amount?: string;
@@ -31,7 +32,30 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (action === 'checkEligibility') {
+    if (action === 'checkStatus') {
+      // Check last claim time from database
+      const { data: lastClaim } = await supabase
+        .from('gooddollar_claims')
+        .select('claimed_at')
+        .eq('wallet_address', walletAddress)
+        .order('claimed_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextClaimTime = null;
+      
+      if (lastClaim && lastClaim.claimed_at) {
+        const lastClaimTime = new Date(lastClaim.claimed_at);
+        nextClaimTime = new Date(lastClaimTime.getTime() + 24 * 60 * 60 * 1000); // Add 24 hours
+      }
+
+      return new Response(JSON.stringify({ 
+        nextClaimTime: nextClaimTime?.toISOString() || null
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'checkEligibility') {
       // Check claim eligibility using GoodDollar contracts
       
       // First check if user is verified via identity contract

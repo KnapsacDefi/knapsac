@@ -1,74 +1,66 @@
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PrivyErrorBoundary } from "@/components/PrivyErrorBoundary";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { PrivyProvider } from "@privy-io/react-auth";
-import { mainnet, polygon, base,celo } from "viem/chains";
-import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
-import Index from "./pages/Index";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import Wallet from "./pages/Wallet";
-import GoodDollarClaim from "./pages/GoodDollarClaim";
-import Subscription from "./pages/Subscription";
-import ServiceProviderMotivation from "./pages/ServiceProviderMotivation";
-import Terms from "./pages/Terms";
-
-
+import React from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { PrivyProvider, PrivyErrorBoundary } from '@privy-io/react-auth';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
+import ErrorBoundary from './ErrorBoundary';
+import LandingPage from './LandingPage';
+import Dashboard from './Dashboard';
+import Wallet from './Wallet';
+import Profile from './Profile';
+import TermsOfService from './TermsOfService';
+import PrivacyPolicy from './PrivacyPolicy';
+import GoodDollarClaim from './GoodDollarClaim';
+import ServiceProviderMotivation from './ServiceProviderMotivation';
+import { WagmiProvider } from 'wagmi';
+import { wagmiConfig } from '@/lib/wagmi';
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  // Replace with your actual Privy App ID - this is a public identifier, not a secret
-  const privyAppId = 'cmby0t9xh037old0ngdyu15ct';
-
-  
-
+function App() {
   return (
-    <ErrorBoundary>
-      <PrivyErrorBoundary onRetry={() => window.location.reload()}>
-        <PrivyProvider
-          appId={privyAppId}
-          config={{
-            appearance: {
-              theme: "light",
-              accentColor: "#676FFF",
-            },
-            embeddedWallets: {
-              createOnLogin: "all-users",
-              requireUserPasswordOnCreate: false,
-            },
-            loginMethods: ['wallet', 'email'],
-            defaultChain: mainnet,
-            supportedChains: [mainnet, polygon, base, celo],
-          }}
-        >
+    <PrivyProvider
+      appId={import.meta.env.VITE_PRIVY_APP_ID}
+      config={{
+        loginMethods: ['email', 'wallet'],
+        appearance: {
+          accentColor: '#6366F1',
+          theme: 'light',
+          borderRadius: 8,
+          fontFamily: 'Inter, sans-serif',
+          logo: '/logo.svg',
+        },
+        embeddedWallets: {
+          requestUsersky: true,
+        },
+      }}
+    >
+      <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
+          <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
             <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/wallet" element={<Wallet />} />
-                <Route path="/claim" element={<GoodDollarClaim />} />
-                <Route path="/subscription" element={<Subscription />} />
-                <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+            <PrivyErrorBoundary>
+              <ErrorBoundary>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/wallet" element={<Wallet />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/claim" element={<GoodDollarClaim />} />
+                    <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+                  </Routes>
+                </BrowserRouter>
+              </ErrorBoundary>
+            </PrivyErrorBoundary>
+          </ThemeProvider>
         </QueryClientProvider>
-      </PrivyProvider>
-      </PrivyErrorBoundary>
-    </ErrorBoundary>
+      </WagmiProvider>
+    </PrivyProvider>
   );
-};
+}
 
 export default App;
