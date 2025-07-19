@@ -4,6 +4,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { toast } from '@/hooks/use-toast';
 import { useGoodDollarIdentity } from './useGoodDollarIdentity';
+import { ClaimSDK, IdentitySDK } from '@goodsdks/citizen-sdk';
 
 interface SDKClaimResult {
   success: boolean;
@@ -20,19 +21,25 @@ export const useGoodDollarSDK = () => {
   const [claiming, setClaiming] = useState(false);
   const { checkIdentityVerification } = useGoodDollarIdentity();
 
-  // Initialize viem clients for GoodDollar interactions
+  // Initialize ClaimSDK with actual GoodDollar SDK
   const initializeSDK = useCallback(async () => {
     if (!address || !publicClient || !walletClient) return null;
 
     try {
-      // Return the clients for direct contract interaction
-      return {
+      // Create IdentitySDK instance
+      const identitySDK = new IdentitySDK(publicClient, walletClient, 'production');
+      
+      const claimSDK = new ClaimSDK({
+        account: address,
         publicClient,
         walletClient,
-        address
-      };
+        identitySDK,
+        env: 'production',
+      });
+      
+      return claimSDK;
     } catch (error) {
-      console.error('Failed to initialize GoodDollar clients:', error);
+      console.error('Failed to initialize GoodDollar ClaimSDK:', error);
       return null;
     }
   }, [address, publicClient, walletClient]);
@@ -53,22 +60,24 @@ export const useGoodDollarSDK = () => {
         };
       }
 
-      const sdk = await initializeSDK();
-      if (!sdk) {
+      const claimSDK = await initializeSDK();
+      if (!claimSDK) {
         return { canClaim: false, amount: '0' };
       }
 
-      // For now, return based on identity verification only
-      // TODO: Implement proper entitlement check when SDK is properly configured
+      // Use actual SDK to check entitlement
+      const entitlement = await claimSDK.checkEntitlement(publicClient);
+      const canClaim = entitlement > 0n;
+      
       return {
-        canClaim: identityResult.canClaim,
-        amount: '1000000000000000000' // 1 G$ in wei as example
+        canClaim,
+        amount: entitlement.toString()
       };
     } catch (error) {
       console.error('Error in checkClaimEligibility:', error);
       return { canClaim: false, amount: '0' };
     }
-  }, [authenticated, address, checkIdentityVerification, initializeSDK]);
+  }, [authenticated, address, checkIdentityVerification, initializeSDK, publicClient]);
 
   const claimGoodDollar = useCallback(async (): Promise<SDKClaimResult> => {
     if (!authenticated || !address || claiming) {
@@ -102,8 +111,8 @@ export const useGoodDollarSDK = () => {
       }
 
       // Initialize SDK
-      const sdk = await initializeSDK();
-      if (!sdk) {
+      const claimSDK = await initializeSDK();
+      if (!claimSDK) {
         setClaiming(false);
         return { success: false, error: 'Failed to initialize SDK' };
       }
@@ -115,19 +124,18 @@ export const useGoodDollarSDK = () => {
         return { success: false, error: 'Not eligible to claim' };
       }
 
-      // For now, simulate a successful claim
-      // TODO: Implement actual claiming when SDK is properly configured
-      const mockTxHash = `0x${Math.random().toString(16).slice(2)}`;
+      // Use actual SDK to claim UBI
+      const receipt = await claimSDK.claim();
       
       toast({
         title: "Claim Successful!",
-        description: `Successfully claimed G$ tokens. Transaction: ${mockTxHash}`,
+        description: `Successfully claimed G$ tokens. Transaction: ${receipt.transactionHash}`,
       });
 
       setClaiming(false);
       return { 
         success: true, 
-        transactionHash: mockTxHash,
+        transactionHash: receipt.transactionHash,
         amount: eligibility.amount
       };
 

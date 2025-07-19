@@ -56,50 +56,9 @@ serve(async (req) => {
       });
 
     } else if (action === 'checkEligibility') {
-      // Check claim eligibility using GoodDollar contracts
+      // This endpoint is now primarily used for checking claim cooldown
+      // The actual entitlement checking is handled by the SDK on the frontend
       
-      // First check if user is verified via identity contract
-      const identityCheckResponse = await fetch(`${supabaseUrl}/functions/v1/gooddollar-identity-check`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({ walletAddress }),
-      });
-
-      const identityData = await identityCheckResponse.json();
-      
-      if (!identityData.isVerified) {
-        return new Response(JSON.stringify({ 
-          canClaim: false, 
-          amount: '0',
-          error: 'Identity not verified' 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Check entitlement via contract call
-      const entitlementCall = {
-        jsonrpc: "2.0",
-        method: "eth_call",
-        params: [{
-          to: UBI_SCHEME_CONTRACT,
-          data: `0x9d76ea58000000000000000000000000${walletAddress.slice(2)}` // checkEntitlement(address)
-        }, "latest"],
-        id: 1
-      };
-
-      const rpcResponse = await fetch(CELO_RPC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entitlementCall)
-      });
-
-      const rpcResult = await rpcResponse.json();
-      const entitlementAmount = rpcResult.result ? parseInt(rpcResult.result, 16) : 0;
-
       // Check last claim time from database
       const { data: lastClaim } = await supabase
         .from('gooddollar_claims')
@@ -109,19 +68,19 @@ serve(async (req) => {
         .limit(1)
         .single();
 
-      let canClaim = entitlementAmount > 0;
+      let canClaim = true;
       
       // Check if 24 hours have passed since last claim
       if (lastClaim && lastClaim.claimed_at) {
         const lastClaimTime = new Date(lastClaim.claimed_at);
         const now = new Date();
         const hoursSinceLastClaim = (now.getTime() - lastClaimTime.getTime()) / (1000 * 60 * 60);
-        canClaim = canClaim && hoursSinceLastClaim >= 24;
+        canClaim = hoursSinceLastClaim >= 24;
       }
 
       return new Response(JSON.stringify({ 
         canClaim, 
-        amount: entitlementAmount.toString() 
+        nextClaimTime: lastClaim ? new Date(new Date(lastClaim.claimed_at).getTime() + 24 * 60 * 60 * 1000).toISOString() : null
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
