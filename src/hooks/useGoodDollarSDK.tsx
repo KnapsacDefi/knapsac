@@ -69,11 +69,11 @@ export const useGoodDollarSDK = () => {
       }
 
       // Use IdentitySDK to check if user is whitelisted
-      const isWhitelisted = await identitySDK.isWhitelisted(address);
+      const result = await identitySDK.getWhitelistedRoot(address);
       
       return {
-        isVerified: isWhitelisted,
-        canClaim: isWhitelisted
+        isVerified: result.isWhitelisted,
+        canClaim: result.isWhitelisted
       };
     } catch (error) {
       console.error('Error checking identity verification:', error);
