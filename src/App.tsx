@@ -20,7 +20,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <PrivyProvider
-      appId="cm2qpjquo00ftlw0fwoyf7q1s"
+      appId="clz2bqttq03rg12r1qwni6qiv"
       config={{
         loginMethods: ['email', 'wallet'],
         appearance: {
