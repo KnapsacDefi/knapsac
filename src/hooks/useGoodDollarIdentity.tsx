@@ -28,7 +28,6 @@ export const useGoodDollarIdentity = () => {
   const { wallets } = useWallets();
   
   const { 
-    isWhitelisted, 
     checkIdentityVerification: wagmiCheckIdentity,
     identityLoading 
   } = useGoodDollarWagmi();
@@ -90,7 +89,8 @@ export const useGoodDollarIdentity = () => {
       console.log('📋 Starting verification for wallet:', walletAddress);
       
       // Check if already verified using Wagmi hook
-      if (isWhitelisted) {
+      const identityCheck = await checkIdentityVerification();
+      if (identityCheck.isVerified) {
         console.log('✅ Already verified via Wagmi hook');
         toast({
           title: "Already Verified",
@@ -134,7 +134,7 @@ export const useGoodDollarIdentity = () => {
         error: 'Failed to start verification' 
       };
     }
-  }, [user, wallets, isWhitelisted]);
+  }, [user, wallets]);
 
   const handleVerificationComplete = async () => {
     console.log('✅ Verification completed, closing modal...');
@@ -188,7 +188,7 @@ export const useGoodDollarIdentity = () => {
     openVerificationInNewTab,
     
     // Direct access to Wagmi state
-    isWhitelisted,
+    
     identityLoading
   };
 };

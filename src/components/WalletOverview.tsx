@@ -20,7 +20,7 @@ const WalletOverview = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   
   const { startIdentityVerification, isVerifying } = useGoodDollarIdentity();
-  const { isWhitelisted, checkIdentityVerification } = useGoodDollarWagmi();
+  const {  checkIdentityVerification } = useGoodDollarWagmi();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -192,7 +192,8 @@ const WalletOverview = () => {
           className="h-12 flex flex-col gap-1"
           onClick={async () => {
             // Use Wagmi hook to check if identity is verified
-            if (!isWhitelisted) {
+            const identityCheck = await checkIdentityVerification();
+            if (!identityCheck.isVerified) {
               // Start verification process
               await startIdentityVerification();
             } else {

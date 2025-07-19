@@ -1,7 +1,6 @@
 
-import { useCallback } from 'react';
-import { useIdentitySDK } from '@goodsdks/identity-sdk/wagmi-sdk';
-import { ClaimSDK } from '@goodsdks/identity-sdk/viem-claim-sdk';
+import { useCallback, useState } from 'react';
+import { ClaimSDK, IdentitySDK } from '@goodsdks/citizen-sdk';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { toast } from '@/hooks/use-toast';
 
@@ -16,25 +15,39 @@ export const useGoodDollarWagmi = () => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  
-  // Use the official Wagmi-integrated identity SDK
-  const { 
-    isWhitelisted, 
-    checkWhitelist, 
-    isLoading: identityLoading 
-  } = useIdentitySDK({
-    address,
-    chainId: 42220, // Celo mainnet
-  });
+  const [identityLoading, setIdentityLoading] = useState(false);
 
-  // Check identity verification using the official hook
+  // Initialize IdentitySDK manually like the working version
+  const initializeIdentitySDK = useCallback(async () => {
+    if (!address || !publicClient || !walletClient) return null;
+
+    try {
+      const identitySDK = new IdentitySDK(publicClient, walletClient, 'production');
+      return identitySDK;
+    } catch (error) {
+      console.error('Failed to initialize GoodDollar IdentitySDK:', error);
+      return null;
+    }
+  }, [address, publicClient, walletClient]);
+
+  // Check identity verification using IdentitySDK
   const checkIdentityVerification = useCallback(async () => {
     if (!address) {
       return { isVerified: false, canClaim: false };
     }
 
+    setIdentityLoading(true);
     try {
-      const result = await checkWhitelist();
+      const identitySDK = await initializeIdentitySDK();
+      if (!identitySDK) {
+        setIdentityLoading(false);
+        return { isVerified: false, canClaim: false };
+      }
+
+      // Use IdentitySDK to check if user is whitelisted
+      const result = await identitySDK.getWhitelistedRoot(address);
+      setIdentityLoading(false);
+      
       return {
         isVerified: result.isWhitelisted,
         canClaim: result.isWhitelisted,
@@ -42,11 +55,12 @@ export const useGoodDollarWagmi = () => {
       };
     } catch (error) {
       console.error('Error checking identity verification:', error);
+      setIdentityLoading(false);
       return { isVerified: false, canClaim: false };
     }
-  }, [address, checkWhitelist]);
+  }, [address, initializeIdentitySDK]);
 
-  // Check claim eligibility using the official SDK
+  // Check claim eligibility using ClaimSDK
   const checkClaimEligibility = useCallback(async () => {
     if (!address || !publicClient || !walletClient) {
       return { canClaim: false, amount: '0' };
@@ -54,15 +68,22 @@ export const useGoodDollarWagmi = () => {
 
     try {
       // First verify identity
-      if (!isWhitelisted) {
+      const identityResult = await checkIdentityVerification();
+      if (!identityResult.isVerified) {
         return { canClaim: false, amount: '0' };
       }
 
-      // Initialize ClaimSDK with Wagmi integration
+      // Initialize ClaimSDK with IdentitySDK
+      const identitySDK = await initializeIdentitySDK();
+      if (!identitySDK) {
+        return { canClaim: false, amount: '0' };
+      }
+
       const claimSDK = new ClaimSDK({
         account: address,
         publicClient,
         walletClient,
+        identitySDK,
         env: 'production',
       });
 
@@ -78,17 +99,18 @@ export const useGoodDollarWagmi = () => {
       console.error('Error checking claim eligibility:', error);
       return { canClaim: false, amount: '0' };
     }
-  }, [address, publicClient, walletClient, isWhitelisted]);
+  }, [address, publicClient, walletClient, checkIdentityVerification, initializeIdentitySDK]);
 
-  // Claim UBI using the official SDK
+  // Claim UBI using ClaimSDK
   const claimGoodDollar = useCallback(async (): Promise<ClaimResult> => {
     if (!address || !publicClient || !walletClient) {
       return { success: false, error: 'Wallet not connected' };
     }
 
     try {
-      // Verify identity first
-      if (!isWhitelisted) {
+      // First verify identity
+      const identityResult = await checkIdentityVerification();
+      if (!identityResult.isVerified) {
         toast({
           title: "Identity Verification Required",
           description: "Please complete identity verification before claiming.",
@@ -97,11 +119,17 @@ export const useGoodDollarWagmi = () => {
         return { success: false, error: 'Identity not verified' };
       }
 
-      // Initialize ClaimSDK
+      // Initialize IdentitySDK and ClaimSDK
+      const identitySDK = await initializeIdentitySDK();
+      if (!identitySDK) {
+        return { success: false, error: 'Failed to initialize IdentitySDK' };
+      }
+
       const claimSDK = new ClaimSDK({
         account: address,
         publicClient,
         walletClient,
+        identitySDK,
         env: 'production',
       });
 
@@ -138,11 +166,10 @@ export const useGoodDollarWagmi = () => {
 
       return { success: false, error: errorMessage };
     }
-  }, [address, publicClient, walletClient, isWhitelisted, checkClaimEligibility]);
+  }, [address, publicClient, walletClient, checkIdentityVerification, initializeIdentitySDK, checkClaimEligibility]);
 
   return {
     // Identity verification
-    isWhitelisted,
     checkIdentityVerification,
     identityLoading,
     

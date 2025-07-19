@@ -21,6 +21,7 @@ const GoodDollarClaim = (): JSX.Element => {
   const [claimStatus, setClaimStatus] = useState<'available' | 'claimed' | 'cooldown' | 'loading' | 'not-eligible' | 'not-verified'>('loading');
   const [estimatedAmount, setEstimatedAmount] = useState<string>('');
   const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
 
   const { 
     checkIdentityVerification, 
@@ -31,7 +32,7 @@ const GoodDollarClaim = (): JSX.Element => {
     handleVerificationComplete,
     handleModalClose,
     openVerificationInNewTab,
-    isWhitelisted,
+    
     identityLoading
   } = useGoodDollarIdentity();
   
@@ -47,7 +48,7 @@ const GoodDollarClaim = (): JSX.Element => {
     if (wallets.length > 0 && isConnected) {
       checkIdentityAndClaimStatus();
     }
-  }, [authenticated, wallets, navigate, isConnected, isWhitelisted]);
+  }, [authenticated, wallets, navigate, isConnected]);
 
   const checkIdentityAndClaimStatus = async (): Promise<void> => {
     if (!wallets[0] || !isConnected) return;
@@ -61,10 +62,13 @@ const GoodDollarClaim = (): JSX.Element => {
         return;
       }
       
-      console.log('📋 Identity result (Wagmi):', { isWhitelisted });
+      // Check identity verification status
+      const identityResult = await checkIdentityVerification();
+      setIsWhitelisted(identityResult.isVerified);
+      console.log('📋 Identity result (Wagmi):', { isWhitelisted: identityResult.isVerified });
       
       // Then check claim status based on the Wagmi identity result
-      await checkClaimStatus(isWhitelisted);
+      await checkClaimStatus(identityResult.isVerified);
     } catch (error) {
       console.error('❌ Error checking identity and claim status:', error);
       setClaimStatus('not-verified');

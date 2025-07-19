@@ -7,7 +7,6 @@ import { toast } from '@/hooks/use-toast';
 
 export const GoodDollarTestButtons = () => {
   const { 
-    isWhitelisted,
     checkIdentityVerification,
     checkClaimEligibility,
     claimGoodDollar,
@@ -120,7 +119,7 @@ export const GoodDollarTestButtons = () => {
           <div className="text-sm space-y-1">
             <div>Connected: {isConnected ? '✅' : '❌'}</div>
             <div>Address: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'None'}</div>
-            <div>Whitelisted: {identityLoading ? '⏳' : (isWhitelisted ? '✅' : '❌')}</div>
+            <div>Whitelisted: {identityLoading ? '⏳' : 'Check manually'}</div>
           </div>
         </div>
 
