@@ -20,7 +20,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <PrivyProvider
-      appId={import.meta.env.VITE_PRIVY_APP_ID}
+      appId="clz0upvvw06pr9b1xo1p4g9nz"
       config={{
         loginMethods: ['email', 'wallet'],
         appearance: {
