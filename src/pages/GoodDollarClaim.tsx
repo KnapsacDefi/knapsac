@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGoodDollarIdentity } from '@/hooks/useGoodDollarIdentity';
 import { useGoodDollarClaim } from '@/hooks/useGoodDollarClaim';
 import { useGoodDollarWagmi } from '@/hooks/useGoodDollarWagmi';
-import { GoodDollarVerificationModal } from '@/components/GoodDollarVerificationModal';
+
 import { GoodDollarTestButtons } from '@/components/GoodDollarTestButtons';
 
 const GoodDollarClaim = (): JSX.Element => {
@@ -27,12 +27,7 @@ const GoodDollarClaim = (): JSX.Element => {
     checkIdentityVerification, 
     startIdentityVerification, 
     isVerifying, 
-    showVerificationModal,
-    verificationError,
-    handleVerificationComplete,
-    handleModalClose,
     openVerificationInNewTab,
-    
     identityLoading
   } = useGoodDollarIdentity();
   
@@ -222,7 +217,7 @@ const GoodDollarClaim = (): JSX.Element => {
                 <div>isWhitelisted: {isWhitelisted.toString()}</div>
                 <div>identityLoading: {identityLoading.toString()}</div>
                 <div>isVerifying: {isVerifying.toString()}</div>
-                <div>showModal: {showVerificationModal.toString()}</div>
+                
               </div>
             </CardContent>
           </Card>
@@ -277,11 +272,6 @@ const GoodDollarClaim = (): JSX.Element => {
                     </p>
                   </div>
                   
-                  {verificationError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700">{verificationError}</p>
-                    </div>
-                  )}
                   
                   <div className="flex flex-col gap-3">
                     <Button 
@@ -367,16 +357,6 @@ const GoodDollarClaim = (): JSX.Element => {
         <GoodDollarTestButtons />
       </div>
 
-      {/* Verification Modal */}
-      {wallets[0] && (
-        <GoodDollarVerificationModal
-          isOpen={showVerificationModal}
-          onClose={handleModalClose}
-          onVerificationComplete={handleVerificationComplete}
-          walletAddress={wallets[0].address}
-          onOpenInNewTab={openVerificationInNewTab}
-        />
-      )}
     </div>
   );
 };
