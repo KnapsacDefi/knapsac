@@ -22,8 +22,6 @@ export interface IdentityCheckResult {
 
 export const useGoodDollarIdentity = () => {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
   const { user } = usePrivy();
   const { wallets } = useWallets();
   
@@ -82,7 +80,6 @@ export const useGoodDollarIdentity = () => {
     }
 
     setIsVerifying(true);
-    setVerificationError(null);
 
     try {
       const walletAddress = wallets[0].address;
@@ -104,18 +101,11 @@ export const useGoodDollarIdentity = () => {
         };
       }
 
-      // Start new verification process through embedded modal
-      console.log('🔄 Opening verification modal...');
-      toast({
-        title: "Opening Verification",
-        description: "Opening GoodDollar face verification modal...",
-      });
-
-      setShowVerificationModal(true);
-      // Reset isVerifying immediately after modal opens successfully
-      setIsVerifying(false);
-      console.log('✅ Modal state set to true, isVerifying reset to false');
+      // Direct user to GoodDollar web app for verification in new tab
+      console.log('🔗 Opening GoodDollar web app for verification...');
+      openVerificationInNewTab();
       
+      setIsVerifying(false);
       return {
         isVerified: false,
         canClaim: false
@@ -123,7 +113,6 @@ export const useGoodDollarIdentity = () => {
       
     } catch (error) {
       console.error('❌ Failed to start identity verification:', error);
-      setVerificationError(error instanceof Error ? error.message : 'Unknown error');
       setIsVerifying(false);
       toast({
         title: "Verification Failed",
@@ -138,30 +127,7 @@ export const useGoodDollarIdentity = () => {
     }
   }, [user, wallets, checkIdentityVerification]);
 
-  const handleVerificationComplete = async () => {
-    console.log('✅ Verification completed, closing modal...');
-    setShowVerificationModal(false);
-    setIsVerifying(false);
-    setVerificationError(null);
-    
-    // Check verification status after completion
-    const result = await checkIdentityVerification();
-    if (result.isVerified) {
-      toast({
-        title: "Verification Successful!",
-        description: "Your identity has been verified with GoodDollar.",
-      });
-    }
-  };
-
-  const handleModalClose = () => {
-    console.log('🔄 Modal closed by user');
-    setShowVerificationModal(false);
-    setIsVerifying(false);
-    setVerificationError(null);
-  };
-
-  const openVerificationInNewTab = () => {
+  const openVerificationInNewTab = useCallback(() => {
     if (!wallets[0]) return;
     
     const walletAddress = wallets[0].address;
@@ -174,19 +140,13 @@ export const useGoodDollarIdentity = () => {
       title: "Verification Opened",
       description: "Complete the verification in the new tab, then return to check your status.",
     });
-    
-    setIsVerifying(false);
-  };
+  }, [wallets]);
 
   return {
     checkIdentityVerification,
     startIdentityVerification,
     isVerifying,
     isChecking: identityLoading,
-    showVerificationModal,
-    verificationError,
-    handleVerificationComplete,
-    handleModalClose,
     openVerificationInNewTab,
     
     // Direct access to Wagmi state

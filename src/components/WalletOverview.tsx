@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useGoodDollarWagmi } from "@/hooks/useGoodDollarWagmi";
+import { toast } from "@/hooks/use-toast";
 
 interface WalletOverviewProps {
   startIdentityVerification: () => Promise<any>;
@@ -148,16 +148,41 @@ const WalletOverview = ({
 
   const handleClaimClick = async () => {
     console.log('🎯 Claim button clicked, checking identity...');
-    // Check if identity is verified first
-    const identityCheck = await checkIdentityVerification();
-    if (!identityCheck.isVerified) {
-      console.log('🔐 Identity not verified, starting verification process...');
-      // Start verification process
-      await startIdentityVerification();
-    } else {
-      console.log('✅ Identity verified, navigating to claim page...');
-      // Navigate to claim page if verified
-      navigate('/claim');
+    
+    try {
+      // Check if identity is verified first
+      const identityCheck = await checkIdentityVerification();
+      
+      if (!identityCheck.isVerified) {
+        console.log('🔐 Identity not verified, redirecting to verification...');
+        
+        toast({
+          title: "Identity Verification Required",
+          description: "You'll be redirected to GoodDollar to complete face verification.",
+        });
+        
+        // Start verification process (opens in new tab)
+        await startIdentityVerification();
+        
+        // Show additional guidance
+        toast({
+          title: "Return After Verification",
+          description: "After completing verification, return here and click 'Claim G$' again.",
+          duration: 5000,
+        });
+        
+      } else {
+        console.log('✅ Identity verified, navigating to claim page...');
+        // Navigate to claim page if verified
+        navigate('/claim');
+      }
+    } catch (error) {
+      console.error('❌ Error in claim flow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check verification status. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -193,7 +218,7 @@ const WalletOverview = ({
               <div className="text-2xl font-bold text-green-600">
                 {showBalance ? displayGooddollarBalance : "••••••"}
               </div>
-              <div className="text-xs text-muted-foreground">GoodDollar (Wagmi)</div>
+              <div className="text-xs text-muted-foreground">GoodDollar</div>
             </div>
           </div>
         </div>
@@ -214,7 +239,7 @@ const WalletOverview = ({
           disabled={isVerifying}
         >
           <Coins className="w-4 h-4" />
-          <span className="text-xs">{isVerifying ? 'Verifying...' : 'Claim G$'}</span>
+          <span className="text-xs">{isVerifying ? 'Processing...' : 'Claim G$'}</span>
         </Button>
         {isLender && hasSignedTerms && (
           <Button 
