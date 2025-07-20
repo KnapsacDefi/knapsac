@@ -78,25 +78,24 @@ const Withdraw = () => {
             }
           });
           
-          if (!error && data?.portfolio) {
-            const portfolio = data.portfolio;
+          console.log(`Portfolio data for ${chain}:`, data);
+          
+          if (!error && data?.portfolio?.result) {
+            const portfolioResults = data.portfolio.result;
             
-            // Parse portfolio data and match with our supported tokens
-            if (portfolio.data && Array.isArray(portfolio.data)) {
-              for (const walletData of portfolio.data) {
-                if (walletData.assets && Array.isArray(walletData.assets)) {
-                  for (const asset of walletData.assets) {
-                    // Find matching token by contract address
-                    const matchingToken = tokens.find(token => 
-                      token.address.toLowerCase() === asset.tokenAddress?.toLowerCase()
-                    );
-                    
-                    if (matchingToken && asset.balance) {
-                      // Convert balance from smallest unit to human readable
-                      const balance = parseFloat(asset.balance) / Math.pow(10, matchingToken.decimals);
-                      newBalances[chain][matchingToken.symbol] = balance.toFixed(6);
-                    }
-                  }
+            // Parse portfolio results and match with our supported tokens
+            if (Array.isArray(portfolioResults)) {
+              for (const tokenData of portfolioResults) {
+                // Find matching token by contract address
+                const matchingToken = tokens.find(token => 
+                  token.address.toLowerCase() === tokenData.tokenAddress?.toLowerCase()
+                );
+                
+                if (matchingToken && tokenData.balance) {
+                  // Convert balance from smallest unit to human readable
+                  const balance = parseFloat(tokenData.balance) / Math.pow(10, matchingToken.decimals);
+                  newBalances[chain][matchingToken.symbol] = balance.toFixed(6);
+                  console.log(`Updated ${matchingToken.symbol} balance:`, balance.toFixed(6));
                 }
               }
             }
@@ -106,6 +105,7 @@ const Withdraw = () => {
         }
       }
       
+      console.log('Final balances:', newBalances);
       setBalances(newBalances);
     } catch (error) {
       console.error('Error fetching balances:', error);
