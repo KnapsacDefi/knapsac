@@ -86,16 +86,19 @@ const Withdraw = () => {
             // Parse portfolio results and match with our supported tokens
             if (Array.isArray(portfolioResults)) {
               for (const tokenData of portfolioResults) {
+                console.log(`Processing token data for ${chain}:`, tokenData);
+                
                 // Find matching token by contract address
                 const matchingToken = tokens.find(token => 
                   token.address.toLowerCase() === tokenData.tokenAddress?.toLowerCase()
                 );
                 
                 if (matchingToken && tokenData.balance) {
-                  // Convert balance from smallest unit to human readable
-                  const balance = parseFloat(tokenData.balance) / Math.pow(10, matchingToken.decimals);
-                  newBalances[chain][matchingToken.symbol] = balance.toFixed(6);
-                  console.log(`Updated ${matchingToken.symbol} balance:`, balance.toFixed(6));
+                  // Use the balance directly since Tatum API already provides human-readable format
+                  // The 'balance' field is already converted from wei to human readable
+                  const balance = parseFloat(tokenData.balance);
+                  newBalances[chain][matchingToken.symbol] = balance.toFixed(2);
+                  console.log(`✅ Updated ${matchingToken.symbol} balance on ${chain}:`, balance.toFixed(2));
                 }
               }
             }
