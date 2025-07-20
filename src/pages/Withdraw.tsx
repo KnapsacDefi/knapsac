@@ -155,10 +155,11 @@ const Withdraw = () => {
       return SUPPORTED_TOKENS;
     }
     
-    // Show only USDC when switch is inactive
+    // Show only USDC for Ethereum when switch is inactive
     const filteredTokens: Record<string, Array<{ symbol: string; address: string; decimals: number; }>> = {};
-    for (const [chain, tokens] of Object.entries(SUPPORTED_TOKENS)) {
-      filteredTokens[chain] = tokens.filter(token => token.symbol === 'USDC');
+    const ethereumTokens = SUPPORTED_TOKENS.ethereum.filter(token => token.symbol === 'USDC');
+    if (ethereumTokens.length > 0) {
+      filteredTokens.ethereum = ethereumTokens;
     }
     return filteredTokens;
   };
