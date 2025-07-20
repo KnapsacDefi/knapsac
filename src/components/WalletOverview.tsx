@@ -1,4 +1,4 @@
-import { Banknote, Eye, EyeOff, Coins } from "lucide-react";
+import { Banknote, Eye, EyeOff, Coins, ArrowUpFromLine } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
@@ -240,6 +240,14 @@ const WalletOverview = ({
         >
           <Coins className="w-4 h-4" />
           <span className="text-xs">{isVerifying ? 'Processing...' : 'Claim G$'}</span>
+        </Button>
+        <Button 
+          variant="outline" 
+          className="h-12 flex flex-col gap-1"
+          onClick={() => navigate('/withdraw')}
+        >
+          <ArrowUpFromLine className="w-4 h-4" />
+          <span className="text-xs">Withdraw</span>
         </Button>
         {isLender && hasSignedTerms && (
           <Button 

@@ -26,3 +26,21 @@ verify_jwt = false
 
 [functions.get-privy-config]
 verify_jwt = false
+
+[functions.get-token-balance]
+verify_jwt = false
+
+[functions.get-conversion-rate]
+verify_jwt = false
+
+[functions.get-mobile-networks]
+verify_jwt = false
+
+[functions.create-withdrawal]
+verify_jwt = false
+
+[functions.process-mobile-money-transfer]
+verify_jwt = false
+
+[functions.payment-callback]
+verify_jwt = false

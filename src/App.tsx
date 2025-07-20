@@ -6,6 +6,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Index from '@/pages/Index';
 import Wallet from '@/pages/Wallet';
+import Withdraw from '@/pages/Withdraw';
+import WithdrawWallet from '@/pages/WithdrawWallet';
+import WithdrawMobileMoney from '@/pages/WithdrawMobileMoney';
 import Profile from '@/pages/Profile';
 import Terms from '@/pages/Terms';
 import GoodDollarClaim from '@/pages/GoodDollarClaim';
@@ -89,6 +92,9 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/wallet" element={<Wallet />} />
+                <Route path="/withdraw" element={<Withdraw />} />
+                <Route path="/withdraw/wallet" element={<WithdrawWallet />} />
+                <Route path="/withdraw/mobile-money" element={<WithdrawMobileMoney />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/claim" element={<GoodDollarClaim />} />
