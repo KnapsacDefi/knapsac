@@ -193,9 +193,6 @@ const Withdraw = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold">{token.symbol}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {token.address.slice(0, 6)}...{token.address.slice(-4)}
-                        </p>
                       </div>
                     </div>
                     <div className="text-right">
