@@ -237,7 +237,7 @@ const WalletOverview = ({
           className="h-12 flex flex-col gap-1"
           onClick={() => navigate('/withdraw')}
         >
-          <ArrowUpFromLine className="w-4 h-4" />
+          
           <span className="text-xs">Withdraw</span>
         </Button>
         {isLender && hasSignedTerms && (
