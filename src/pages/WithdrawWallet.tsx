@@ -219,9 +219,9 @@ const WithdrawWallet = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress}
+            disabled={true}
           >
-            {isProcessing ? 'Processing...' : 'Withdraw'}
+            Withdraw (coming)
           </Button>
         </div>
       </main>

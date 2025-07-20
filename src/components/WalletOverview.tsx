@@ -224,22 +224,13 @@ const WalletOverview = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
           disabled={isServiceProvider}
           onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-12 flex flex-col gap-1"
-          onClick={handleClaimClick}
-          disabled={isVerifying}
-        >
-          <Coins className="w-4 h-4" />
-          <span className="text-xs">{isVerifying ? 'Processing...' : 'Claim G$'}</span>
         </Button>
         <Button 
           variant="outline" 
