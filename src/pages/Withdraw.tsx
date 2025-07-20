@@ -8,6 +8,7 @@ import { ArrowLeft, Wallet2, Smartphone } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +43,7 @@ const Withdraw = () => {
   const [selectedMethod, setSelectedMethod] = useState<'wallet' | 'mobile_money'>('wallet');
   const [balances, setBalances] = useState<Record<string, Record<string, string>>>({});
   const [loading, setLoading] = useState(true);
+  const [showAllTokens, setShowAllTokens] = useState(false);
 
   useEffect(() => {
     if (!authenticated) {
@@ -148,6 +150,19 @@ const Withdraw = () => {
     return chain.charAt(0).toUpperCase() + chain.slice(1);
   };
 
+  const getFilteredTokens = () => {
+    if (showAllTokens) {
+      return SUPPORTED_TOKENS;
+    }
+    
+    // Show only USDC when switch is inactive
+    const filteredTokens: Record<string, Array<{ symbol: string; address: string; decimals: number; }>> = {};
+    for (const [chain, tokens] of Object.entries(SUPPORTED_TOKENS)) {
+      filteredTokens[chain] = tokens.filter(token => token.symbol === 'USDC');
+    }
+    return filteredTokens;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -171,8 +186,19 @@ const Withdraw = () => {
           <h1 className="text-2xl font-bold">Withdraw</h1>
         </div>
 
+        <div className="flex items-center justify-between mb-4 p-4 border rounded-lg">
+          <Label htmlFor="show-all-tokens" className="font-medium">
+            Show All Tokens
+          </Label>
+          <Switch
+            id="show-all-tokens"
+            checked={showAllTokens}
+            onCheckedChange={setShowAllTokens}
+          />
+        </div>
+
         <div className="space-y-6">
-          {Object.entries(SUPPORTED_TOKENS).map(([chain, tokens]) => (
+          {Object.entries(getFilteredTokens()).map(([chain, tokens]) => (
             <Card key={chain}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
