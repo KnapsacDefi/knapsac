@@ -2,7 +2,6 @@
 import { useState, useCallback } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
-import { useNetworkManager } from './useNetworkManager';
 import { useGoodDollarWagmi } from './useGoodDollarWagmi';
 
 export interface IdentityVerificationResult {
@@ -30,8 +29,6 @@ export const useGoodDollarIdentity = () => {
     identityLoading 
   } = useGoodDollarWagmi();
   
-  // Ensure we're on Celo network for GoodDollar operations
-  useNetworkManager('celo', true);
 
   const checkIdentityVerification = useCallback(async (): Promise<IdentityCheckResult> => {
     console.log('🔍 Starting identity verification check...');

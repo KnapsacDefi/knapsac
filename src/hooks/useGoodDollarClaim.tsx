@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useNetworkManager } from './useNetworkManager';
 import { useGoodDollarWagmi } from './useGoodDollarWagmi';
 
 interface ClaimResult {
@@ -24,8 +23,6 @@ export const useGoodDollarClaim = () => {
     checkIdentityVerification
   } = useGoodDollarWagmi();
   
-  // Use network manager to ensure we're on Celo
-  useNetworkManager('celo', true);
 
   const claimGoodDollar = async (): Promise<ClaimResult> => {
     if (!authenticated || !wallets[0] || claiming) {
