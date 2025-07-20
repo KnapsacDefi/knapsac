@@ -61,30 +61,48 @@ const Withdraw = () => {
     const newBalances: Record<string, Record<string, string>> = {};
 
     try {
-      // Fetch balances for all supported tokens
+      // Fetch portfolio for each supported chain
       for (const [chain, tokens] of Object.entries(SUPPORTED_TOKENS)) {
         newBalances[chain] = {};
         
+        // Initialize all tokens to 0
         for (const token of tokens) {
-          try {
-            const { data, error } = await supabase.functions.invoke('get-token-balance', {
-              body: {
-                walletAddress,
-                tokenAddress: token.address,
-                chain,
-                decimals: token.decimals
-              }
-            });
-            
-            if (!error && data?.balance) {
-              newBalances[chain][token.symbol] = data.balance;
-            } else {
-              newBalances[chain][token.symbol] = '0.00';
+          newBalances[chain][token.symbol] = '0.00';
+        }
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('get-token-balance', {
+            body: {
+              walletAddress,
+              chain
             }
-          } catch (err) {
-            console.error(`Error fetching ${token.symbol} balance on ${chain}:`, err);
-            newBalances[chain][token.symbol] = '0.00';
+          });
+          
+          if (!error && data?.portfolio) {
+            const portfolio = data.portfolio;
+            
+            // Parse portfolio data and match with our supported tokens
+            if (portfolio.data && Array.isArray(portfolio.data)) {
+              for (const walletData of portfolio.data) {
+                if (walletData.assets && Array.isArray(walletData.assets)) {
+                  for (const asset of walletData.assets) {
+                    // Find matching token by contract address
+                    const matchingToken = tokens.find(token => 
+                      token.address.toLowerCase() === asset.tokenAddress?.toLowerCase()
+                    );
+                    
+                    if (matchingToken && asset.balance) {
+                      // Convert balance from smallest unit to human readable
+                      const balance = parseFloat(asset.balance) / Math.pow(10, matchingToken.decimals);
+                      newBalances[chain][matchingToken.symbol] = balance.toFixed(6);
+                    }
+                  }
+                }
+              }
+            }
           }
+        } catch (err) {
+          console.error(`Error fetching portfolio for ${chain}:`, err);
         }
       }
       

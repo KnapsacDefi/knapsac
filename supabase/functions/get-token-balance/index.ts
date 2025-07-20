@@ -11,9 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const { walletAddress, tokenAddress, chain, decimals } = await req.json();
+    const { walletAddress, chain } = await req.json();
 
-    if (!walletAddress || !tokenAddress || !chain) {
+    if (!walletAddress || !chain) {
       return new Response(
         JSON.stringify({ error: 'Missing required parameters' }),
         { 
@@ -23,15 +23,51 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Fetching balance for ${tokenAddress} on ${chain} for ${walletAddress}`);
+    // Map chain names to Tatum API format
+    const chainMapping: Record<string, string> = {
+      'ethereum': 'ethereum-mainnet',
+      'celo': 'celo-mainnet',
+      'base': 'base-mainnet'
+    };
 
-    // Mock balance for demo - in production, this would call actual blockchain APIs
-    const mockBalance = (Math.random() * 1000).toFixed(6);
+    const tatumChain = chainMapping[chain];
+    if (!tatumChain) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported chain' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log(`Fetching portfolio for ${walletAddress} on ${tatumChain}`);
+
+    const tatumApiKey = Deno.env.get('TATUM_API_KEY');
+    if (!tatumApiKey) {
+      throw new Error('TATUM_API_KEY not configured');
+    }
+
+    const url = `https://api.tatum.io/v4/data/wallet/portfolio?chain=${tatumChain}&addresses=${walletAddress}&tokenTypes=fungible`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'x-api-key': tatumApiKey
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Tatum API error: ${response.status} ${response.statusText}`);
+    }
+
+    const portfolioData = await response.json();
+    console.log('Portfolio data:', JSON.stringify(portfolioData, null, 2));
     
     return new Response(
       JSON.stringify({ 
-        balance: mockBalance,
-        tokenAddress,
+        portfolio: portfolioData,
         chain,
         walletAddress 
       }),
@@ -44,7 +80,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in get-token-balance function:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
