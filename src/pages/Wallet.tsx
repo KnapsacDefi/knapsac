@@ -27,11 +27,19 @@ const Wallet = () => {
     checkIdentityVerification
   } = useGoodDollarIdentity();
 
+  // Handle authentication redirects in useEffect to prevent navigation during render
   useEffect(() => {
     if (ready && !authenticated) {
       navigate('/');
     }
   }, [ready, authenticated, navigate]);
+
+  // Handle Service Provider redirection in useEffect
+  useEffect(() => {
+    if (walletData.userProfile?.profile_type === 'Service Provider' && !walletData.loading.profile) {
+      navigate('/service-provider-motivation');
+    }
+  }, [walletData.userProfile?.profile_type, walletData.loading.profile, navigate]);
 
   // Show loading state only for initial authentication
   if (!ready) {
@@ -49,9 +57,8 @@ const Wallet = () => {
     return null;
   }
 
-  // Hide wallet page from Service Providers
+  // Don't render content if we're redirecting Service Providers
   if (walletData.userProfile?.profile_type === 'Service Provider') {
-    navigate('/service-provider-motivation');
     return null;
   }
 

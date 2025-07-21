@@ -46,10 +46,25 @@ export const useWalletData = () => {
   });
 
   useEffect(() => {
-    if (!ready || !authenticated || wallets.length === 0) return;
+    // Defensive checks to prevent API calls with invalid state
+    if (!ready || !authenticated || !user) {
+      console.log('useWalletData: Not ready for API calls', { ready, authenticated, user: !!user });
+      return;
+    }
+
+    // Wait for wallets to be available
+    if (wallets.length === 0) {
+      console.log('useWalletData: No wallets available yet');
+      return;
+    }
 
     const walletAddress = wallets[0]?.address || user?.wallet?.address;
-    if (!walletAddress) return;
+    if (!walletAddress) {
+      console.log('useWalletData: No wallet address available');
+      return;
+    }
+
+    console.log('useWalletData: Starting API calls with wallet:', walletAddress);
 
     const fetchProfileData = async () => {
       try {
