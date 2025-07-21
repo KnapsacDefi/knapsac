@@ -1,8 +1,9 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
 import { getChainNameFromId } from '@/constants/tokens';
+import { debugLog } from '@/utils/debugConfig';
 
 interface WalletProviderHealth {
   isHealthy: boolean;
@@ -15,6 +16,7 @@ interface CircuitBreaker {
   failures: number;
   lastFailure: number;
   isOpen: boolean;
+  cooldownUntil: number;
 }
 
 export const useWalletProviderHealth = () => {
@@ -29,236 +31,217 @@ export const useWalletProviderHealth = () => {
   const [circuitBreaker, setCircuitBreaker] = useState<CircuitBreaker>({
     failures: 0,
     lastFailure: 0,
-    isOpen: false
+    isOpen: false,
+    cooldownUntil: 0
   });
 
-  // Enhanced EIP155 parsing with multiple format support
+  // Add refs to prevent excessive health checks
+  const lastHealthCheckRef = useRef<number>(0);
+  const healthCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isHealthCheckingRef = useRef<boolean>(false);
+
   const parseEIP155ChainId = useCallback((chainIdValue: any): number | null => {
     if (!chainIdValue) return null;
     
     const chainIdStr = String(chainIdValue);
-    console.log('🔍 Parsing chain ID value:', chainIdStr, 'Type:', typeof chainIdValue);
+    debugLog('WALLET_HEALTH', 'Parsing chain ID value:', chainIdStr);
     
-    // Handle EIP155 format variations: "eip155:42220", "eip155:0x42220", etc.
+    // Handle EIP155 format variations
     if (chainIdStr.includes('eip155:') || chainIdStr.includes('EIP155:')) {
       const parts = chainIdStr.split(':');
       if (parts.length >= 2) {
         const numericPart = parts[1];
         
-        // Handle hex format in EIP155
         if (numericPart.startsWith('0x')) {
           const parsed = parseInt(numericPart, 16);
           if (!isNaN(parsed) && parsed > 0) {
-            console.log('✅ EIP155 hex format parsed successfully:', parsed);
+            debugLog('WALLET_HEALTH', 'EIP155 hex format parsed:', parsed);
             return parsed;
           }
         } else {
-          // Handle decimal format in EIP155
           const parsed = parseInt(numericPart, 10);
           if (!isNaN(parsed) && parsed > 0) {
-            console.log('✅ EIP155 decimal format parsed successfully:', parsed);
+            debugLog('WALLET_HEALTH', 'EIP155 decimal format parsed:', parsed);
             return parsed;
           }
         }
       }
     }
     
-    // Handle hex format directly: "0x42220"
+    // Handle hex format directly
     if (chainIdStr.startsWith('0x')) {
       const parsed = parseInt(chainIdStr, 16);
       if (!isNaN(parsed) && parsed > 0) {
-        console.log('✅ Direct hex format parsed successfully:', parsed);
+        debugLog('WALLET_HEALTH', 'Direct hex format parsed:', parsed);
         return parsed;
       }
     }
     
-    // Handle direct numeric values (string or number)
+    // Handle direct numeric values
     const parsed = typeof chainIdValue === 'string' ? parseInt(chainIdValue, 10) : Number(chainIdValue);
     if (!isNaN(parsed) && parsed > 0) {
-      console.log('✅ Direct numeric format parsed successfully:', parsed);
+      debugLog('WALLET_HEALTH', 'Direct numeric format parsed:', parsed);
       return parsed;
     }
     
-    console.warn('❌ Could not parse chain ID:', chainIdValue);
+    debugLog('WALLET_HEALTH', 'Could not parse chain ID:', chainIdValue);
     return null;
   }, []);
 
-  // Safely access wallet properties with error handling
   const safeWalletAccess = useCallback((wallet: any, property: string): any => {
     try {
-      if (!wallet || typeof wallet !== 'object') {
-        console.warn('Wallet object is null or invalid');
-        return null;
-      }
-      
-      const value = wallet[property];
-      console.log(`Safe wallet access - ${property}:`, value);
-      return value;
+      if (!wallet || typeof wallet !== 'object') return null;
+      return wallet[property];
     } catch (error) {
-      console.error(`Error accessing wallet.${property}:`, error);
+      debugLog('WALLET_HEALTH', `Error accessing wallet.${property}:`, error);
       return null;
     }
   }, []);
 
-  // Enhanced chain ID detection with comprehensive fallbacks
   const detectChainId = useCallback(async (wallet: any): Promise<number | null> => {
-    console.log('🔍 Starting comprehensive chain ID detection...');
+    debugLog('WALLET_HEALTH', 'Starting chain ID detection...');
     
-    if (!wallet) {
-      console.warn('❌ No wallet provided for chain detection');
-      return null;
-    }
+    if (!wallet) return null;
 
     const detectionMethods = [
-      // Method 1: Direct chainId property
-      () => {
-        const directChainId = safeWalletAccess(wallet, 'chainId');
-        console.log('🔍 Method 1 - Direct chainId:', directChainId);
-        return parseEIP155ChainId(directChainId);
-      },
-      
-      // Method 2: wallet.chain.id
+      () => parseEIP155ChainId(safeWalletAccess(wallet, 'chainId')),
       () => {
         const chain = safeWalletAccess(wallet, 'chain');
-        if (chain && typeof chain === 'object') {
-          const chainId = safeWalletAccess(chain, 'id');
-          console.log('🔍 Method 2 - Chain.id:', chainId);
-          return parseEIP155ChainId(chainId);
-        }
-        return null;
+        return chain ? parseEIP155ChainId(safeWalletAccess(chain, 'id')) : null;
       },
-      
-      // Method 3: wallet.connectedChain
-      () => {
-        const connectedChain = safeWalletAccess(wallet, 'connectedChain');
-        if (connectedChain) {
-          console.log('🔍 Method 3 - ConnectedChain:', connectedChain);
-          return parseEIP155ChainId(connectedChain);
-        }
-        return null;
-      },
-      
-      // Method 4: wallet.network.chainId
+      () => parseEIP155ChainId(safeWalletAccess(wallet, 'connectedChain')),
       () => {
         const network = safeWalletAccess(wallet, 'network');
-        if (network && typeof network === 'object') {
-          const chainId = safeWalletAccess(network, 'chainId');
-          console.log('🔍 Method 4 - Network.chainId:', chainId);
-          return parseEIP155ChainId(chainId);
-        }
-        return null;
+        return network ? parseEIP155ChainId(safeWalletAccess(network, 'chainId')) : null;
       },
-      
-      // Method 5: ethereum.request for chainId
       async () => {
         try {
           if (typeof window !== 'undefined' && window.ethereum && typeof window.ethereum.request === 'function') {
             const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-            console.log('🔍 Method 5 - ethereum.request result:', chainIdHex);
             if (chainIdHex) {
               const parsed = parseInt(chainIdHex, 16);
               return !isNaN(parsed) && parsed > 0 ? parsed : null;
             }
           }
         } catch (error) {
-          console.warn('❌ Method 5 failed - ethereum.request:', error);
+          debugLog('WALLET_HEALTH', 'ethereum.request failed:', error);
         }
         return null;
       }
     ];
 
-    // Try each method sequentially
     for (let i = 0; i < detectionMethods.length; i++) {
       try {
         const result = await detectionMethods[i]();
         if (result && result > 0) {
           const chainName = getChainNameFromId(result);
-          console.log(`✅ Method ${i + 1} success - Chain: ${chainName || 'Unknown'} (${result})`);
+          debugLog('WALLET_HEALTH', `Method ${i + 1} success - Chain: ${chainName || 'Unknown'} (${result})`);
           return result;
         }
       } catch (error) {
-        console.warn(`❌ Method ${i + 1} failed:`, error);
+        debugLog('WALLET_HEALTH', `Method ${i + 1} failed:`, error);
       }
     }
 
-    console.error('❌ All chain ID detection methods failed');
+    debugLog('WALLET_HEALTH', 'All chain ID detection methods failed');
     return null;
   }, [safeWalletAccess, parseEIP155ChainId]);
 
-  // Circuit breaker check with reduced threshold
+  // Enhanced circuit breaker with cooldown
   const isCircuitBreakerOpen = useCallback((): boolean => {
     const now = Date.now();
-    const timeSinceLastFailure = now - circuitBreaker.lastFailure;
-    const cooldownPeriod = 15000; // Reduced to 15 seconds
     
-    if (circuitBreaker.failures >= 2 && timeSinceLastFailure < cooldownPeriod) { // Reduced threshold
+    // Check if we're in a cooldown period
+    if (circuitBreaker.cooldownUntil > now) {
       return true;
     }
     
     // Reset circuit breaker after cooldown
-    if (timeSinceLastFailure > cooldownPeriod) {
-      setCircuitBreaker(prev => ({ ...prev, failures: 0, isOpen: false }));
+    if (circuitBreaker.cooldownUntil > 0 && circuitBreaker.cooldownUntil <= now) {
+      setCircuitBreaker(prev => ({ 
+        ...prev, 
+        failures: 0, 
+        isOpen: false, 
+        cooldownUntil: 0 
+      }));
       return false;
     }
     
-    return false;
+    const timeSinceLastFailure = now - circuitBreaker.lastFailure;
+    const shortCooldown = 5000; // 5 seconds
+    
+    return circuitBreaker.failures >= 3 && timeSinceLastFailure < shortCooldown;
   }, [circuitBreaker]);
 
-  // Record circuit breaker failure
   const recordFailure = useCallback(() => {
-    setCircuitBreaker(prev => ({
-      failures: prev.failures + 1,
-      lastFailure: Date.now(),
-      isOpen: prev.failures + 1 >= 2 // Reduced threshold
-    }));
+    const now = Date.now();
+    setCircuitBreaker(prev => {
+      const newFailures = prev.failures + 1;
+      const cooldownDuration = Math.min(30000, 5000 * Math.pow(2, newFailures - 1)); // Exponential backoff, max 30s
+      
+      return {
+        failures: newFailures,
+        lastFailure: now,
+        isOpen: newFailures >= 3,
+        cooldownUntil: newFailures >= 3 ? now + cooldownDuration : 0
+      };
+    });
   }, []);
 
-  // Improved wallet state validation - be more lenient
   const validateWalletState = useCallback((): boolean => {
-    // If wallets array exists and has items with addresses, that's valid
     if (wallets && wallets.length > 0) {
       const wallet = wallets[0];
       const address = safeWalletAccess(wallet, 'address');
       if (address) {
-        console.log('✅ Wallet state valid - address found:', address);
+        debugLog('WALLET_HEALTH', 'Wallet state valid - address found:', address);
         return true;
       }
     }
     
-    console.log('⚠️ Wallet state not ready - no address found');
+    debugLog('WALLET_HEALTH', 'Wallet state not ready - no address found');
     return false;
   }, [wallets, safeWalletAccess]);
 
-  // Optimistic health check - assume healthy unless proven otherwise
+  // Debounced health check with proper throttling
   const performHealthCheck = useCallback(async () => {
+    const now = Date.now();
+    
+    // Prevent excessive health checks - minimum 2 seconds between checks
+    if (now - lastHealthCheckRef.current < 2000) {
+      debugLog('WALLET_HEALTH', 'Health check throttled');
+      return;
+    }
+    
+    // Prevent concurrent health checks
+    if (isHealthCheckingRef.current) {
+      debugLog('WALLET_HEALTH', 'Health check already in progress');
+      return;
+    }
+    
     // Skip if circuit breaker is open
     if (isCircuitBreakerOpen()) {
-      console.log('🚨 Circuit breaker is open, skipping health check');
+      debugLog('WALLET_HEALTH', 'Circuit breaker is open, skipping health check');
       return;
     }
 
-    // Check if we have a basic valid wallet first
-    if (!validateWalletState()) {
-      // Only set as unhealthy if we actually expect a wallet but it's invalid
-      // Don't mark as unhealthy during normal initialization
-      console.log('ℹ️ No valid wallet state - normal during initialization');
-      setHealth(prev => ({ 
-        ...prev, 
-        isHealthy: true, // Stay optimistic
-        lastError: null,
-        chainId: null 
-      }));
-      return;
-    }
+    isHealthCheckingRef.current = true;
+    lastHealthCheckRef.current = now;
 
-    const wallet = wallets[0];
-    
     try {
-      // We have a valid wallet, now try to detect chain
+      if (!validateWalletState()) {
+        setHealth(prev => ({ 
+          ...prev, 
+          isHealthy: true, // Stay optimistic during initialization
+          lastError: null,
+          chainId: null 
+        }));
+        return;
+      }
+
+      const wallet = wallets[0];
       const chainId = await detectChainId(wallet);
       
       if (chainId) {
-        // Validate that the detected chain is supported
         const chainName = getChainNameFromId(chainId);
         const isValidChain = !!chainName;
         
@@ -270,35 +253,36 @@ export const useWalletProviderHealth = () => {
             isRecovering: false
           });
 
-          console.log(`✅ Wallet health check passed - Chain: ${chainName} (${chainId})`);
+          debugLog('WALLET_HEALTH', `Health check passed - Chain: ${chainName} (${chainId})`);
           
           // Reset circuit breaker on success
-          setCircuitBreaker(prev => ({ ...prev, failures: 0, isOpen: false }));
+          setCircuitBreaker(prev => ({ 
+            ...prev, 
+            failures: 0, 
+            isOpen: false, 
+            cooldownUntil: 0 
+          }));
         } else {
-          // Detected chain but it's not supported
-          console.warn(`⚠️ Detected unsupported chain ID: ${chainId}`);
           setHealth({
             isHealthy: false,
-            lastError: `Unsupported chain ID: ${chainId}. Please switch to a supported network (Ethereum, Celo, or Base).`,
+            lastError: `Unsupported chain ID: ${chainId}`,
             chainId,
             isRecovering: false
           });
         }
       } else {
-        // Can't detect chain but wallet exists - be more lenient
-        console.warn('⚠️ Chain detection failed but wallet exists - staying optimistic');
+        // Chain detection failed but wallet exists - stay optimistic
         setHealth(prev => ({ 
           ...prev, 
-          isHealthy: true, // Stay optimistic - maybe chain detection will work later
-          lastError: 'Chain ID detection failed - retrying...',
+          isHealthy: true,
+          lastError: 'Chain detection pending...',
           isRecovering: false 
         }));
       }
 
     } catch (error) {
-      console.error('💥 Wallet health check error:', error);
+      console.error('Wallet health check error:', error);
       
-      // Only mark as unhealthy for serious errors
       const isSeriousError = error.message?.includes('properties of null') || 
                             error.message?.includes('undefined');
       
@@ -310,39 +294,27 @@ export const useWalletProviderHealth = () => {
           isRecovering: false 
         }));
         recordFailure();
-      } else {
-        // For minor errors, stay optimistic
-        setHealth(prev => ({ 
-          ...prev, 
-          isHealthy: true,
-          lastError: null,
-          isRecovering: false 
-        }));
       }
+    } finally {
+      isHealthCheckingRef.current = false;
     }
   }, [wallets, detectChainId, isCircuitBreakerOpen, validateWalletState, recordFailure]);
 
-  // Recovery function with circuit breaker
   const attemptRecovery = useCallback(async () => {
     if (isCircuitBreakerOpen()) {
-      console.log('🚨 Circuit breaker is open, skipping recovery attempt');
+      debugLog('WALLET_HEALTH', 'Circuit breaker is open, skipping recovery');
       return;
     }
 
-    console.log('🔄 Attempting wallet provider recovery...');
+    debugLog('WALLET_HEALTH', 'Attempting wallet provider recovery...');
     setHealth(prev => ({ ...prev, isRecovering: true }));
 
     try {
-      // Shorter wait for wallet state to settle
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Perform health check again
+      await new Promise(resolve => setTimeout(resolve, 2000));
       await performHealthCheck();
-      
       setHealth(prev => ({ ...prev, isRecovering: false }));
-      
     } catch (error) {
-      console.error('❌ Wallet recovery failed:', error);
+      console.error('Wallet recovery failed:', error);
       setHealth(prev => ({ 
         ...prev, 
         isRecovering: false,
@@ -352,33 +324,44 @@ export const useWalletProviderHealth = () => {
     }
   }, [performHealthCheck, isCircuitBreakerOpen, recordFailure]);
 
-  // Monitor wallet health with debouncing - reduced delay
+  // Properly debounced health monitoring with much longer delay
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (healthCheckTimeoutRef.current) {
+      clearTimeout(healthCheckTimeoutRef.current);
+    }
+    
+    healthCheckTimeoutRef.current = setTimeout(() => {
       performHealthCheck();
-    }, 50); // Reduced delay
+    }, 1000); // Increased from 50ms to 1000ms
 
-    return () => clearTimeout(timeoutId);
-  }, [performHealthCheck]);
+    return () => {
+      if (healthCheckTimeoutRef.current) {
+        clearTimeout(healthCheckTimeoutRef.current);
+      }
+    };
+  }, [wallets.length]); // Only depend on wallet count, not the entire wallets array
 
-  // Less aggressive auto-recovery
+  // Less aggressive auto-recovery with proper notifications
   useEffect(() => {
     if (!health.isHealthy && !health.isRecovering && health.lastError && !isCircuitBreakerOpen()) {
-      console.log('🚨 Wallet health issue detected:', health.lastError);
-      
-      // Only show notifications for serious issues
       const isSeriousIssue = health.lastError.includes('properties of null') || 
-                            health.lastError.includes('Recovery failed');
+                            health.lastError.includes('Recovery failed') ||
+                            health.lastError.includes('Unsupported chain');
       
       if (isSeriousIssue) {
-        toast({
-          title: "Wallet Connection Issue",
-          description: "Attempting to restore wallet connection...",
-          variant: "destructive"
-        });
+        console.warn('Wallet health issue detected:', health.lastError);
         
-        // Attempt recovery after a delay
-        setTimeout(attemptRecovery, 1500);
+        // Only show toast for critical issues, not during normal operation
+        if (health.lastError.includes('Recovery failed')) {
+          toast({
+            title: "Wallet Connection Issue",
+            description: "Attempting to restore wallet connection...",
+            variant: "destructive"
+          });
+        }
+        
+        // Attempt recovery with delay
+        setTimeout(attemptRecovery, 3000); // Increased delay
       }
     }
   }, [health.isHealthy, health.isRecovering, health.lastError, attemptRecovery, isCircuitBreakerOpen]);

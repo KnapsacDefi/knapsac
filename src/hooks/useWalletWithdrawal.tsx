@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -6,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
 import { validateAddress, checksumAddress, validateTokenForChain } from '@/utils/withdrawalValidation';
+import { debugLog } from '@/utils/debugConfig';
 
 const erc20Abi = [
   {
@@ -43,17 +43,18 @@ export const useWalletWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   
-  // Enhanced network management - switch when starting withdrawal process
+  // More controlled network management - only switch when actually needed
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    step === 'signing' && !!token // Only switch when we're in signing step
+    step === 'signing' && !!token // Only trigger network switching during signing step
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
-      console.log('Message signed successfully:', signature);
-      // Check network status before proceeding
-      setTimeout(() => {
+      debugLog('WITHDRAWAL', 'Message signed successfully:', signature);
+      
+      // Check network status before proceeding - but with timeout
+      const proceedWithTransfer = () => {
         if (isCorrectNetwork) {
           handleTokenTransfer();
         } else {
@@ -65,7 +66,14 @@ export const useWalletWithdrawal = ({
           setStep('form');
           setIsProcessing(false);
         }
-      }, 500); // Brief delay to let network switching complete
+      };
+      
+      // If still validating, wait briefly then proceed anyway
+      if (isValidating) {
+        setTimeout(proceedWithTransfer, 1000);
+      } else {
+        proceedWithTransfer();
+      }
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -81,7 +89,7 @@ export const useWalletWithdrawal = ({
 
   const { sendTransaction } = useSendTransaction({
     onSuccess: async (txHash) => {
-      console.log('Transaction successful:', txHash);
+      debugLog('WITHDRAWAL', 'Transaction successful:', txHash);
       
       try {
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
@@ -195,36 +203,35 @@ export const useWalletWithdrawal = ({
   };
 
   const handleWithdraw = async () => {
-    // Validate all inputs first
     if (!validateWithdrawalInputs()) {
       return;
     }
 
-    // Check if still validating - but with timeout
+    // More lenient validation timeout handling
     if (isValidating) {
-      console.log('Network validation in progress, proceeding with timeout...');
+      debugLog('WITHDRAWAL', 'Network validation in progress, proceeding with timeout...');
       
       toast({
         title: "Please Wait",
         description: `Validating connection to ${token?.chain || 'target'} network...`,
       });
       
-      // Give validation max 2 seconds then proceed anyway
+      // Reduced timeout - be more responsive
       setTimeout(() => {
         if (isValidating) {
-          console.log('⚠️ Network validation timeout - proceeding anyway');
+          debugLog('WITHDRAWAL', 'Network validation timeout - proceeding anyway');
           toast({
             title: "Validation Timeout",
             description: "Network validation is taking longer than expected. Please ensure you're on the correct network.",
             variant: "destructive"
           });
         }
-      }, 2000);
+      }, 1500); // Reduced from 2000ms
       
       return;
     }
 
-    // Check if we're on the wrong network before proceeding
+    // More informative network checking
     if (!isCorrectNetwork && currentChain && token?.chain) {
       toast({
         title: "Wrong Network",
@@ -236,15 +243,13 @@ export const useWalletWithdrawal = ({
 
     const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
-    setStep('signing'); // This will trigger network switching
+    setStep('signing'); // This will trigger network switching if needed
 
-    // Shorter timeout for network switching - be more responsive
+    // Reduced timeout for better user experience
     setTimeout(async () => {
       try {
-        // Validate and checksum the recipient address
         const validatedRecipientAddress = checksumAddress(recipientAddress);
 
-        // Create transaction record
         const transactionData = {
           wallet_address: walletAddress,
           transaction_type: 'withdrawal_wallet',
@@ -265,10 +270,8 @@ export const useWalletWithdrawal = ({
 
         currentTransactionId = transaction.id;
 
-        // Create authorization message
         const message = `Authorize withdrawal of ${amount} ${token!.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
         
-        // Sign the message
         signMessage({ message });
 
       } catch (error) {
@@ -281,7 +284,7 @@ export const useWalletWithdrawal = ({
         setStep('form');
         setIsProcessing(false);
       }
-    }, 300); // Reduced from 1000ms to 300ms for faster response
+    }, 200); // Reduced from 300ms to 200ms for faster response
   };
 
   const handleTokenTransfer = async () => {
