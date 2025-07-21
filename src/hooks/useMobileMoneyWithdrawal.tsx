@@ -82,7 +82,7 @@ export const useMobileMoneyWithdrawal = ({
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
           body: {
             transactionId: currentTransactionId,
-            transactionHash: txHash,
+            transactionHash: txHash.hash,
             status: 'processing'
           }
         });
@@ -92,7 +92,7 @@ export const useMobileMoneyWithdrawal = ({
         }
 
         // Process mobile money transfer
-        await processMobileMoneyTransfer(txHash);
+        await processMobileMoneyTransfer(txHash.hash);
 
       } catch (error) {
         console.error('Error in mobile money processing:', error);
@@ -109,7 +109,7 @@ export const useMobileMoneyWithdrawal = ({
       console.error('Token transfer failed:', error);
       toast({
         title: "Transaction Failed",
-        description: error.message || "Token transfer was rejected or failed",
+        description: error.toString() || "Token transfer was rejected or failed",
         variant: "destructive"
       });
       setStep('form');
@@ -190,7 +190,7 @@ export const useMobileMoneyWithdrawal = ({
       const message = `Authorize mobile money withdrawal of ${amount} ${token.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
       
       // Sign the message
-      signMessage(message);
+      signMessage({ message });
 
     } catch (error) {
       console.error('Mobile money withdrawal setup error:', error);

@@ -95,7 +95,7 @@ export const useWalletWithdrawal = ({
       console.error('Transaction failed:', error);
       toast({
         title: "Transaction Failed",
-        description: error.message || "Transaction was rejected or failed",
+        description: error.toString() || "Transaction was rejected or failed",
         variant: "destructive"
       });
       setStep('form');
@@ -163,7 +163,7 @@ export const useWalletWithdrawal = ({
       const message = `Authorize withdrawal of ${amount} ${token.symbol} to ${recipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
       
       // Sign the message
-      signMessage(message);
+      signMessage({ message });
 
     } catch (error) {
       console.error('Withdrawal setup error:', error);
