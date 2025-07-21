@@ -16,6 +16,7 @@ import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleto
 import { useMountingGuard } from "@/hooks/useMountingGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { getWalletAddress } from "@/utils/walletUtils";
+import { useNetworkManager } from "@/hooks/useNetworkManager";
 
 const Wallet = () => {
   // ALWAYS call hooks in the same order at the top
@@ -29,6 +30,9 @@ const Wallet = () => {
 
   // Get unified wallet address
   const walletAddress = getWalletAddress(wallets, user);
+
+  // Add network management to default to Ethereum
+  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager('ethereum', true);
 
   // Handle authentication redirects
   useEffect(() => {
@@ -55,13 +59,15 @@ const Wallet = () => {
     }
   }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, navigate]);
 
-  // Show loading state during initialization
-  if (!ready || !isStable || !mountingStable) {
+  // Show loading state during initialization or network switching
+  if (!ready || !isStable || !mountingStable || isValidating) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading wallet...</p>
+          <p className="text-muted-foreground">
+            {isValidating ? "Switching to Ethereum network..." : "Loading wallet..."}
+          </p>
         </div>
       </div>
     );
