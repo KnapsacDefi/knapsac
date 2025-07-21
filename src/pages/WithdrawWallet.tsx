@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Wallet2, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Wallet2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -73,6 +73,42 @@ const WithdrawWallet = () => {
     );
   }
 
+  const getNetworkStatusAlert = () => {
+    if (isValidating) {
+      return (
+        <Alert className="mb-4">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            Validating network connection...
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (!isCorrectNetwork) {
+      const currentDisplay = currentChain || 'Unknown';
+      const targetDisplay = token.chain || 'target';
+      
+      return (
+        <Alert className="mb-4" variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Connected to {currentDisplay} network. Please switch to {targetDisplay} network in your wallet to continue.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <Alert className="mb-4">
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          Connected to {token.chain} network ✓
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
@@ -85,34 +121,8 @@ const WithdrawWallet = () => {
           <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
         </div>
 
-        {/* Network Status Alert */}
-        {isValidating && (
-          <Alert className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Validating network connection...
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!isValidating && !isCorrectNetwork && (
-          <Alert className="mb-4" variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Please switch to {token.chain} network in your wallet to continue.
-              {currentChain && ` Currently on: ${currentChain}`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!isValidating && isCorrectNetwork && (
-          <Alert className="mb-4">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              Connected to {token.chain} network ✓
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Enhanced Network Status Alert */}
+        {getNetworkStatusAlert()}
 
         <Card className="mb-6">
           <CardHeader>
@@ -178,6 +188,15 @@ const WithdrawWallet = () => {
           >
             {isProcessing ? "Processing..." : "Withdraw"}
           </Button>
+
+          {/* Additional help text for network issues */}
+          {!isCorrectNetwork && !isValidating && (
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                Having trouble switching networks? Please manually switch to {token.chain} network in your wallet.
+              </p>
+            </div>
+          )}
         </div>
       </main>
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -43,37 +44,18 @@ export const useWalletWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   
-  // More controlled network management - only switch when actually needed
+  // Only trigger network switching when actually needed (during signing)
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    step === 'signing' && !!token // Only trigger network switching during signing step
+    false // Don't auto-switch, we'll handle this manually
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       debugLog('WITHDRAWAL', 'Message signed successfully:', signature);
       
-      // Check network status before proceeding - but with timeout
-      const proceedWithTransfer = () => {
-        if (isCorrectNetwork) {
-          handleTokenTransfer();
-        } else {
-          toast({
-            title: "Network Error",
-            description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-            variant: "destructive"
-          });
-          setStep('form');
-          setIsProcessing(false);
-        }
-      };
-      
-      // If still validating, wait briefly then proceed anyway
-      if (isValidating) {
-        setTimeout(proceedWithTransfer, 1000);
-      } else {
-        proceedWithTransfer();
-      }
+      // Proceed with token transfer after successful signing
+      handleTokenTransfer();
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -198,39 +180,37 @@ export const useWalletWithdrawal = ({
   };
 
   const handleWithdraw = async () => {
+    console.log('🚀 Starting withdrawal process...', {
+      token: token?.symbol,
+      amount,
+      recipient: recipientAddress,
+      currentChain,
+      targetChain: token?.chain,
+      isCorrectNetwork,
+      isValidating
+    });
+
     if (!validateWithdrawalInputs()) {
       return;
     }
 
-    // More lenient validation timeout handling
+    // Check network status at the time of withdrawal
     if (isValidating) {
-      debugLog('WITHDRAWAL', 'Network validation in progress, proceeding with timeout...');
-      
       toast({
-        title: "Please Wait",
-        description: `Validating connection to ${token?.chain || 'target'} network...`,
+        title: "Network Check",
+        description: "Checking network connection, please wait...",
       });
-      
-      // Reduced timeout - be more responsive
-      setTimeout(() => {
-        if (isValidating) {
-          debugLog('WITHDRAWAL', 'Network validation timeout - proceeding anyway');
-          toast({
-            title: "Validation Timeout",
-            description: "Network validation is taking longer than expected. Please ensure you're on the correct network.",
-            variant: "destructive"
-          });
-        }
-      }, 1500); // Reduced from 2000ms
-      
       return;
     }
 
-    // More informative network checking
-    if (!isCorrectNetwork && currentChain && token?.chain) {
+    // More informative network error messages
+    if (!isCorrectNetwork) {
+      const currentNetworkDisplay = currentChain || 'Unknown';
+      const targetNetworkDisplay = token?.chain || 'target';
+      
       toast({
         title: "Wrong Network",
-        description: `Currently on ${currentChain} network. Please switch to ${token.chain} network to continue.`,
+        description: `Currently connected to ${currentNetworkDisplay} network. Please switch to ${targetNetworkDisplay} network in your wallet and try again.`,
         variant: "destructive"
       });
       return;
@@ -238,69 +218,68 @@ export const useWalletWithdrawal = ({
 
     const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
-    setStep('signing'); // This will trigger network switching if needed
+    setStep('signing');
 
-    // Reduced timeout for better user experience
-    setTimeout(async () => {
-      try {
-        const validatedRecipientAddress = checksumAddress(recipientAddress);
+    try {
+      const validatedRecipientAddress = checksumAddress(recipientAddress);
 
-        const transactionData = {
-          wallet_address: walletAddress,
-          transaction_type: 'withdrawal_wallet',
-          token_symbol: token!.symbol,
-          chain: token!.chain,
-          amount: parseFloat(amount),
-          recipient_address: validatedRecipientAddress,
-          status: 'pending'
-        };
+      const transactionData = {
+        wallet_address: walletAddress,
+        transaction_type: 'withdrawal_wallet',
+        token_symbol: token!.symbol,
+        chain: token!.chain,
+        amount: parseFloat(amount),
+        recipient_address: validatedRecipientAddress,
+        status: 'pending'
+      };
 
-        const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
-          body: transactionData
-        });
+      console.log('📄 Creating withdrawal transaction record...', transactionData);
 
-        if (createError) {
-          throw createError;
-        }
+      const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
+        body: transactionData
+      });
 
-        currentTransactionId = transaction.id;
-
-        // Create formatted message for withdrawal authorization
-        const message = `Authorize withdrawal of ${amount} ${token!.symbol}\n\nRecipient: ${validatedRecipientAddress}\nChain: ${token!.chain}\nTimestamp: ${new Date().toISOString()}`;
-        
-        // Add Privy UI options for better user experience
-        const uiOptions = {
-          title: 'Authorize Withdrawal',
-          description: `Please sign this message to authorize the withdrawal of ${amount} ${token!.symbol} to the specified recipient address. This signature does not cost any gas fees.`,
-          buttonText: 'Sign & Authorize'
-        };
-
-        console.log('🎯 Initiating withdrawal authorization...', { 
-          walletAddress, 
-          token: token!.symbol,
-          amount,
-          recipient: validatedRecipientAddress,
-          message,
-          uiOptions 
-        });
-
-        // Use Privy's signMessage with UI options
-        signMessage(
-          { message },
-          { uiOptions }
-        );
-
-      } catch (error) {
-        console.error('Withdrawal setup error:', error);
-        toast({
-          title: "Setup Error",
-          description: error.message || "Failed to setup withdrawal",
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
+      if (createError) {
+        throw createError;
       }
-    }, 200); // Reduced from 300ms to 200ms for faster response
+
+      currentTransactionId = transaction.id;
+
+      // Create formatted message for withdrawal authorization
+      const message = `Authorize withdrawal of ${amount} ${token!.symbol}\n\nRecipient: ${validatedRecipientAddress}\nChain: ${token!.chain}\nTimestamp: ${new Date().toISOString()}`;
+      
+      // Add Privy UI options for better user experience
+      const uiOptions = {
+        title: 'Authorize Withdrawal',
+        description: `Please sign this message to authorize the withdrawal of ${amount} ${token!.symbol} to the specified recipient address. This signature does not cost any gas fees.`,
+        buttonText: 'Sign & Authorize'
+      };
+
+      console.log('🎯 Initiating withdrawal authorization...', { 
+        walletAddress, 
+        token: token!.symbol,
+        amount,
+        recipient: validatedRecipientAddress,
+        message,
+        uiOptions 
+      });
+
+      // Use Privy's signMessage with UI options
+      signMessage(
+        { message },
+        { uiOptions }
+      );
+
+    } catch (error) {
+      console.error('Withdrawal setup error:', error);
+      toast({
+        title: "Setup Error",
+        description: error.message || "Failed to setup withdrawal",
+        variant: "destructive"
+      });
+      setStep('form');
+      setIsProcessing(false);
+    }
   };
 
   const handleTokenTransfer = async () => {
@@ -323,6 +302,13 @@ export const useWalletWithdrawal = ({
         description: `Send ${amount || '0'} ${token?.symbol || 'TOKEN'} to ${validatedRecipientAddress.slice(0, 6)}...${validatedRecipientAddress.slice(-4)}`,
         buttonText: "Confirm Withdrawal"
       };
+
+      console.log('💸 Initiating token transfer...', {
+        token: token.symbol,
+        amount,
+        recipient: validatedRecipientAddress,
+        amountInWei: amountInWei.toString()
+      });
 
       sendTransaction({
         to: token.address as `0x${string}`,
