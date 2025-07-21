@@ -1,119 +1,35 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Wallet2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
-import { supabase } from '@/integrations/supabase/client';
+import { useWalletWithdrawal } from '@/hooks/useWalletWithdrawal';
 
 const WithdrawWallet = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
-  const { toast } = useToast();
   
   const { token, balance } = location.state || {};
   
   const [amount, setAmount] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
 
   if (!token) {
     navigate('/withdraw');
     return null;
   }
 
-  const handleWithdraw = async () => {
-    if (!amount || !recipientAddress) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(balance)) {
-      toast({
-        title: "Error",
-        description: "Invalid amount",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    setStep('signing');
-
-    try {
-      const walletAddress = wallets[0]?.address;
-      if (!walletAddress) {
-        throw new Error('No wallet connected');
-      }
-
-      // Create transaction record
-      const transactionData = {
-        wallet_address: walletAddress,
-        transaction_type: 'withdrawal_wallet',
-        token_symbol: token.symbol,
-        chain: token.chain,
-        amount: parseFloat(amount),
-        recipient_address: recipientAddress,
-        status: 'pending'
-      };
-
-      const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
-        body: transactionData
-      });
-
-      if (createError) {
-        throw createError;
-      }
-
-      setStep('confirming');
-
-      // Here you would implement the actual blockchain transaction
-      // For now, we'll simulate it
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Update transaction status
-      const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
-        body: {
-          transactionId: transaction.id,
-          transactionHash: `0x${Math.random().toString(16).slice(2)}`,
-          status: 'completed'
-        }
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Withdrawal completed successfully"
-      });
-
-      navigate('/wallet');
-    } catch (error) {
-      console.error('Withdrawal error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Withdrawal failed",
-        variant: "destructive"
-      });
-      setStep('form');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  const { handleWithdraw, isProcessing, step } = useWalletWithdrawal({
+    token,
+    amount,
+    recipientAddress,
+    balance
+  });
 
   if (step === 'signing') {
     return (
@@ -219,9 +135,9 @@ const WithdrawWallet = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={true}
+            disabled={isProcessing || !amount || !recipientAddress}
           >
-            Withdraw (coming)
+            {isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>

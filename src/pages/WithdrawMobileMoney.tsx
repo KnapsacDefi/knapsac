@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
+import { useMobileMoneyWithdrawal } from '@/hooks/useMobileMoneyWithdrawal';
 
 const CURRENCIES = [
   { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
@@ -36,8 +36,6 @@ interface MobileNetwork {
 const WithdrawMobileMoney = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
   const { toast } = useToast();
   
   const { token, balance } = location.state || {};
@@ -49,8 +47,6 @@ const WithdrawMobileMoney = () => {
   const [conversionRate, setConversionRate] = useState<number | null>(null);
   const [localAmount, setLocalAmount] = useState('0.00');
   const [mobileNetworks, setMobileNetworks] = useState<MobileNetwork[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
 
@@ -58,6 +54,17 @@ const WithdrawMobileMoney = () => {
     navigate('/withdraw');
     return null;
   }
+
+  const { handleWithdraw, isProcessing, step } = useMobileMoneyWithdrawal({
+    token,
+    amount,
+    phoneNumber,
+    selectedCurrency,
+    selectedNetwork,
+    conversionRate: conversionRate || 0,
+    localAmount,
+    balance
+  });
 
   useEffect(() => {
     if (selectedCurrency) {
@@ -175,111 +182,10 @@ const WithdrawMobileMoney = () => {
     }
   };
 
-  const formatPhoneNumber = (input: string) => {
-    // Remove all non-digits
-    const digits = input.replace(/\D/g, '');
-    
-    // Add country code if not present
-    if (digits.length > 0 && !digits.startsWith('233')) {
-      return `+233${digits}`;
-    }
-    
-    return `+${digits}`;
-  };
-
   // Defensive filter to ensure mobileNetworks is always an array
   const filteredNetworks = Array.isArray(mobileNetworks) 
     ? mobileNetworks.filter(network => network.currency === selectedCurrency)
     : [];
-
-  const handleWithdraw = async () => {
-    if (!amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(balance)) {
-      toast({
-        title: "Error",
-        description: "Invalid amount",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    setStep('signing');
-
-    try {
-      const walletAddress = wallets[0]?.address;
-      if (!walletAddress) {
-        throw new Error('No wallet connected');
-      }
-
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-
-      // Create transaction record
-      const transactionData = {
-        wallet_address: walletAddress,
-        transaction_type: 'withdrawal_mobile_money',
-        token_symbol: token.symbol,
-        chain: token.chain,
-        amount: parseFloat(amount),
-        recipient_phone: formattedPhone,
-        recipient_currency: selectedCurrency,
-        mobile_network: selectedNetwork,
-        conversion_rate: conversionRate,
-        status: 'pending'
-      };
-
-      const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
-        body: transactionData
-      });
-
-      if (createError) {
-        throw createError;
-      }
-
-      setStep('transferring');
-
-      // Process the mobile money transfer
-      const { data: transferResult, error: transferError } = await supabase.functions.invoke('process-mobile-money-transfer', {
-        body: {
-          transactionId: transaction.id,
-          amount: localAmount,
-          currency: selectedCurrency,
-          phoneNumber: formattedPhone,
-          mobileNetwork: selectedNetwork,
-          walletAddress
-        }
-      });
-
-      if (transferError) {
-        throw transferError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Mobile money transfer initiated successfully"
-      });
-
-      navigate('/wallet');
-    } catch (error) {
-      console.error('Mobile money transfer error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Transfer failed",
-        variant: "destructive"
-      });
-      setStep('form');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   if (step === 'signing') {
     return (
@@ -435,9 +341,9 @@ const WithdrawMobileMoney = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={true}
+            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate}
           >
-            Withdraw (coming)
+            {isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>
