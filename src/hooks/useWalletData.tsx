@@ -51,11 +51,25 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
     },
   });
 
-  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
-  // Memoize the wallet address to prevent unnecessary re-triggers
+  // Fix memoization to use actual string values instead of object references
   const walletAddress = useMemo(() => {
-    return wallets[0]?.address || user?.wallet?.address || null;
-  }, [wallets, user?.wallet?.address]);
+    // Primary source: wallets array (more stable)
+    if (wallets && wallets.length > 0 && wallets[0]?.address) {
+      return wallets[0].address;
+    }
+    // Fallback: user wallet address (extract just the string value)
+    if (user?.wallet?.address) {
+      return user.wallet.address;
+    }
+    return null;
+  }, [
+    wallets?.length, 
+    wallets?.[0]?.address, 
+    user?.wallet?.address
+  ]);
+
+  // Extract user ID to avoid object reference issues
+  const userId = useMemo(() => user?.id || null, [user?.id]);
 
   useEffect(() => {
     console.log('useWalletData: useEffect triggered', { 
@@ -63,8 +77,9 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       authenticated, 
       user: !!user,
       isStable,
-      walletsCount: wallets.length,
+      walletsCount: wallets?.length || 0,
       walletAddress,
+      userId,
       hasInit: hasInitialized.current
     });
 
@@ -129,7 +144,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
             walletAddress: walletAddress,
             signature: '',
             message: '',
-            privyUserId: user.id
+            privyUserId: userId
           }
         });
 
@@ -226,13 +241,10 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       console.log('useWalletData: All API calls completed', results);
     });
 
-    // Cleanup function
-    return () => {
-      hasInitialized.current = false;
-    };
+    // Note: Don't reset hasInitialized in cleanup to prevent re-initialization
 
-  // Use walletAddress in dependencies instead of the entire wallets array
-  }, [ready, authenticated, user, walletAddress, isStable, user?.id]);
+  // Use stable primitive values in dependencies
+  }, [ready, authenticated, isStable, walletAddress, userId]);
 
   return data;
 };
