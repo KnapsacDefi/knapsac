@@ -24,8 +24,8 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
   // Enhanced wallet detection with validation
   const getActiveWallet = useCallback(() => {
-    // Check wallet provider health first
-    if (!health.isHealthy) {
+    // Wait for wallet provider to be healthy before proceeding
+    if (!health.isHealthy && health.lastError && health.lastError !== 'Chain ID detection failed') {
       console.warn('Wallet provider is unhealthy:', health.lastError);
       return null;
     }
@@ -66,19 +66,19 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [detectChainId, safeWalletAccess]);
 
-  // Enhanced network switch verification with multiple attempts
-  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 8): Promise<boolean> => {
+  // Enhanced network switch verification with progressive delays
+  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 6): Promise<boolean> => {
     console.log(`🔄 Starting enhanced network switch verification for chainId: ${targetChainId}`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`📡 Verification attempt ${attempt}/${maxAttempts}`);
       
-      // Progressive delay: start with 1s, then 2s, 3s, etc.
+      // Progressive delay: 1s, 2s, 3s, etc.
       const delay = 1000 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       // Check wallet provider health before verification
-      if (!health.isHealthy) {
+      if (!health.isHealthy && health.lastError && !health.lastError.includes('Unsupported chain')) {
         console.log(`⚠️ Wallet provider unhealthy on attempt ${attempt}, attempting recovery...`);
         await attemptRecovery();
         continue;
@@ -124,9 +124,9 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setIsValidating(true);
       
       try {
-        // Check wallet provider health first
-        if (!health.isHealthy) {
-          console.log('Wallet provider is unhealthy, waiting for recovery...');
+        // Wait for wallet provider to stabilize if it's recovering
+        if (health.isRecovering) {
+          console.log('Wallet provider is recovering, waiting...');
           setIsValidating(false);
           return;
         }
@@ -167,8 +167,8 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
           setCurrentChain(null);
           setIsValidating(false);
           
-          // Attempt recovery if chain detection fails
-          if (!health.isRecovering) {
+          // Attempt recovery if chain detection fails and provider is unhealthy
+          if (!health.isRecovering && health.lastError && health.lastError.includes('Chain ID detection failed')) {
             console.log('🔄 Attempting recovery due to chain detection failure...');
             await attemptRecovery();
           }
