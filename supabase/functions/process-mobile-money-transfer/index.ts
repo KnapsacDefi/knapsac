@@ -25,7 +25,7 @@ serve(async (req) => {
       }
     );
 
-    const payboxApiKey = Deno.env.get('PAYBOX_API_KEY');
+    const payboxApiKey = Deno.env.get('PAYBOX_TRANSFER_API_KEY');
     if (!payboxApiKey) {
       console.error('PAYBOX_API_KEY not found');
       return new Response(
