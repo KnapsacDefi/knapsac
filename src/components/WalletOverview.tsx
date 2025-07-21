@@ -31,25 +31,11 @@ const WalletOverview = ({
   user,
   wallets = []
 }: WalletOverviewProps) => {
+  // ALWAYS call ALL hooks at the beginning - never conditionally
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
 
-  const isLoading = loading.usdc || loading.gooddollar;
-
-  // Show skeleton while essential data is loading
-  if (loading.profile || loading.usdc || loading.gooddollar) {
-    return <WalletOverviewSkeleton />;
-  }
-
-  const displayBalance = isLoading ? "Loading..." : `$${balance}`;
-  const displayGooddollarBalance = isLoading ? "Loading..." : `${gooddollarBalance} G$`;
-
-  const isStartup = userProfile?.profile_type === 'Startup';
-  const isLender = userProfile?.profile_type === 'Lender';
-  const isServiceProvider = userProfile?.profile_type === 'Service Provider';
-  const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
-
-  // Check if we have valid wallets - fix the inconsistency
+  // Check if we have valid wallets
   const hasWallets = wallets && wallets.length > 0 && wallets[0]?.address;
   
   // ALWAYS call useFundWallet hook to maintain consistent hook order
@@ -95,6 +81,22 @@ const WalletOverview = ({
       }
     }
   }, [hasWallets, wallets, fundWalletHook]);
+
+  // NOW check for loading state AFTER all hooks are called
+  const isLoading = loading.usdc || loading.gooddollar;
+
+  // Show skeleton while essential data is loading - but AFTER all hooks are called
+  if (loading.profile || loading.usdc || loading.gooddollar) {
+    return <WalletOverviewSkeleton />;
+  }
+
+  const displayBalance = isLoading ? "Loading..." : `$${balance}`;
+  const displayGooddollarBalance = isLoading ? "Loading..." : `${gooddollarBalance} G$`;
+
+  const isStartup = userProfile?.profile_type === 'Startup';
+  const isLender = userProfile?.profile_type === 'Lender';
+  const isServiceProvider = userProfile?.profile_type === 'Service Provider';
+  const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
