@@ -43,11 +43,12 @@ export const useWalletWithdrawal = ({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
+  const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
-  // Only trigger network switching when actually needed (during signing)
+  // Only trigger network validation when explicitly requested (during withdrawal)
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    false // Don't auto-switch, we'll handle this manually
+    shouldValidateNetwork // Only validate when withdrawal is initiated
   );
 
   const { signMessage } = useSignMessage({
@@ -66,6 +67,7 @@ export const useWalletWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   });
 
@@ -96,6 +98,7 @@ export const useWalletWithdrawal = ({
       
       setIsProcessing(false);
       setStep('form');
+      setShouldValidateNetwork(false);
     },
     onError: (error) => {
       console.error('Transaction failed:', error);
@@ -106,6 +109,7 @@ export const useWalletWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   });
 
@@ -185,25 +189,31 @@ export const useWalletWithdrawal = ({
       amount,
       recipient: recipientAddress,
       currentChain,
-      targetChain: token?.chain,
-      isCorrectNetwork,
-      isValidating
+      targetChain: token?.chain
     });
 
     if (!validateWithdrawalInputs()) {
       return;
     }
 
-    // Check network status at the time of withdrawal
+    // Trigger network validation only when user actually tries to withdraw
+    setShouldValidateNetwork(true);
+    setIsProcessing(true);
+
+    // Wait a moment for network validation to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Check network status after validation is triggered
     if (isValidating) {
       toast({
         title: "Network Check",
         description: "Checking network connection, please wait...",
       });
+      setIsProcessing(false);
+      setShouldValidateNetwork(false);
       return;
     }
 
-    // More informative network error messages
     if (!isCorrectNetwork) {
       const currentNetworkDisplay = currentChain || 'Unknown';
       const targetNetworkDisplay = token?.chain || 'target';
@@ -213,11 +223,12 @@ export const useWalletWithdrawal = ({
         description: `Currently connected to ${currentNetworkDisplay} network. Please switch to ${targetNetworkDisplay} network in your wallet and try again.`,
         variant: "destructive"
       });
+      setIsProcessing(false);
+      setShouldValidateNetwork(false);
       return;
     }
 
     const walletAddress = wallets[0]?.address;
-    setIsProcessing(true);
     setStep('signing');
 
     try {
@@ -279,6 +290,7 @@ export const useWalletWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   };
 
@@ -325,6 +337,7 @@ export const useWalletWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   };
 
@@ -332,8 +345,8 @@ export const useWalletWithdrawal = ({
     handleWithdraw,
     isProcessing,
     step,
-    isCorrectNetwork,
+    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true, // Don't show network error until validation is triggered
     currentChain,
-    isValidating
+    isValidating: shouldValidateNetwork ? isValidating : false // Don't show validating until triggered
   };
 };

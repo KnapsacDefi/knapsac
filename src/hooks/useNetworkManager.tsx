@@ -53,7 +53,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     try {
       const detectionPromise = detectChainId(wallet);
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('Chain detection timeout')), 8000); // Increased timeout
+        setTimeout(() => reject(new Error('Chain detection timeout')), 8000);
       });
       
       const chainId = await Promise.race([detectionPromise, timeoutPromise]);
@@ -79,7 +79,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       debugLog('NETWORK_MANAGER', `Verification attempt ${attempt}/${maxAttempts}`);
       
-      const delay = 1500 * attempt; // Increased delay
+      const delay = 1500 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       try {
@@ -101,8 +101,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     return false;
   }, [detectCurrentNetwork]);
 
-  // Debounced validation with proper throttling
+  // Validation function that respects shouldSwitch flag
   const validateAndSwitchNetwork = useCallback(async () => {
+    // Skip validation entirely if shouldSwitch is false
+    if (!shouldSwitch) {
+      debugLog('NETWORK_MANAGER', 'Network validation skipped - shouldSwitch is false');
+      return;
+    }
+
     const now = Date.now();
     
     // Prevent excessive validations - minimum 3 seconds between validations
@@ -147,7 +153,6 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         return;
       }
 
-      // Don't wait for perfect health - proceed with basic wallet
       const { chainId: currentChainId, chainName: currentChainName } = await detectCurrentNetwork(activeWallet);
       
       if (!currentChainId) {
@@ -155,7 +160,6 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         setIsCorrectNetwork(false);
         setCurrentChain(null);
         
-        // Only attempt recovery for serious health issues - not for basic chain detection failures
         if (!health.isRecovering && health.lastError?.includes('properties of null')) {
           debugLog('NETWORK_MANAGER', 'Attempting recovery due to serious health issue...');
           setTimeout(attemptRecovery, 2000);
@@ -219,14 +223,11 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
             description = `Your wallet doesn't support ${targetChain} network. Please add it manually or switch using your wallet.`;
           }
           
-          // Only show toast for actual switch attempts, not during normal validation
-          if (shouldSwitch) {
-            toast({
-              title,
-              description,
-              variant: "destructive"
-            });
-          }
+          toast({
+            title,
+            description,
+            variant: "destructive"
+          });
           
           setIsCorrectNetwork(false);
         }
@@ -236,7 +237,6 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setIsCorrectNetwork(false);
       setCurrentChain(null);
       
-      // Only show error toast for serious issues
       if (error.message?.includes('properties of null')) {
         toast({
           title: "Network Error",
@@ -250,9 +250,12 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery]);
 
-  // Properly debounced network validation
+  // Only run validation when shouldSwitch is true
   useEffect(() => {
-    if (!shouldSwitch) return;
+    if (!shouldSwitch) {
+      debugLog('NETWORK_MANAGER', 'Skipping useEffect validation - shouldSwitch is false');
+      return;
+    }
 
     if (validationTimeoutRef.current) {
       clearTimeout(validationTimeoutRef.current);
@@ -260,14 +263,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     
     validationTimeoutRef.current = setTimeout(() => {
       validateAndSwitchNetwork();
-    }, 1500); // Increased from immediate to 1.5 seconds
+    }, 1500);
 
     return () => {
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current);
       }
     };
-  }, [wallets.length, targetChain, shouldSwitch, authenticated]); // Reduced dependencies
+  }, [wallets.length, targetChain, shouldSwitch, authenticated]);
 
   return {
     isCorrectNetwork,

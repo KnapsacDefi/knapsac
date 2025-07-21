@@ -74,6 +74,11 @@ const WithdrawWallet = () => {
   }
 
   const getNetworkStatusAlert = () => {
+    // Only show network status during processing or when there's an issue
+    if (!isProcessing && isCorrectNetwork) {
+      return null;
+    }
+
     if (isValidating) {
       return (
         <Alert className="mb-4">
@@ -85,7 +90,7 @@ const WithdrawWallet = () => {
       );
     }
 
-    if (!isCorrectNetwork) {
+    if (!isCorrectNetwork && isProcessing) {
       const currentDisplay = currentChain || 'Unknown';
       const targetDisplay = token.chain || 'target';
       
@@ -99,14 +104,7 @@ const WithdrawWallet = () => {
       );
     }
 
-    return (
-      <Alert className="mb-4">
-        <CheckCircle className="h-4 w-4" />
-        <AlertDescription>
-          Connected to {token.chain} network ✓
-        </AlertDescription>
-      </Alert>
-    );
+    return null;
   };
 
   return (
@@ -121,7 +119,7 @@ const WithdrawWallet = () => {
           <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
         </div>
 
-        {/* Enhanced Network Status Alert */}
+        {/* Network Status Alert - only shown when needed */}
         {getNetworkStatusAlert()}
 
         <Card className="mb-6">
@@ -184,19 +182,10 @@ const WithdrawWallet = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress || isValidating || !isCorrectNetwork}
+            disabled={isProcessing || !amount || !recipientAddress}
           >
             {isProcessing ? "Processing..." : "Withdraw"}
           </Button>
-
-          {/* Additional help text for network issues */}
-          {!isCorrectNetwork && !isValidating && (
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
-                Having trouble switching networks? Please manually switch to {token.chain} network in your wallet.
-              </p>
-            </div>
-          )}
         </div>
       </main>
 
