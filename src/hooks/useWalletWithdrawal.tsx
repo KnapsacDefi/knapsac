@@ -45,6 +45,7 @@ export const useWalletWithdrawal = ({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'confirming'>('form');
+  const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   
   // Enable automatic network switching
   const { 
@@ -84,6 +85,19 @@ export const useWalletWithdrawal = ({
       debugLog('WITHDRAWAL', 'Transaction successful:', txHash);
       
       try {
+        // Validate that we have a transaction ID before proceeding
+        if (!currentTransactionId) {
+          console.error('No transaction ID available for update');
+          toast({
+            title: "Update Error",
+            description: "Transaction completed but update failed - no transaction ID",
+            variant: "destructive"
+          });
+          setIsProcessing(false);
+          setStep('form');
+          return;
+        }
+
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
           body: {
             transactionId: currentTransactionId,
@@ -122,8 +136,6 @@ export const useWalletWithdrawal = ({
       setIsProcessing(false);
     }
   });
-
-  let currentTransactionId: string;
 
   const validateWithdrawalInputs = (): boolean => {
     if (!token) {
@@ -247,7 +259,7 @@ export const useWalletWithdrawal = ({
         throw createError;
       }
 
-      currentTransactionId = transaction.id;
+      setCurrentTransactionId(transaction.id);
 
       const message = `Authorize withdrawal of ${amount} ${token!.symbol}\n\nRecipient: ${validatedRecipientAddress}\nChain: ${token!.chain}\nTimestamp: ${new Date().toISOString()}`;
       
