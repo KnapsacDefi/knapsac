@@ -25,11 +25,6 @@ const Wallet = () => {
   // Get auth data from context
   const { ready, authenticated, user, wallets, isStable } = useAuth();
   const data = useWalletData({ ready, authenticated, user, wallets, isStable });
-  
-  // Add debugging but avoid console.log in render to prevent infinite loops
-  React.useEffect(() => {
-    console.log('Wallet: Render state', { ready, authenticated, isStable, mountingStable, hasNavigated });
-  }, [ready, authenticated, isStable, mountingStable, hasNavigated]);
 
   // Handle authentication redirects
   useEffect(() => {

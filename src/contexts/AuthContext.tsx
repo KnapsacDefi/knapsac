@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useStableAuth } from '@/hooks/useStableAuth';
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const stableWallets = useMemo(() => wallets, [wallets.length, wallets[0]?.address]);
 
   // Memoize the context value to prevent unnecessary re-renders
+  // NOTE: login and logout functions are NOT included in dependencies as they recreate on every render
   const value: AuthContextType = useMemo(() => ({
     ready,
     authenticated,
@@ -48,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     wallets: stableWallets,
     isStable,
-  }), [ready, authenticated, user, login, logout, stableWallets, isStable]);
+  }), [ready, authenticated, user, stableWallets, isStable]);
 
   return (
     <AuthContext.Provider value={value}>
