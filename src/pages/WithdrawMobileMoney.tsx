@@ -89,6 +89,18 @@ const WithdrawMobileMoney = () => {
         throw error;
       }
       
+      // Handle error responses from the API
+      if (data?.error) {
+        console.error('API returned error:', data.error);
+        toast({
+          title: "Error",
+          description: data.message || "Failed to load mobile networks",
+          variant: "destructive"
+        });
+        setMobileNetworks([]);
+        return;
+      }
+      
       // Handle different response structures
       let networks = [];
       if (data?.networks) {
@@ -124,7 +136,7 @@ const WithdrawMobileMoney = () => {
       console.error('Error fetching mobile networks:', error);
       toast({
         title: "Error",
-        description: "Failed to load mobile networks",
+        description: "Failed to load mobile networks. Please try again.",
         variant: "destructive"
       });
       // Ensure we always have an array even on error
