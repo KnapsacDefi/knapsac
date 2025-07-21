@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Wallet2 } from 'lucide-react';
+import { ArrowLeft, Wallet2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useWalletWithdrawal } from '@/hooks/useWalletWithdrawal';
@@ -24,7 +25,14 @@ const WithdrawWallet = () => {
     return null;
   }
 
-  const { handleWithdraw, isProcessing, step } = useWalletWithdrawal({
+  const { 
+    handleWithdraw, 
+    isProcessing, 
+    step, 
+    isCorrectNetwork, 
+    currentChain, 
+    isValidating 
+  } = useWalletWithdrawal({
     token,
     amount,
     recipientAddress,
@@ -74,6 +82,35 @@ const WithdrawWallet = () => {
           </Button>
           <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
         </div>
+
+        {/* Network Status Alert */}
+        {isValidating && (
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Validating network connection...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isValidating && !isCorrectNetwork && (
+          <Alert className="mb-4" variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please switch to {token.chain} network in your wallet to continue.
+              {currentChain && ` Currently on: ${currentChain}`}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isValidating && isCorrectNetwork && (
+          <Alert className="mb-4">
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              Connected to {token.chain} network ✓
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6">
           <CardHeader>
@@ -135,7 +172,7 @@ const WithdrawWallet = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress}
+            disabled={isProcessing || !amount || !recipientAddress || isValidating || !isCorrectNetwork}
           >
             {isProcessing ? "Processing..." : "Withdraw"}
           </Button>

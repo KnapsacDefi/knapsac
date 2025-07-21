@@ -5,6 +5,7 @@ import { encodeFunctionData, parseUnits } from 'viem';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
+import { validateTokenForChain, checksumAddress } from '@/utils/withdrawalValidation';
 
 const erc20Abi = [
   {
@@ -53,13 +54,26 @@ export const useMobileMoneyWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
   
-  // Network switching
-  useNetworkManager(token.chain as 'celo' | 'ethereum', step !== 'form');
+  // Enhanced network management with validation
+  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
+    token.chain as 'celo' | 'ethereum' | 'base', 
+    step !== 'form'
+  );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       console.log('Message signed successfully:', signature);
-      handleTokenTransfer();
+      if (isCorrectNetwork) {
+        handleTokenTransfer();
+      } else {
+        toast({
+          title: "Network Error",
+          description: `Please switch to ${token.chain} network to continue`,
+          variant: "destructive"
+        });
+        setStep('form');
+        setIsProcessing(false);
+      }
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -77,7 +91,6 @@ export const useMobileMoneyWithdrawal = ({
     onSuccess: async (txHash) => {
       console.log('Token transfer successful:', txHash);
       
-      // Update transaction with hash and process mobile money
       try {
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
           body: {
@@ -97,7 +110,7 @@ export const useMobileMoneyWithdrawal = ({
       } catch (error) {
         console.error('Error in mobile money processing:', error);
         toast({
-          title: "Error",
+          title: "Processing Error",
           description: "Token transfer succeeded but mobile money processing failed",
           variant: "destructive"
         });
@@ -127,35 +140,107 @@ export const useMobileMoneyWithdrawal = ({
     return `+${digits}`;
   };
 
-  const handleWithdraw = async () => {
+  const validateMobileMoneyInputs = (): boolean => {
+    // Validate basic inputs
     if (!amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: "Missing Information",
+        description: "Please fill in all required fields",
         variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate amount
+    if (parseFloat(amount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount greater than 0",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (parseFloat(amount) > parseFloat(balance)) {
+      toast({
+        title: "Insufficient Balance",
+        description: "Amount exceeds available balance",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate phone number format
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (formattedPhone.length < 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid phone number",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate conversion rate
+    if (conversionRate <= 0) {
+      toast({
+        title: "Invalid Rate",
+        description: "Unable to get valid conversion rate. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate token contract for current chain
+    if (!validateTokenForChain(token.address, token.chain as any)) {
+      toast({
+        title: "Invalid Token",
+        description: `Token ${token.symbol} is not supported on ${token.chain} network`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate wallet connection
+    const walletAddress = wallets[0]?.address;
+    if (!walletAddress) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to continue",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleWithdraw = async () => {
+    // Validate all inputs first
+    if (!validateMobileMoneyInputs()) {
+      return;
+    }
+
+    // Check network validation is complete
+    if (isValidating) {
+      toast({
+        title: "Please Wait",
+        description: "Validating network connection...",
       });
       return;
     }
 
-    if (parseFloat(amount) <= 0 || parseFloat(amount) > parseFloat(balance)) {
+    // Check if on correct network
+    if (!isCorrectNetwork) {
       toast({
-        title: "Error",
-        description: "Invalid amount",
+        title: "Wrong Network",
+        description: `Please switch to ${token.chain} network to continue`,
         variant: "destructive"
       });
       return;
     }
 
     const walletAddress = wallets[0]?.address;
-    if (!walletAddress) {
-      toast({
-        title: "Error",
-        description: "No wallet connected",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsProcessing(true);
     setStep('signing');
 
@@ -195,7 +280,7 @@ export const useMobileMoneyWithdrawal = ({
     } catch (error) {
       console.error('Mobile money withdrawal setup error:', error);
       toast({
-        title: "Error",
+        title: "Setup Error",
         description: error.message || "Failed to setup withdrawal",
         variant: "destructive"
       });
@@ -209,11 +294,12 @@ export const useMobileMoneyWithdrawal = ({
 
     try {
       const amountInWei = parseUnits(amount, token.decimals);
+      const validatedServiceAddress = checksumAddress(SERVICE_WALLET_ADDRESS);
       
       const transferData = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
-        args: [SERVICE_WALLET_ADDRESS as `0x${string}`, amountInWei],
+        args: [validatedServiceAddress as `0x${string}`, amountInWei],
       });
 
       sendTransaction({
@@ -224,7 +310,7 @@ export const useMobileMoneyWithdrawal = ({
     } catch (error) {
       console.error('Token transfer error:', error);
       toast({
-        title: "Error",
+        title: "Transfer Error",
         description: "Failed to initiate token transfer",
         variant: "destructive"
       });
@@ -261,7 +347,7 @@ export const useMobileMoneyWithdrawal = ({
     } catch (error) {
       console.error('Mobile money processing error:', error);
       toast({
-        title: "Error",
+        title: "Processing Error",
         description: error.message || "Mobile money processing failed",
         variant: "destructive"
       });
@@ -274,6 +360,9 @@ export const useMobileMoneyWithdrawal = ({
   return {
     handleWithdraw,
     isProcessing,
-    step
+    step,
+    isCorrectNetwork,
+    currentChain,
+    isValidating
   };
 };
