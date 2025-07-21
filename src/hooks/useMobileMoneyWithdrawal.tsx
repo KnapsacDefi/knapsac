@@ -49,7 +49,7 @@ export const useMobileMoneyWithdrawal = ({
   const { wallets } = useWallets();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
+  const [step, setStep] = useState<'form' | 'transferring'>('form');
   const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
   // Validate network when explicitly requested
@@ -71,7 +71,6 @@ export const useMobileMoneyWithdrawal = ({
         description: "Message signing was cancelled or failed",
         variant: "destructive"
       });
-      setStep('form');
       setIsProcessing(false);
       setShouldValidateNetwork(false);
     }
@@ -133,7 +132,6 @@ export const useMobileMoneyWithdrawal = ({
   };
 
   const validateMobileMoneyInputs = (): boolean => {
-    // Check if token is available
     if (!token) {
       toast({
         title: "Missing Token",
@@ -143,7 +141,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate basic inputs
     if (!amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate) {
       toast({
         title: "Missing Information",
@@ -153,7 +150,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate amount
     if (parseFloat(amount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -172,7 +168,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate phone number format
     const formattedPhone = formatPhoneNumber(phoneNumber);
     if (formattedPhone.length < 10) {
       toast({
@@ -183,7 +178,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate conversion rate
     if (conversionRate <= 0) {
       toast({
         title: "Invalid Rate",
@@ -193,7 +187,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate token contract for current chain
     if (!validateTokenForChain(token.address, token.chain as any)) {
       toast({
         title: "Invalid Token",
@@ -203,7 +196,6 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    // Validate wallet connection
     const walletAddress = wallets[0]?.address;
     if (!walletAddress) {
       toast({
@@ -218,20 +210,16 @@ export const useMobileMoneyWithdrawal = ({
   };
 
   const handleWithdraw = async () => {
-    // Validate all inputs first
     if (!validateMobileMoneyInputs()) {
       return;
     }
 
     setIsProcessing(true);
     
-    // Validate network FIRST before proceeding with any signing
     setShouldValidateNetwork(true);
     
-    // Wait for network validation to complete
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Check if network validation is still in progress
     if (isValidating) {
       toast({
         title: "Network Check",
@@ -242,7 +230,6 @@ export const useMobileMoneyWithdrawal = ({
       return;
     }
 
-    // Check if we're on the correct network
     if (!isCorrectNetwork) {
       const currentNetworkDisplay = currentChain || 'Unknown';
       const targetNetworkDisplay = token?.chain || 'target';
@@ -257,14 +244,11 @@ export const useMobileMoneyWithdrawal = ({
       return;
     }
 
-    // Network is correct, proceed with signing
     const walletAddress = wallets[0]?.address;
-    setStep('signing');
 
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
 
-      // Create transaction record
       const transactionData = {
         wallet_address: walletAddress,
         transaction_type: 'withdrawal_mobile_money',
@@ -288,17 +272,14 @@ export const useMobileMoneyWithdrawal = ({
 
       currentTransactionId = transaction.id;
 
-      // Create authorization message
       const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      // Add UI options to keep signing within current context
       const uiOptions = {
         title: 'Authorize Mobile Money Withdrawal',
         description: `Please sign this message to authorize the mobile money withdrawal of ${amount} ${token!.symbol}. This signature does not cost any gas fees.`,
         buttonText: 'Sign & Authorize'
       };
 
-      // Sign the message (network is already validated)
       signMessage({ message }, { uiOptions });
 
     } catch (error) {
@@ -308,7 +289,6 @@ export const useMobileMoneyWithdrawal = ({
         description: error.message || "Failed to setup withdrawal",
         variant: "destructive"
       });
-      setStep('form');
       setIsProcessing(false);
       setShouldValidateNetwork(false);
     }

@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Wallet2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Wallet2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -39,33 +40,6 @@ const WithdrawWallet = () => {
   if (!token) {
     navigate('/withdraw');
     return null;
-  }
-
-  if (step === 'signing') {
-    return (
-      <div className="min-h-screen flex flex-col bg-background pb-20">
-        <DashboardHeader />
-        
-        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
-          <Card className="w-full max-w-sm">
-            <CardContent className="pt-6 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold mb-2">Sign Message</h3>
-              <p className="text-muted-foreground">
-                Please sign the authorization message in your wallet to proceed with the withdrawal.
-              </p>
-              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-                <p><strong>Amount:</strong> {amount} {token.symbol}</p>
-                <p><strong>To:</strong> {recipientAddress.slice(0, 6)}...{recipientAddress.slice(-4)}</p>
-                <p><strong>Chain:</strong> {token.chain}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-
-        <BottomNavigation />
-      </div>
-    );
   }
 
   if (step === 'confirming') {

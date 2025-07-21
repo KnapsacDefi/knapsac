@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -42,7 +41,7 @@ export const useWalletWithdrawal = ({
   const { wallets } = useWallets();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
+  const [step, setStep] = useState<'form' | 'confirming'>('form');
   const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
   // Only trigger network validation when explicitly requested
@@ -65,7 +64,6 @@ export const useWalletWithdrawal = ({
         description: "Message signing was cancelled or failed",
         variant: "destructive"
       });
-      setStep('form');
       setIsProcessing(false);
       setShouldValidateNetwork(false);
     }
@@ -230,9 +228,8 @@ export const useWalletWithdrawal = ({
       return;
     }
 
-    // Network is correct, proceed with signing
+    // Network is correct, proceed with signing - no step change here
     const walletAddress = wallets[0]?.address;
-    setStep('signing');
 
     try {
       const validatedRecipientAddress = checksumAddress(recipientAddress);
@@ -278,7 +275,7 @@ export const useWalletWithdrawal = ({
         uiOptions 
       });
 
-      // Use Privy's signMessage with UI options
+      // Use Privy's signMessage with UI options - Privy UI will appear directly
       signMessage(
         { message },
         { uiOptions }
@@ -291,7 +288,6 @@ export const useWalletWithdrawal = ({
         description: error.message || "Failed to setup withdrawal",
         variant: "destructive"
       });
-      setStep('form');
       setIsProcessing(false);
       setShouldValidateNetwork(false);
     }
