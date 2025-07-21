@@ -1,6 +1,11 @@
 
 import { isAddress, getAddress } from 'viem';
-import { SUPPORTED_TOKENS, SupportedChain } from '@/constants/tokens';
+import { 
+  SUPPORTED_TOKENS, 
+  SupportedChain, 
+  getChainIdFromName, 
+  getChainNameFromId 
+} from '@/constants/tokens';
 
 export const validateAddress = (address: string): boolean => {
   try {
@@ -28,20 +33,5 @@ export const validateTokenForChain = (
   );
 };
 
-export const getChainIdFromName = (chain: SupportedChain): number => {
-  switch (chain) {
-    case 'ethereum': return 1;
-    case 'celo': return 42220;
-    case 'base': return 8453;
-    default: throw new Error(`Unsupported chain: ${chain}`);
-  }
-};
-
-export const getChainNameFromId = (chainId: number): SupportedChain | null => {
-  switch (chainId) {
-    case 1: return 'ethereum';
-    case 42220: return 'celo';
-    case 8453: return 'base';
-    default: return null;
-  }
-};
+// Re-export chain utility functions from tokens.ts for backward compatibility
+export { getChainIdFromName, getChainNameFromId } from '@/constants/tokens';

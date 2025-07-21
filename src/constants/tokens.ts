@@ -15,11 +15,65 @@ export const SUPPORTED_TOKENS = {
   ]
 };
 
+// Centralized chain configuration
+export const CHAIN_CONFIG = {
+  ethereum: {
+    id: 1,
+    name: 'ethereum',
+    displayName: 'Ethereum',
+    nativeCurrency: 'ETH'
+  },
+  celo: {
+    id: 42220,
+    name: 'celo',
+    displayName: 'Celo',
+    nativeCurrency: 'CELO'
+  },
+  base: {
+    id: 8453,
+    name: 'base',
+    displayName: 'Base',
+    nativeCurrency: 'ETH'
+  }
+} as const;
+
 export type SupportedChain = keyof typeof SUPPORTED_TOKENS;
 export type TokenInfo = {
   symbol: string;
   address: string;
   decimals: number;
+};
+
+export type ChainConfig = typeof CHAIN_CONFIG[SupportedChain];
+
+// Utility functions for chain ID conversion
+export const getChainIdFromName = (chain: SupportedChain): number => {
+  const config = CHAIN_CONFIG[chain];
+  if (!config) {
+    throw new Error(`Unsupported chain: ${chain}`);
+  }
+  return config.id;
+};
+
+export const getChainNameFromId = (chainId: number): SupportedChain | null => {
+  for (const [chainName, config] of Object.entries(CHAIN_CONFIG)) {
+    if (config.id === chainId) {
+      return chainName as SupportedChain;
+    }
+  }
+  return null;
+};
+
+export const getAllSupportedChainIds = (): number[] => {
+  return Object.values(CHAIN_CONFIG).map(config => config.id);
+};
+
+export const getChainConfig = (chain: SupportedChain): ChainConfig => {
+  const config = CHAIN_CONFIG[chain];
+  if (!config) {
+    throw new Error(`Unsupported chain: ${chain}`);
+  }
+  return config;
 };
 
 // Shared recipient address for all payment flows

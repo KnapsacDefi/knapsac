@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
-import { getChainIdFromName, getChainNameFromId } from '@/utils/withdrawalValidation';
+import { getChainIdFromName, getChainNameFromId } from '@/constants/tokens';
 import { SupportedChain } from '@/constants/tokens';
 import { useWalletProviderHealth } from './useWalletProviderHealth';
 

@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
-import { getChainNameFromId } from '@/utils/withdrawalValidation';
+import { getChainNameFromId } from '@/constants/tokens';
 
 interface WalletProviderHealth {
   isHealthy: boolean;
