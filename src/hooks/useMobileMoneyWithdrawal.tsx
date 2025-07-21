@@ -50,27 +50,35 @@ export const useMobileMoneyWithdrawal = ({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
+  const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
-  // Enhanced network management - only switch when we're processing (not on form step)
+  // Only validate network when explicitly requested (during actual transaction)
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    step !== 'form' && !!token
+    shouldValidateNetwork
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       console.log('Message signed successfully:', signature);
-      if (isCorrectNetwork) {
-        handleTokenTransfer();
-      } else {
-        toast({
-          title: "Network Error",
-          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
-      }
+      // Now trigger network validation for the actual transaction
+      setShouldValidateNetwork(true);
+      
+      // Give network validation time to complete, then proceed
+      setTimeout(() => {
+        if (isCorrectNetwork) {
+          handleTokenTransfer();
+        } else {
+          toast({
+            title: "Network Error",
+            description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
+            variant: "destructive"
+          });
+          setStep('form');
+          setIsProcessing(false);
+          setShouldValidateNetwork(false);
+        }
+      }, 2000);
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -81,6 +89,7 @@ export const useMobileMoneyWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   });
 
@@ -113,6 +122,7 @@ export const useMobileMoneyWithdrawal = ({
         });
         setStep('form');
         setIsProcessing(false);
+        setShouldValidateNetwork(false);
       }
     },
     onError: (error) => {
@@ -124,6 +134,7 @@ export const useMobileMoneyWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   });
 
@@ -228,77 +239,54 @@ export const useMobileMoneyWithdrawal = ({
       return;
     }
 
-    // Check network validation is complete
-    if (isValidating) {
-      toast({
-        title: "Please Wait",
-        description: "Validating network connection...",
-      });
-      return;
-    }
-
     const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
     setStep('signing');
 
-    // Network validation will now happen automatically due to step change
-    // Wait a moment for network switching to complete if needed
-    setTimeout(async () => {
-      if (!isCorrectNetwork) {
-        toast({
-          title: "Wrong Network",
-          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
-        return;
+    try {
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+
+      // Create transaction record
+      const transactionData = {
+        wallet_address: walletAddress,
+        transaction_type: 'withdrawal_mobile_money',
+        token_symbol: token!.symbol,
+        chain: token!.chain,
+        amount: parseFloat(amount),
+        recipient_phone: formattedPhone,
+        recipient_currency: selectedCurrency,
+        mobile_network: selectedNetwork,
+        conversion_rate: conversionRate,
+        status: 'pending'
+      };
+
+      const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
+        body: transactionData
+      });
+
+      if (createError) {
+        throw createError;
       }
 
-      try {
-        const formattedPhone = formatPhoneNumber(phoneNumber);
+      currentTransactionId = transaction.id;
 
-        // Create transaction record
-        const transactionData = {
-          wallet_address: walletAddress,
-          transaction_type: 'withdrawal_mobile_money',
-          token_symbol: token!.symbol,
-          chain: token!.chain,
-          amount: parseFloat(amount),
-          recipient_phone: formattedPhone,
-          recipient_currency: selectedCurrency,
-          mobile_network: selectedNetwork,
-          conversion_rate: conversionRate,
-          status: 'pending'
-        };
+      // Create authorization message
+      const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
+      
+      // Sign the message (network validation happens after signing)
+      signMessage({ message });
 
-        const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
-          body: transactionData
-        });
-
-        if (createError) {
-          throw createError;
-        }
-
-        currentTransactionId = transaction.id;
-
-        // Create authorization message
-        const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
-        
-        // Sign the message
-        signMessage({ message });
-
-      } catch (error) {
-        console.error('Mobile money withdrawal setup error:', error);
-        toast({
-          title: "Setup Error",
-          description: error.message || "Failed to setup withdrawal",
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
-      }
-    }, 1000); // Give network switch time to complete
+    } catch (error) {
+      console.error('Mobile money withdrawal setup error:', error);
+      toast({
+        title: "Setup Error",
+        description: error.message || "Failed to setup withdrawal",
+        variant: "destructive"
+      });
+      setStep('form');
+      setIsProcessing(false);
+      setShouldValidateNetwork(false);
+    }
   };
 
   const handleTokenTransfer = async () => {
@@ -338,6 +326,7 @@ export const useMobileMoneyWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
+      setShouldValidateNetwork(false);
     }
   };
 
@@ -376,6 +365,7 @@ export const useMobileMoneyWithdrawal = ({
     } finally {
       setIsProcessing(false);
       setStep('form');
+      setShouldValidateNetwork(false);
     }
   };
 
@@ -383,8 +373,9 @@ export const useMobileMoneyWithdrawal = ({
     handleWithdraw,
     isProcessing,
     step,
-    isCorrectNetwork,
+    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true, // Don't show network error until validation is triggered
     currentChain,
-    isValidating
+    isValidating: shouldValidateNetwork ? isValidating : false, // Don't show validating until triggered
+    showNetworkStatus: shouldValidateNetwork && step === 'transferring' // Only show network status during transfer step
   };
 };

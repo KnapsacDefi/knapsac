@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Smartphone, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Smartphone, RefreshCw, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -51,8 +51,15 @@ const WithdrawMobileMoney = () => {
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
 
-  // Move hook call to the beginning - BEFORE any early returns
-  const { handleWithdraw, isProcessing, step } = useMobileMoneyWithdrawal({
+  const { 
+    handleWithdraw, 
+    isProcessing, 
+    step, 
+    isCorrectNetwork, 
+    currentChain, 
+    isValidating,
+    showNetworkStatus 
+  } = useMobileMoneyWithdrawal({
     token,
     amount,
     phoneNumber,
@@ -63,7 +70,6 @@ const WithdrawMobileMoney = () => {
     balance
   });
 
-  // Early return AFTER all hooks are called
   if (!token) {
     navigate('/withdraw');
     return null;
@@ -99,7 +105,6 @@ const WithdrawMobileMoney = () => {
         throw error;
       }
       
-      // Handle error responses from the API
       if (data?.error) {
         console.error('API returned error:', data.error);
         toast({
@@ -111,24 +116,20 @@ const WithdrawMobileMoney = () => {
         return;
       }
       
-      // Handle different response structures
       let networks = [];
       if (data?.networks) {
         networks = data.networks;
       } else if (Array.isArray(data)) {
         networks = data;
       } else if (data && typeof data === 'object') {
-        // Handle currency-grouped response
         networks = Object.values(data).flat();
       }
       
-      // Ensure networks is always an array
       if (!Array.isArray(networks)) {
         console.warn('Networks data is not an array, using empty array');
         networks = [];
       }
       
-      // Normalize network data structure
       const normalizedNetworks = networks.map((network: any) => ({
         id: network.id || `${network.mobile_network || network.name}_${network.currency}`,
         name: network.mobile_network_name || network.mobile_network || network.name,
@@ -149,7 +150,6 @@ const WithdrawMobileMoney = () => {
         description: "Failed to load mobile networks. Please try again.",
         variant: "destructive"
       });
-      // Ensure we always have an array even on error
       setMobileNetworks([]);
     } finally {
       setLoadingNetworks(false);
@@ -185,10 +185,42 @@ const WithdrawMobileMoney = () => {
     }
   };
 
-  // Defensive filter to ensure mobileNetworks is always an array
   const filteredNetworks = Array.isArray(mobileNetworks) 
     ? mobileNetworks.filter(network => network.currency === selectedCurrency)
     : [];
+
+  const getNetworkStatusAlert = () => {
+    if (!showNetworkStatus) {
+      return null;
+    }
+
+    if (isValidating) {
+      return (
+        <Alert className="mb-4">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            Validating network connection...
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (!isCorrectNetwork) {
+      const currentDisplay = currentChain || 'Unknown';
+      const targetDisplay = token.chain || 'target';
+      
+      return (
+        <Alert className="mb-4" variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Connected to {currentDisplay} network. Please switch to {targetDisplay} network in your wallet to continue.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return null;
+  };
 
   if (step === 'signing') {
     return (
@@ -211,6 +243,7 @@ const WithdrawMobileMoney = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-sm mx-auto">
           <CardContent className="pt-6 text-center">
+            {getNetworkStatusAlert()}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <h3 className="text-lg font-semibold mb-2">Processing Transfer</h3>
             <p className="text-muted-foreground">
