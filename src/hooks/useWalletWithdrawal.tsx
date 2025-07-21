@@ -130,7 +130,6 @@ export const useWalletWithdrawal = ({
   let currentTransactionId: string;
 
   const validateWithdrawalInputs = (): boolean => {
-    // Check if token is available
     if (!token) {
       toast({
         title: "Missing Token",
@@ -140,7 +139,6 @@ export const useWalletWithdrawal = ({
       return false;
     }
 
-    // Validate amount
     if (!amount || parseFloat(amount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -159,7 +157,6 @@ export const useWalletWithdrawal = ({
       return false;
     }
 
-    // Validate recipient address
     if (!recipientAddress) {
       toast({
         title: "Missing Recipient",
@@ -178,7 +175,6 @@ export const useWalletWithdrawal = ({
       return false;
     }
 
-    // Validate token contract for current chain
     if (!validateTokenForChain(token.address, token.chain as any)) {
       toast({
         title: "Invalid Token",
@@ -188,7 +184,6 @@ export const useWalletWithdrawal = ({
       return false;
     }
 
-    // Validate wallet connection
     const walletAddress = wallets[0]?.address;
     if (!walletAddress) {
       toast({
@@ -270,9 +265,30 @@ export const useWalletWithdrawal = ({
 
         currentTransactionId = transaction.id;
 
-        const message = `Authorize withdrawal of ${amount} ${token!.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
+        // Create formatted message for withdrawal authorization
+        const message = `Authorize withdrawal of ${amount} ${token!.symbol}\n\nRecipient: ${validatedRecipientAddress}\nChain: ${token!.chain}\nTimestamp: ${new Date().toISOString()}`;
         
-        signMessage({ message });
+        // Add Privy UI options for better user experience
+        const uiOptions = {
+          title: 'Authorize Withdrawal',
+          description: `Please sign this message to authorize the withdrawal of ${amount} ${token!.symbol} to the specified recipient address. This signature does not cost any gas fees.`,
+          buttonText: 'Sign & Authorize'
+        };
+
+        console.log('🎯 Initiating withdrawal authorization...', { 
+          walletAddress, 
+          token: token!.symbol,
+          amount,
+          recipient: validatedRecipientAddress,
+          message,
+          uiOptions 
+        });
+
+        // Use Privy's signMessage with UI options
+        signMessage(
+          { message },
+          { uiOptions }
+        );
 
       } catch (error) {
         console.error('Withdrawal setup error:', error);
