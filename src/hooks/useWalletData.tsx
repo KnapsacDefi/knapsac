@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -51,22 +50,29 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
     },
   });
 
+  // Extract stable primitive values to prevent object reference changes
+  const userWalletAddress = useMemo(() => user?.wallet?.address || null, [user?.wallet?.address]);
+  const walletsFirstAddress = useMemo(() => wallets?.[0]?.address || null, [wallets?.[0]?.address]);
+  const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
+
   // Fix memoization to use actual string values instead of object references
   const walletAddress = useMemo(() => {
+    console.log('useWalletData: Recalculating walletAddress', { 
+      walletsFirstAddress, 
+      userWalletAddress,
+      walletsLength 
+    });
+    
     // Primary source: wallets array (more stable)
-    if (wallets && wallets.length > 0 && wallets[0]?.address) {
-      return wallets[0].address;
+    if (walletsLength > 0 && walletsFirstAddress) {
+      return walletsFirstAddress;
     }
-    // Fallback: user wallet address (extract just the string value)
-    if (user?.wallet?.address) {
-      return user.wallet.address;
+    // Fallback: user wallet address
+    if (userWalletAddress) {
+      return userWalletAddress;
     }
     return null;
-  }, [
-    wallets?.length, 
-    wallets?.[0]?.address, 
-    user?.wallet?.address
-  ]);
+  }, [walletsLength, walletsFirstAddress, userWalletAddress]);
 
   // Extract user ID to avoid object reference issues
   const userId = useMemo(() => user?.id || null, [user?.id]);
@@ -77,7 +83,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       authenticated, 
       user: !!user,
       isStable,
-      walletsCount: wallets?.length || 0,
+      walletsLength,
       walletAddress,
       userId,
       hasInit: hasInitialized.current
