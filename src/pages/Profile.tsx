@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ const inspirationalQuotes = {
 };
 
 const Profile = () => {
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, wallets } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
@@ -45,7 +45,6 @@ const Profile = () => {
   const [walletLoading, setWalletLoading] = useState(true);
 
   const userEmail = user?.email?.address;
-  const { wallets } = useWallets();
   const walletAddress = wallets[0]?.address || user?.wallet?.address;
 
   // Enhanced wallet state debugging

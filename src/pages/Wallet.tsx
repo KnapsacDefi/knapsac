@@ -13,44 +13,42 @@ import { useWalletData } from "@/hooks/useWalletData";
 import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton";
 import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleton";
 import { useMountingGuard } from "@/hooks/useMountingGuard";
-import { useStableAuth } from "@/hooks/useStableAuth";
-import { useWallets } from "@privy-io/react-auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Wallet = () => {
-  const { ready, authenticated, user } = useStableAuth();
-  const { wallets } = useWallets();
+  const { ready, authenticated, user, wallets, isStable } = useAuth();
+  const data = useWalletData({ ready, authenticated, user, wallets, isStable });
   const navigate = useNavigate();
-  const walletData = useWalletData();
-  const { isStable } = useMountingGuard();
+  const { isStable: mountingStable } = useMountingGuard();
   const [hasNavigated, setHasNavigated] = useState(false);
 
   // Handle authentication redirects
   useEffect(() => {
-    if (!isStable || hasNavigated) return;
+    if (!isStable || !mountingStable || hasNavigated) return;
 
     if (ready && !authenticated) {
       console.log('Wallet: User not authenticated, redirecting to home');
       setHasNavigated(true);
       navigate('/');
     }
-  }, [ready, authenticated, isStable, hasNavigated, navigate]);
+  }, [ready, authenticated, isStable, mountingStable, hasNavigated, navigate]);
 
   // Handle Service Provider redirection
   useEffect(() => {
-    if (!isStable || hasNavigated) return;
+    if (!isStable || !mountingStable || hasNavigated) return;
 
     if (
-      walletData.userProfile?.profile_type === 'Service Provider' && 
-      !walletData.loading.profile
+      data.userProfile?.profile_type === 'Service Provider' && 
+      !data.loading.profile
     ) {
       console.log('Wallet: Service Provider detected, redirecting to motivation page');
       setHasNavigated(true);
       navigate('/service-provider-motivation');
     }
-  }, [walletData.userProfile?.profile_type, walletData.loading.profile, isStable, hasNavigated, navigate]);
+  }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, navigate]);
 
   // Show loading state during initialization
-  if (!ready || !isStable) {
+  if (!ready || !isStable || !mountingStable) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -74,7 +72,7 @@ const Wallet = () => {
   }
 
   // Don't render content if we're redirecting Service Providers
-  if (walletData.userProfile?.profile_type === 'Service Provider') {
+  if (data.userProfile?.profile_type === 'Service Provider') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -85,31 +83,31 @@ const Wallet = () => {
     );
   }
 
-  const hasValidHash = walletData.userProfile?.signed_terms_hash && walletData.userProfile.signed_terms_hash.trim() !== '';
-  const shouldShowAddProfileBanner = !walletData.loading.profile && !hasValidHash;
-  const shouldShowSubscriptionBanner = hasValidHash && !walletData.hasSubscription && walletData.userProfile?.profile_type === 'Startup';
+  const hasValidHash = data.userProfile?.signed_terms_hash && data.userProfile.signed_terms_hash.trim() !== '';
+  const shouldShowAddProfileBanner = !data.loading.profile && !hasValidHash;
+  const shouldShowSubscriptionBanner = hasValidHash && !data.hasSubscription && data.userProfile?.profile_type === 'Startup';
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         {/* Progressive banner loading */}
-        {walletData.loading.profile ? (
+        {data.loading.profile ? (
           <ProfileBannerSkeleton />
         ) : (
           <>
             {shouldShowAddProfileBanner && <AddProfileBanner />}
             {shouldShowSubscriptionBanner && <SubscriptionBanner />}
-            {walletData.userProfile?.profile_type === 'Lender' && <LenderComingSoonBanner />}
+            {data.userProfile?.profile_type === 'Lender' && <LenderComingSoonBanner />}
           </>
         )}
         
         <WalletOverview 
-          userProfile={walletData.userProfile}
-          hasSubscription={walletData.hasSubscription}
-          balance={walletData.balance}
-          gooddollarBalance={walletData.gooddollarBalance}
-          loading={walletData.loading}
+          userProfile={data.userProfile}
+          hasSubscription={data.hasSubscription}
+          balance={data.balance}
+          gooddollarBalance={data.gooddollarBalance}
+          loading={data.loading}
           user={user}
           wallets={wallets}
         />
@@ -122,7 +120,7 @@ const Wallet = () => {
         )}
         
         {/* Show credit score for startups only */}
-        {walletData.userProfile?.profile_type === 'Startup' && <CreditScore />}
+        {data.userProfile?.profile_type === 'Startup' && <CreditScore />}
       </main>
       <BottomNavigation />
     </div>

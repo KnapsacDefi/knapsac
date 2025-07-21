@@ -1,0 +1,58 @@
+import React, { createContext, useContext, ReactNode } from 'react';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useStableAuth } from '@/hooks/useStableAuth';
+
+interface AuthContextType {
+  // Privy auth data
+  ready: boolean;
+  authenticated: boolean;
+  user: any;
+  login: () => void;
+  logout: () => Promise<void>;
+  
+  // Wallet data
+  wallets: any[];
+  
+  // Combined stable state
+  isStable: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // Get all auth data from Privy hooks in one place
+  const { login, logout } = usePrivy();
+  const { wallets } = useWallets();
+  const { ready, authenticated, user } = useStableAuth();
+  
+  // Consider stable when auth is ready
+  const isStable = ready;
+
+  const value: AuthContextType = {
+    ready,
+    authenticated,
+    user,
+    login,
+    logout,
+    wallets,
+    isStable,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

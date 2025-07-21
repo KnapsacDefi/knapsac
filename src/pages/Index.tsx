@@ -1,30 +1,29 @@
 
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
 import AuthScreen from "@/components/AuthScreen";
 import { useMountingGuard } from "@/hooks/useMountingGuard";
-import { useStableAuth } from "@/hooks/useStableAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { ready, authenticated, user } = useStableAuth();
-  const { isStable } = useMountingGuard();
+  const { ready, authenticated, user, isStable } = useAuth();
+  const { isStable: mountingStable } = useMountingGuard();
   const [hasNavigated, setHasNavigated] = useState(false);
 
   // Consolidate all navigation logic in a single useEffect
   useEffect(() => {
-    if (!isStable || hasNavigated) return;
+    if (!isStable || !mountingStable || hasNavigated) return;
 
     if (ready && authenticated && user) {
       console.log('Index: Navigating to profile for authenticated user');
       setHasNavigated(true);
       navigate('/profile');
     }
-  }, [ready, authenticated, user, isStable, hasNavigated, navigate]);
+  }, [ready, authenticated, user, isStable, mountingStable, hasNavigated, navigate]);
 
   // Show loading state while Privy initializes or component stabilizes
-  if (!ready || !isStable) {
+  if (!ready || !isStable || !mountingStable) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

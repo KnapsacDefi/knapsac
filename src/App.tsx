@@ -19,6 +19,7 @@ import NotFound from '@/pages/NotFound';
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const queryClient = new QueryClient();
 
@@ -120,23 +121,25 @@ function App() {
       >
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>
-            <Toaster />
-            <ErrorBoundary>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/wallet" element={<Wallet />} />
-                  <Route path="/withdraw" element={<Withdraw />} />
-                  <Route path="/withdraw/wallet" element={<WithdrawWallet />} />
-                  <Route path="/withdraw/mobile-money" element={<WithdrawMobileMoney />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
-                  <Route path="/subscription" element={<Subscription />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </ErrorBoundary>
+            <AuthProvider>
+              <Toaster />
+              <ErrorBoundary>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/wallet" element={<Wallet />} />
+                    <Route path="/withdraw" element={<Withdraw />} />
+                    <Route path="/withdraw/wallet" element={<WithdrawWallet />} />
+                    <Route path="/withdraw/mobile-money" element={<WithdrawMobileMoney />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+                    <Route path="/subscription" element={<Subscription />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </ErrorBoundary>
+            </AuthProvider>
           </QueryClientProvider>
         </WagmiProvider>
       </PrivyProvider>

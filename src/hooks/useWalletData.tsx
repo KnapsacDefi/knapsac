@@ -1,9 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { useStableAuth } from "./useStableAuth";
-import { useMountingGuard } from "./useMountingGuard";
 
 interface WalletData {
   userProfile: any;
@@ -24,10 +21,15 @@ interface WalletData {
   };
 }
 
-export const useWalletData = () => {
-  const { ready, authenticated, user } = useStableAuth();
-  const { wallets } = useWallets();
-  const { isStable } = useMountingGuard();
+interface UseWalletDataParams {
+  ready: boolean;
+  authenticated: boolean;
+  user: any;
+  wallets: any[];
+  isStable: boolean;
+}
+
+export const useWalletData = ({ ready, authenticated, user, wallets, isStable }: UseWalletDataParams) => {
   const hasInitialized = useRef(false);
   
   const [data, setData] = useState<WalletData>({
@@ -50,25 +52,22 @@ export const useWalletData = () => {
   });
 
   useEffect(() => {
-    // Prevent multiple initializations
-    if (hasInitialized.current) return;
-
-    // Comprehensive checks to prevent API calls with invalid state
-    if (!ready || !authenticated || !user || !isStable) {
+    // Skip if we can't make API calls yet or already initialized
+    const canFetchData = ready && authenticated && user && isStable && wallets.length > 0;
+    
+    if (!canFetchData) {
       console.log('useWalletData: Not ready for API calls', { 
         ready, 
         authenticated, 
         user: !!user,
-        isStable 
+        isStable,
+        walletsCount: wallets.length
       });
       return;
     }
 
-    // Wait for wallets to be available with timeout
-    if (wallets.length === 0) {
-      console.log('useWalletData: No wallets available yet');
-      return;
-    }
+    // Prevent multiple initializations
+    if (hasInitialized.current) return;
 
     const walletAddress = wallets[0]?.address || user?.wallet?.address;
     if (!walletAddress) {
