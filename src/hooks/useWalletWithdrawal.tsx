@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -43,7 +42,7 @@ export const useWalletWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   
-  // Enhanced network management with validation - handle case where token might be null
+  // Enhanced network management - only switch when we're processing (not on form step)
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
     step !== 'form' && !!token
@@ -206,61 +205,66 @@ export const useWalletWithdrawal = ({
       return;
     }
 
-    // Check if on correct network
-    if (!isCorrectNetwork) {
-      toast({
-        title: "Wrong Network",
-        description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-        variant: "destructive"
-      });
-      return;
-    }
-
     const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
     setStep('signing');
 
-    try {
-      // Validate and checksum the recipient address
-      const validatedRecipientAddress = checksumAddress(recipientAddress);
-
-      // Create transaction record
-      const transactionData = {
-        wallet_address: walletAddress,
-        transaction_type: 'withdrawal_wallet',
-        token_symbol: token!.symbol,
-        chain: token!.chain,
-        amount: parseFloat(amount),
-        recipient_address: validatedRecipientAddress,
-        status: 'pending'
-      };
-
-      const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
-        body: transactionData
-      });
-
-      if (createError) {
-        throw createError;
+    // Network validation will now happen automatically due to step change
+    // Wait a moment for network switching to complete if needed
+    setTimeout(async () => {
+      if (!isCorrectNetwork) {
+        toast({
+          title: "Wrong Network",
+          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
+          variant: "destructive"
+        });
+        setStep('form');
+        setIsProcessing(false);
+        return;
       }
 
-      currentTransactionId = transaction.id;
+      try {
+        // Validate and checksum the recipient address
+        const validatedRecipientAddress = checksumAddress(recipientAddress);
 
-      // Create authorization message
-      const message = `Authorize withdrawal of ${amount} ${token!.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
-      
-      // Sign the message
-      signMessage({ message });
+        // Create transaction record
+        const transactionData = {
+          wallet_address: walletAddress,
+          transaction_type: 'withdrawal_wallet',
+          token_symbol: token!.symbol,
+          chain: token!.chain,
+          amount: parseFloat(amount),
+          recipient_address: validatedRecipientAddress,
+          status: 'pending'
+        };
 
-    } catch (error) {
-      console.error('Withdrawal setup error:', error);
-      toast({
-        title: "Setup Error",
-        description: error.message || "Failed to setup withdrawal",
-        variant: "destructive"
-      });
-      setStep('form');
-      setIsProcessing(false);
-    }
+        const { data: transaction, error: createError } = await supabase.functions.invoke('create-withdrawal', {
+          body: transactionData
+        });
+
+        if (createError) {
+          throw createError;
+        }
+
+        currentTransactionId = transaction.id;
+
+        // Create authorization message
+        const message = `Authorize withdrawal of ${amount} ${token!.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
+        
+        // Sign the message
+        signMessage({ message });
+
+      } catch (error) {
+        console.error('Withdrawal setup error:', error);
+        toast({
+          title: "Setup Error",
+          description: error.message || "Failed to setup withdrawal",
+          variant: "destructive"
+        });
+        setStep('form');
+        setIsProcessing(false);
+      }
+    }, 1000); // Give network switch time to complete
   };
 
   const handleTokenTransfer = async () => {
