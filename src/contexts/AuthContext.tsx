@@ -24,10 +24,14 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Get all auth data from Privy hooks in one place
-  const { login, logout } = usePrivy();
-  const { wallets } = useWallets();
-  const { ready, authenticated, user } = useStableAuth();
+  // Get all auth data from Privy hooks in one place - ALWAYS call these hooks
+  const privyAuth = usePrivy();
+  const { wallets } = useWallets(); 
+  const stableAuth = useStableAuth();
+  
+  // Extract what we need from the hooks (stable data)
+  const { login, logout } = privyAuth;
+  const { ready, authenticated, user } = stableAuth;
   
   // Consider stable when auth is ready
   const isStable = ready;

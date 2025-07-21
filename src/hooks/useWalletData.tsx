@@ -30,8 +30,8 @@ interface UseWalletDataParams {
 }
 
 export const useWalletData = ({ ready, authenticated, user, wallets, isStable }: UseWalletDataParams) => {
+  // ALWAYS call hooks in the same order - move all hooks to the top
   const hasInitialized = useRef(false);
-  
   const [data, setData] = useState<WalletData>({
     userProfile: null,
     hasSubscription: false,
@@ -51,23 +51,28 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
     },
   });
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
   useEffect(() => {
-    // Skip if we can't make API calls yet or already initialized
+    console.log('useWalletData: useEffect triggered', { 
+      ready, 
+      authenticated, 
+      user: !!user,
+      isStable,
+      walletsCount: wallets.length,
+      hasInit: hasInitialized.current
+    });
+
+    // Use state flags instead of early returns to prevent hook ordering issues
+
     const canFetchData = ready && authenticated && user && isStable && wallets.length > 0;
+    const shouldFetch = canFetchData && !hasInitialized.current;
     
-    if (!canFetchData) {
-      console.log('useWalletData: Not ready for API calls', { 
-        ready, 
-        authenticated, 
-        user: !!user,
-        isStable,
-        walletsCount: wallets.length
-      });
+    if (!shouldFetch) {
+      if (!canFetchData) {
+        console.log('useWalletData: Not ready for API calls');
+      }
       return;
     }
-
-    // Prevent multiple initializations
-    if (hasInitialized.current) return;
 
     const walletAddress = wallets[0]?.address || user?.wallet?.address;
     if (!walletAddress) {

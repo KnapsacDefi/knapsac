@@ -16,11 +16,16 @@ import { useMountingGuard } from "@/hooks/useMountingGuard";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Wallet = () => {
-  const { ready, authenticated, user, wallets, isStable } = useAuth();
-  const data = useWalletData({ ready, authenticated, user, wallets, isStable });
+  // ALWAYS call hooks in the same order at the top
   const navigate = useNavigate();
   const { isStable: mountingStable } = useMountingGuard();
   const [hasNavigated, setHasNavigated] = useState(false);
+  
+  // Get auth data from context
+  const { ready, authenticated, user, wallets, isStable } = useAuth();
+  const data = useWalletData({ ready, authenticated, user, wallets, isStable });
+  
+  console.log('Wallet: Render state', { ready, authenticated, isStable, mountingStable, hasNavigated });
 
   // Handle authentication redirects
   useEffect(() => {
