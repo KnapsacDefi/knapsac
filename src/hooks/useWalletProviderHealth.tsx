@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
+import { getChainNameFromId } from '@/utils/withdrawalValidation';
 
 interface WalletProviderHealth {
   isHealthy: boolean;
@@ -135,17 +136,21 @@ export const useWalletProviderHealth = () => {
       // Detect chain ID with fallbacks
       const chainId = await detectChainId(wallet);
       
+      // Validate that the detected chain is supported using existing utility
+      const chainName = chainId ? getChainNameFromId(chainId) : null;
+      const isValidChain = !!chainName; // If getChainNameFromId returns a value, it's supported
+      
       setHealth({
-        isHealthy: !!chainId,
-        lastError: chainId ? null : 'Chain ID detection failed',
+        isHealthy: !!chainId && isValidChain,
+        lastError: chainId ? (isValidChain ? null : `Unsupported chain ID: ${chainId}`) : 'Chain ID detection failed',
         chainId,
         isRecovering: false
       });
 
-      if (chainId) {
-        console.log('✅ Wallet health check passed - Chain ID:', chainId);
+      if (chainId && isValidChain) {
+        console.log(`✅ Wallet health check passed - Chain: ${chainName} (${chainId})`);
       } else {
-        console.error('❌ Wallet health check failed - No valid chain ID');
+        console.error(`❌ Wallet health check failed - Chain ID: ${chainId}, Valid: ${isValidChain}`);
       }
 
     } catch (error) {
@@ -202,7 +207,8 @@ export const useWalletProviderHealth = () => {
       
       // Show user notification for provider issues
       if (health.lastError.includes('properties of null') || 
-          health.lastError.includes('Chain ID detection failed')) {
+          health.lastError.includes('Chain ID detection failed') ||
+          health.lastError.includes('Unsupported chain ID')) {
         toast({
           title: "Wallet Connection Issue",
           description: "Attempting to restore wallet connection...",
