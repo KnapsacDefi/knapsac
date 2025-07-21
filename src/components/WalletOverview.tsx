@@ -1,131 +1,52 @@
-import { Banknote, Eye, EyeOff, Coins, ArrowUpFromLine } from "lucide-react";
+
+import { Banknote, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import WalletOverviewSkeleton from "./skeletons/WalletOverviewSkeleton";
 
 interface WalletOverviewProps {
   startIdentityVerification: () => Promise<any>;
   isVerifying: boolean;
   checkIdentityVerification: () => Promise<any>;
+  userProfile?: any;
+  hasSubscription?: boolean;
+  balance?: string;
+  gooddollarBalance?: string;
+  loading?: {
+    profile?: boolean;
+    subscription?: boolean;
+    usdc?: boolean;
+    gooddollar?: boolean;
+  };
 }
 
 const WalletOverview = ({ 
   startIdentityVerification, 
   isVerifying, 
-  checkIdentityVerification 
+  checkIdentityVerification,
+  userProfile,
+  hasSubscription,
+  balance = "0.00",
+  gooddollarBalance = "0.00",
+  loading = {}
 }: WalletOverviewProps) => {
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
-  const [balance, setBalance] = useState("0.00");
-  const [gooddollarBalance, setGooddollarBalance] = useState("0.00");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGooddollarLoading, setIsGooddollarLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (wallets.length === 0) return;
+  const isLoading = loading.usdc || loading.gooddollar;
 
-      const walletAddress = wallets[0]?.address;
-      if (!walletAddress) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('crypto_address', walletAddress)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-        } else {
-          setUserProfile(data);
-        }
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-      }
-    };
-
-    fetchUserProfile();
-  }, [wallets]);
-
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (wallets.length > 0) {
-        try {
-          setIsLoading(true);
-          
-          const walletId = user?.wallet?.id;
-          console.log('Using wallet ID from user.wallet.id:', walletId);
-          
-          if (!walletId) {
-            console.error('No wallet ID found in user object');
-            setIsLoading(false);
-            return;
-          }
-          
-          const response = await supabase.functions.invoke('get-usdc-balance', {
-            body: { walletId }
-          });
-          
-          if (response.error) {
-            console.error('Error fetching USDC balance:', response.error);
-            setBalance("0.00");
-          } else {
-            const formattedBalance = parseFloat(response.data?.balance || 0).toFixed(2);
-            setBalance(formattedBalance);
-          }
-        } catch (error) {
-          console.error('Error fetching balance:', error);
-          setBalance("0.00");
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBalance();
-  }, [wallets, user]);
-
-  useEffect(() => {
-    const fetchGooddollarBalance = async () => {
-      if (!wallets[0]?.address) {
-        setIsGooddollarLoading(false);
-        return;
-      }
-
-      try {
-        setIsGooddollarLoading(true);
-        const { data, error } = await supabase.functions.invoke('get-gooddollar-balance', {
-          body: { walletAddress: wallets[0].address }
-        });
-
-        if (error) {
-          console.error('Error fetching GoodDollar balance:', error);
-          setGooddollarBalance('0.00');
-        } else {
-          setGooddollarBalance(data.balanceFormatted || '0.00');
-        }
-      } catch (error) {
-        console.error('Error fetching GoodDollar balance:', error);
-        setGooddollarBalance('0.00');
-      } finally {
-        setIsGooddollarLoading(false);
-      }
-    };
-
-    fetchGooddollarBalance();
-  }, [wallets]);
+  // Show skeleton while essential data is loading
+  if (loading.profile || loading.usdc || loading.gooddollar) {
+    return <WalletOverviewSkeleton />;
+  }
 
   const displayBalance = isLoading ? "Loading..." : `$${balance}`;
-  const displayGooddollarBalance = isGooddollarLoading ? "Loading..." : `${gooddollarBalance} G$`;
+  const displayGooddollarBalance = isLoading ? "Loading..." : `${gooddollarBalance} G$`;
 
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';
@@ -147,24 +68,17 @@ const WalletOverview = ({
   };
 
   const handleClaimClick = async () => {
-    console.log('🎯 Claim button clicked, checking identity...');
-    
     try {
-      // Check if identity is verified first
       const identityCheck = await checkIdentityVerification();
       
       if (!identityCheck.isVerified) {
-        console.log('🔐 Identity not verified, redirecting to verification...');
-        
         toast({
           title: "Identity Verification Required",
           description: "You'll be redirected to GoodDollar to complete face verification.",
         });
         
-        // Start verification process (opens in new tab)
         await startIdentityVerification();
         
-        // Show additional guidance
         toast({
           title: "Return After Verification",
           description: "After completing verification, return here and click 'Claim G$' again.",
@@ -172,12 +86,10 @@ const WalletOverview = ({
         });
         
       } else {
-        console.log('✅ Identity verified, navigating to claim page...');
-        // Navigate to claim page if verified
         navigate('/claim');
       }
     } catch (error) {
-      console.error('❌ Error in claim flow:', error);
+      console.error('Error in claim flow:', error);
       toast({
         title: "Error",
         description: "Failed to check verification status. Please try again.",
@@ -237,7 +149,6 @@ const WalletOverview = ({
           className="h-12 flex flex-col gap-1"
           onClick={() => navigate('/withdraw')}
         >
-          
           <span className="text-xs">Withdraw</span>
         </Button>
         {isLender && hasSignedTerms && (
