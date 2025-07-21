@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -31,8 +30,8 @@ const Wallet = () => {
   // Get unified wallet address
   const walletAddress = getWalletAddress(wallets, user);
 
-  // Add network management to default to Ethereum
-  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager('ethereum', true);
+  // Add network management to default to Ethereum - with silent: true
+  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager('ethereum', true, true);
 
   // Handle authentication redirects
   useEffect(() => {

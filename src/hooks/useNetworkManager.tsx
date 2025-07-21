@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { toast } from '@/hooks/use-toast';
@@ -13,7 +12,7 @@ interface RetryConfig {
   delay: number;
 }
 
-export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boolean = true) => {
+export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boolean = true, silent: boolean = false) => {
   const { wallets } = useWallets();
   const { user, authenticated } = usePrivy();
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
@@ -116,11 +115,13 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         throw new Error('Wallet does not support network switching');
       }
       
-      // Show immediate feedback
-      toast({
-        title: "Switching Network",
-        description: `Switching to ${targetChain} network...`,
-      });
+      // Show immediate feedback only if not silent
+      if (!silent) {
+        toast({
+          title: "Switching Network",
+          description: `Switching to ${targetChain} network...`,
+        });
+      }
       
       await switchChainMethod(targetChainId);
       debugLog('NETWORK_MANAGER', 'Switch chain command sent, starting verification...');
@@ -128,10 +129,12 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       const switchSuccessful = await verifyNetworkSwitch(wallet, targetChainId);
       
       if (switchSuccessful) {
-        toast({
-          title: "Network Switched",
-          description: `Successfully switched to ${targetChain} network.`,
-        });
+        if (!silent) {
+          toast({
+            title: "Network Switched",
+            description: `Successfully switched to ${targetChain} network.`,
+          });
+        }
         
         setIsCorrectNetwork(true);
         setCurrentChain(targetChain);
@@ -163,20 +166,23 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       }
       
       setSwitchError(description);
-      toast({
-        title,
-        description,
-        variant: "destructive"
-      });
+      
+      // Only show toast if not silent
+      if (!silent) {
+        toast({
+          title,
+          description,
+          variant: "destructive"
+        });
+      }
       
       setIsCorrectNetwork(false);
       return false;
     } finally {
       setIsSwitching(false);
     }
-  }, [detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, toast]);
+  }, [detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, silent]);
 
-  // Main validation function with enhanced error handling
   const validateAndSwitchNetwork = useCallback(async () => {
     if (!shouldSwitch) {
       debugLog('NETWORK_MANAGER', 'Network validation skipped - shouldSwitch is false');
@@ -263,17 +269,19 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       
       if (error.message?.includes('properties of null')) {
         setSwitchError("Failed to validate network connection. Please try again.");
-        toast({
-          title: "Network Error",
-          description: "Failed to validate network connection. Please try again.",
-          variant: "destructive"
-        });
+        if (!silent) {
+          toast({
+            title: "Network Error",
+            description: "Failed to validate network connection. Please try again.",
+            variant: "destructive"
+          });
+        }
       }
     } finally {
       setIsValidating(false);
       isValidatingRef.current = false;
     }
-  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, performNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery, toast]);
+  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, performNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery, silent]);
 
   // Manual retry function for users
   const retryNetworkSwitch = useCallback(async () => {
