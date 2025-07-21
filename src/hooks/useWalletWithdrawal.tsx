@@ -266,9 +266,16 @@ export const useWalletWithdrawal = ({
         args: [validatedRecipientAddress as `0x${string}`, amountInWei],
       });
 
+      const uiOptions = {
+        title: "Confirm Withdrawal",
+        description: `Send ${amount} ${token.symbol} to ${validatedRecipientAddress.slice(0, 6)}...${validatedRecipientAddress.slice(-4)}`,
+        buttonText: "Confirm Withdrawal"
+      };
+
       sendTransaction({
         to: token.address as `0x${string}`,
         data: transferData,
+        uiOptions
       });
 
     } catch (error) {
