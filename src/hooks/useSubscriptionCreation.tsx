@@ -1,9 +1,11 @@
+
 import { usePrivy, useSignMessage, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { subscriptionService } from "@/services/subscriptionService";
 import { useRef } from "react";
 import { encodeFunctionData } from 'viem';
+import { RECIPIENT_ADDRESS } from '@/constants/tokens';
 
 // An ABI for the ERC-20 transfer function.
 const erc20Abi = [
@@ -42,7 +44,6 @@ export const useSubscriptionCreation = ({ selectedPlan, walletAddress }: UseSubs
   
   // USDC contract configuration
   const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-  const recipientAddress = '0x9ec14B42b5F4526C518F0021E26C417fa76D710d' as `0x${string}`;
 
   const { signMessage } = useSignMessage({
     onSuccess: async (data) => {
@@ -59,7 +60,7 @@ export const useSubscriptionCreation = ({ selectedPlan, walletAddress }: UseSubs
         const transactionData = encodeFunctionData({
           abi: erc20Abi,
           functionName: 'transfer',
-          args: [recipientAddress, amount],
+          args: [RECIPIENT_ADDRESS as `0x${string}`, amount],
         });
 
         const uiOptions = {

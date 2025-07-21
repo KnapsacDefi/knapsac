@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNetworkManager } from './useNetworkManager';
 import { validateTokenForChain, checksumAddress } from '@/utils/withdrawalValidation';
+import { RECIPIENT_ADDRESS } from '@/constants/tokens';
 
 const erc20Abi = [
   {
@@ -19,9 +20,6 @@ const erc20Abi = [
     stateMutability: 'nonpayable',
   },
 ] as const;
-
-// Service wallet address for mobile money transfers
-const SERVICE_WALLET_ADDRESS = '0x742d35Cc8385A81b8770c4Cc5a2c3d20F2Bd9c7B';
 
 interface UseMobileMoneyWithdrawalProps {
   token: {
@@ -294,12 +292,12 @@ export const useMobileMoneyWithdrawal = ({
 
     try {
       const amountInWei = parseUnits(amount, token.decimals);
-      const validatedServiceAddress = checksumAddress(SERVICE_WALLET_ADDRESS);
+      const validatedRecipientAddress = checksumAddress(RECIPIENT_ADDRESS);
       
       const transferData = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
-        args: [validatedServiceAddress as `0x${string}`, amountInWei],
+        args: [validatedRecipientAddress as `0x${string}`, amountInWei],
       });
 
       sendTransaction({

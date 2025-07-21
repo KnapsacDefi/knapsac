@@ -21,3 +21,6 @@ export type TokenInfo = {
   address: string;
   decimals: number;
 };
+
+// Shared recipient address for all payment flows
+export const RECIPIENT_ADDRESS = '0x9ec14B42b5F4526C518F0021E26C417fa76D710d' as const;
