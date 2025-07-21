@@ -79,7 +79,7 @@ export const useWalletWithdrawal = ({
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
           body: {
             transactionId: currentTransactionId,
-            transactionHash: txHash,
+            transactionHash: txHash.hash,
             status: 'completed'
           }
         });
