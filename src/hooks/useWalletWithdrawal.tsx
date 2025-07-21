@@ -276,7 +276,7 @@ export const useWalletWithdrawal = ({
         to: token.address as `0x${string}`,
         data: transferData,
         uiOptions
-      });
+      } as any);
 
     } catch (error) {
       console.error('Token transfer error:', error);
