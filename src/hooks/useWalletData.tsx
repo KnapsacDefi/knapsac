@@ -1,7 +1,9 @@
 
-import { useState, useEffect } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useState, useEffect, useRef } from "react";
+import { useWallets } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useStableAuth } from "./useStableAuth";
+import { useMountingGuard } from "./useMountingGuard";
 
 interface WalletData {
   userProfile: any;
@@ -23,8 +25,10 @@ interface WalletData {
 }
 
 export const useWalletData = () => {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user } = useStableAuth();
   const { wallets } = useWallets();
+  const { isStable } = useMountingGuard();
+  const hasInitialized = useRef(false);
   
   const [data, setData] = useState<WalletData>({
     userProfile: null,
@@ -46,13 +50,21 @@ export const useWalletData = () => {
   });
 
   useEffect(() => {
-    // Defensive checks to prevent API calls with invalid state
-    if (!ready || !authenticated || !user) {
-      console.log('useWalletData: Not ready for API calls', { ready, authenticated, user: !!user });
+    // Prevent multiple initializations
+    if (hasInitialized.current) return;
+
+    // Comprehensive checks to prevent API calls with invalid state
+    if (!ready || !authenticated || !user || !isStable) {
+      console.log('useWalletData: Not ready for API calls', { 
+        ready, 
+        authenticated, 
+        user: !!user,
+        isStable 
+      });
       return;
     }
 
-    // Wait for wallets to be available
+    // Wait for wallets to be available with timeout
     if (wallets.length === 0) {
       console.log('useWalletData: No wallets available yet');
       return;
@@ -65,9 +77,11 @@ export const useWalletData = () => {
     }
 
     console.log('useWalletData: Starting API calls with wallet:', walletAddress);
+    hasInitialized.current = true;
 
     const fetchProfileData = async () => {
       try {
+        console.log('useWalletData: Fetching profile data');
         const { data: profileResult, error: profileError } = await supabase.functions.invoke('secure-profile-operations', {
           body: {
             operation: 'get',
@@ -105,6 +119,7 @@ export const useWalletData = () => {
 
     const fetchSubscriptionData = async () => {
       try {
+        console.log('useWalletData: Fetching subscription data');
         const { data: subscription, error: subscriptionError } = await supabase.functions.invoke('secure-subscription-operations', {
           body: {
             operation: 'get',
@@ -133,6 +148,7 @@ export const useWalletData = () => {
 
     const fetchUSDCBalance = async () => {
       try {
+        console.log('useWalletData: Fetching USDC balance');
         const walletId = user?.wallet?.id;
         if (!walletId) {
           setData(prev => ({
@@ -171,6 +187,7 @@ export const useWalletData = () => {
 
     const fetchGoodDollarBalance = async () => {
       try {
+        console.log('useWalletData: Fetching GoodDollar balance');
         const { data: result, error } = await supabase.functions.invoke('get-gooddollar-balance', {
           body: { walletAddress: walletAddress }
         });
@@ -196,15 +213,22 @@ export const useWalletData = () => {
       }
     };
 
-    // Execute all API calls in parallel
-    Promise.all([
+    // Execute all API calls in parallel with error isolation
+    Promise.allSettled([
       fetchProfileData(),
       fetchSubscriptionData(),
       fetchUSDCBalance(),
       fetchGoodDollarBalance()
-    ]);
+    ]).then(results => {
+      console.log('useWalletData: All API calls completed', results);
+    });
 
-  }, [ready, authenticated, user, wallets]);
+    // Cleanup function
+    return () => {
+      hasInitialized.current = false;
+    };
+
+  }, [ready, authenticated, user, wallets, isStable]);
 
   return data;
 };

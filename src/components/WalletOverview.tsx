@@ -3,7 +3,7 @@ import { Banknote, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import WalletOverviewSkeleton from "./skeletons/WalletOverviewSkeleton";
 
@@ -56,16 +56,44 @@ const WalletOverview = ({
   const { fundWallet } = useFundWallet({
     onUserExited: (params) => {
       if (params.balance > 0) {
-        alert(`Successfully funded wallet! New balance: ${params.balance}`);
+        toast({
+          title: "Wallet Funded Successfully",
+          description: `New balance: ${params.balance}`,
+        });
       }
     }
   });
 
-  const handleDeposit = () => {
-    if (wallets.length > 0) {
-      fundWallet(wallets[0].address);
+  const handleDeposit = useCallback(async () => {
+    try {
+      if (wallets.length > 0) {
+        await fundWallet(wallets[0].address);
+      } else {
+        toast({
+          title: "No Wallet Available",
+          description: "Please connect a wallet first.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error('Deposit error:', error);
+      
+      // Handle browser extension conflicts
+      if (error.message?.includes('inpage') || error.message?.includes('MetaMask')) {
+        toast({
+          title: "Browser Extension Conflict",
+          description: "Please disable other wallet extensions and try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Deposit Failed",
+          description: "Unable to open funding interface. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
-  };
+  }, [wallets, fundWallet]);
 
   const handleClaimClick = async () => {
     try {

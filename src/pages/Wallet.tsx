@@ -1,7 +1,6 @@
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import WalletOverview from "@/components/WalletOverview";
 import UserAddressDisplay from "@/components/UserAddressDisplay";
@@ -14,12 +13,17 @@ import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
 import { useWalletData } from "@/hooks/useWalletData";
 import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton";
 import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleton";
+import { useMountingGuard } from "@/hooks/useMountingGuard";
+import { useStableAuth } from "@/hooks/useStableAuth";
+import { useWallets } from "@privy-io/react-auth";
 
 const Wallet = () => {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user } = useStableAuth();
   const { wallets } = useWallets();
   const navigate = useNavigate();
   const walletData = useWalletData();
+  const { isStable } = useMountingGuard();
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   const {
     startIdentityVerification,
@@ -27,39 +31,65 @@ const Wallet = () => {
     checkIdentityVerification
   } = useGoodDollarIdentity();
 
-  // Handle authentication redirects in useEffect to prevent navigation during render
+  // Handle authentication redirects
   useEffect(() => {
+    if (!isStable || hasNavigated) return;
+
     if (ready && !authenticated) {
+      console.log('Wallet: User not authenticated, redirecting to home');
+      setHasNavigated(true);
       navigate('/');
     }
-  }, [ready, authenticated, navigate]);
+  }, [ready, authenticated, isStable, hasNavigated, navigate]);
 
-  // Handle Service Provider redirection in useEffect
+  // Handle Service Provider redirection
   useEffect(() => {
-    if (walletData.userProfile?.profile_type === 'Service Provider' && !walletData.loading.profile) {
+    if (!isStable || hasNavigated) return;
+
+    if (
+      walletData.userProfile?.profile_type === 'Service Provider' && 
+      !walletData.loading.profile
+    ) {
+      console.log('Wallet: Service Provider detected, redirecting to motivation page');
+      setHasNavigated(true);
       navigate('/service-provider-motivation');
     }
-  }, [walletData.userProfile?.profile_type, walletData.loading.profile, navigate]);
+  }, [walletData.userProfile?.profile_type, walletData.loading.profile, isStable, hasNavigated, navigate]);
 
-  // Show loading state only for initial authentication
-  if (!ready) {
+  // Show loading state during initialization
+  if (!ready || !isStable) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading wallet...</p>
         </div>
       </div>
     );
   }
 
+  // Don't render if not authenticated (navigation will handle redirect)
   if (!authenticated) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   // Don't render content if we're redirecting Service Providers
   if (walletData.userProfile?.profile_type === 'Service Provider') {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   const hasValidHash = walletData.userProfile?.signed_terms_hash && walletData.userProfile.signed_terms_hash.trim() !== '';

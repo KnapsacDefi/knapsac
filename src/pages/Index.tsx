@@ -1,21 +1,30 @@
 
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import AuthScreen from "@/components/AuthScreen";
+import { useMountingGuard } from "@/hooks/useMountingGuard";
+import { useStableAuth } from "@/hooks/useStableAuth";
 
 const Index = () => {
-  const { ready, authenticated } = usePrivy();
   const navigate = useNavigate();
+  const { ready, authenticated, user } = useStableAuth();
+  const { isStable } = useMountingGuard();
+  const [hasNavigated, setHasNavigated] = useState(false);
 
+  // Consolidate all navigation logic in a single useEffect
   useEffect(() => {
-    if (ready && authenticated) {
+    if (!isStable || hasNavigated) return;
+
+    if (ready && authenticated && user) {
+      console.log('Index: Navigating to profile for authenticated user');
+      setHasNavigated(true);
       navigate('/profile');
     }
-  }, [ready, authenticated, navigate]);
+  }, [ready, authenticated, user, isStable, hasNavigated, navigate]);
 
-  // Show loading state while Privy initializes
-  if (!ready) {
+  // Show loading state while Privy initializes or component stabilizes
+  if (!ready || !isStable) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -26,12 +35,20 @@ const Index = () => {
     );
   }
 
+  // Only show auth screen for non-authenticated users
   if (!authenticated) {
     return <AuthScreen />;
   }
 
-  // This should not be reached due to useEffect redirect, but just in case
-  return null;
+  // Show loading while navigation is in progress
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Redirecting...</p>
+      </div>
+    </div>
+  );
 };
 
 export default Index;
