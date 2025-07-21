@@ -204,16 +204,32 @@ export const useWalletWithdrawal = ({
     if (isValidating) {
       console.log('Network validation in progress, proceeding with timeout...');
       
-      // Give validation max 3 seconds then proceed anyway
+      toast({
+        title: "Please Wait",
+        description: `Validating connection to ${token?.chain || 'target'} network...`,
+      });
+      
+      // Give validation max 2 seconds then proceed anyway
       setTimeout(() => {
         if (isValidating) {
           console.log('⚠️ Network validation timeout - proceeding anyway');
+          toast({
+            title: "Validation Timeout",
+            description: "Network validation is taking longer than expected. Please ensure you're on the correct network.",
+            variant: "destructive"
+          });
         }
-      }, 3000);
+      }, 2000);
       
+      return;
+    }
+
+    // Check if we're on the wrong network before proceeding
+    if (!isCorrectNetwork && currentChain && token?.chain) {
       toast({
-        title: "Please Wait",
-        description: "Validating network connection...",
+        title: "Wrong Network",
+        description: `Currently on ${currentChain} network. Please switch to ${token.chain} network to continue.`,
+        variant: "destructive"
       });
       return;
     }

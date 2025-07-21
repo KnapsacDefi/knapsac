@@ -162,6 +162,11 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
         console.log(`Network status: Current=${currentChainName} (${currentChainId}), Target=${targetChain} (${targetChainId}), IsCorrect=${isCorrect}`);
 
+        // Provide clearer feedback about network mismatch
+        if (!isCorrect) {
+          console.warn(`❌ Wrong network detected: Currently on ${currentChainName || 'Unknown'} (${currentChainId}), need ${targetChain} (${targetChainId})`);
+        }
+
         // If not on correct network, attempt to switch
         if (!isCorrect) {
           try {
@@ -199,11 +204,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
                                    errorMessage.toLowerCase().includes('cancelled');
             
             let title = "Network Switch Required";
-            let description = `Please manually switch to ${targetChain} network in your wallet to continue.`;
+            let description = `Currently on ${currentChainName || 'Unknown'} network. Please switch to ${targetChain} network in your wallet to continue.`;
             
             if (isUserRejection) {
               title = "Network Switch Cancelled";
-              description = `Network switch was cancelled. Please manually switch to ${targetChain} network to continue.`;
+              description = `Network switch was cancelled. Please manually switch from ${currentChainName || 'current'} to ${targetChain} network to continue.`;
+            } else if (errorMessage.toLowerCase().includes('unsupported')) {
+              title = "Unsupported Network";
+              description = `Your wallet doesn't support ${targetChain} network. Please add it manually or switch using your wallet.`;
             }
             
             toast({
