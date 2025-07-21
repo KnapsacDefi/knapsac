@@ -21,15 +21,15 @@ const erc20Abi = [
 ] as const;
 
 interface UseWalletWithdrawalProps {
-  token: {
+  token?: {
     symbol: string;
     address: string;
     chain: string;
     decimals: number;
-  };
+  } | null;
   amount: string;
   recipientAddress: string;
-  balance: string;
+  balance?: string;
 }
 
 export const useWalletWithdrawal = ({
@@ -43,10 +43,10 @@ export const useWalletWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   
-  // Enhanced network management with validation
+  // Enhanced network management with validation - handle case where token might be null
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
-    token.chain as 'celo' | 'ethereum' | 'base', 
-    step !== 'form'
+    token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
+    step !== 'form' && !!token
   );
 
   const { signMessage } = useSignMessage({
@@ -57,7 +57,7 @@ export const useWalletWithdrawal = ({
       } else {
         toast({
           title: "Network Error",
-          description: `Please switch to ${token.chain} network to continue`,
+          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
           variant: "destructive"
         });
         setStep('form');
@@ -119,6 +119,16 @@ export const useWalletWithdrawal = ({
   let currentTransactionId: string;
 
   const validateWithdrawalInputs = (): boolean => {
+    // Check if token is available
+    if (!token) {
+      toast({
+        title: "Missing Token",
+        description: "Token information is not available",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     // Validate amount
     if (!amount || parseFloat(amount) <= 0) {
       toast({
@@ -129,7 +139,7 @@ export const useWalletWithdrawal = ({
       return false;
     }
 
-    if (parseFloat(amount) > parseFloat(balance)) {
+    if (balance && parseFloat(amount) > parseFloat(balance)) {
       toast({
         title: "Insufficient Balance",
         description: "Amount exceeds available balance",
@@ -200,7 +210,7 @@ export const useWalletWithdrawal = ({
     if (!isCorrectNetwork) {
       toast({
         title: "Wrong Network",
-        description: `Please switch to ${token.chain} network to continue`,
+        description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
         variant: "destructive"
       });
       return;
@@ -218,8 +228,8 @@ export const useWalletWithdrawal = ({
       const transactionData = {
         wallet_address: walletAddress,
         transaction_type: 'withdrawal_wallet',
-        token_symbol: token.symbol,
-        chain: token.chain,
+        token_symbol: token!.symbol,
+        chain: token!.chain,
         amount: parseFloat(amount),
         recipient_address: validatedRecipientAddress,
         status: 'pending'
@@ -236,7 +246,7 @@ export const useWalletWithdrawal = ({
       currentTransactionId = transaction.id;
 
       // Create authorization message
-      const message = `Authorize withdrawal of ${amount} ${token.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
+      const message = `Authorize withdrawal of ${amount} ${token!.symbol} to ${validatedRecipientAddress}\n\nTimestamp: ${new Date().toISOString()}`;
       
       // Sign the message
       signMessage({ message });
@@ -254,6 +264,8 @@ export const useWalletWithdrawal = ({
   };
 
   const handleTokenTransfer = async () => {
+    if (!token) return;
+    
     setStep('confirming');
 
     try {

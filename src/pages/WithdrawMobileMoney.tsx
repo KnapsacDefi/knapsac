@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -50,11 +51,7 @@ const WithdrawMobileMoney = () => {
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
 
-  if (!token) {
-    navigate('/withdraw');
-    return null;
-  }
-
+  // Move hook call to the beginning - BEFORE any early returns
   const { handleWithdraw, isProcessing, step } = useMobileMoneyWithdrawal({
     token,
     amount,
@@ -65,6 +62,12 @@ const WithdrawMobileMoney = () => {
     localAmount,
     balance
   });
+
+  // Early return AFTER all hooks are called
+  if (!token) {
+    navigate('/withdraw');
+    return null;
+  }
 
   useEffect(() => {
     if (selectedCurrency) {

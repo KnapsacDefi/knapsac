@@ -20,11 +20,7 @@ const WithdrawWallet = () => {
   const [amount, setAmount] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
 
-  if (!token) {
-    navigate('/withdraw');
-    return null;
-  }
-
+  // Move all hook calls to the beginning - BEFORE any early returns
   const { 
     handleWithdraw, 
     isProcessing, 
@@ -38,6 +34,12 @@ const WithdrawWallet = () => {
     recipientAddress,
     balance
   });
+
+  // Early return AFTER all hooks are called
+  if (!token) {
+    navigate('/withdraw');
+    return null;
+  }
 
   if (step === 'signing') {
     return (

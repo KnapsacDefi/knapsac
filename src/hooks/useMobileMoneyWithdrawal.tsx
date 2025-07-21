@@ -22,19 +22,19 @@ const erc20Abi = [
 ] as const;
 
 interface UseMobileMoneyWithdrawalProps {
-  token: {
+  token?: {
     symbol: string;
     address: string;
     chain: string;
     decimals: number;
-  };
+  } | null;
   amount: string;
   phoneNumber: string;
   selectedCurrency: string;
   selectedNetwork: string;
   conversionRate: number;
   localAmount: string;
-  balance: string;
+  balance?: string;
 }
 
 export const useMobileMoneyWithdrawal = ({
@@ -52,10 +52,10 @@ export const useMobileMoneyWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
   
-  // Enhanced network management with validation
+  // Enhanced network management with validation - handle case where token might be null
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
-    token.chain as 'celo' | 'ethereum' | 'base', 
-    step !== 'form'
+    token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
+    step !== 'form' && !!token
   );
 
   const { signMessage } = useSignMessage({
@@ -66,7 +66,7 @@ export const useMobileMoneyWithdrawal = ({
       } else {
         toast({
           title: "Network Error",
-          description: `Please switch to ${token.chain} network to continue`,
+          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
           variant: "destructive"
         });
         setStep('form');
@@ -139,6 +139,16 @@ export const useMobileMoneyWithdrawal = ({
   };
 
   const validateMobileMoneyInputs = (): boolean => {
+    // Check if token is available
+    if (!token) {
+      toast({
+        title: "Missing Token",
+        description: "Token information is not available",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     // Validate basic inputs
     if (!amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate) {
       toast({
@@ -159,7 +169,7 @@ export const useMobileMoneyWithdrawal = ({
       return false;
     }
 
-    if (parseFloat(amount) > parseFloat(balance)) {
+    if (balance && parseFloat(amount) > parseFloat(balance)) {
       toast({
         title: "Insufficient Balance",
         description: "Amount exceeds available balance",
@@ -232,7 +242,7 @@ export const useMobileMoneyWithdrawal = ({
     if (!isCorrectNetwork) {
       toast({
         title: "Wrong Network",
-        description: `Please switch to ${token.chain} network to continue`,
+        description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
         variant: "destructive"
       });
       return;
@@ -249,8 +259,8 @@ export const useMobileMoneyWithdrawal = ({
       const transactionData = {
         wallet_address: walletAddress,
         transaction_type: 'withdrawal_mobile_money',
-        token_symbol: token.symbol,
-        chain: token.chain,
+        token_symbol: token!.symbol,
+        chain: token!.chain,
         amount: parseFloat(amount),
         recipient_phone: formattedPhone,
         recipient_currency: selectedCurrency,
@@ -270,7 +280,7 @@ export const useMobileMoneyWithdrawal = ({
       currentTransactionId = transaction.id;
 
       // Create authorization message
-      const message = `Authorize mobile money withdrawal of ${amount} ${token.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
+      const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
       
       // Sign the message
       signMessage({ message });
@@ -288,6 +298,8 @@ export const useMobileMoneyWithdrawal = ({
   };
 
   const handleTokenTransfer = async () => {
+    if (!token) return;
+    
     setStep('transferring');
 
     try {
