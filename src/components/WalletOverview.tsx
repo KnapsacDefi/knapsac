@@ -49,7 +49,9 @@ const WalletOverview = ({
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
   const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
-  const { fundWallet } = useFundWallet({
+  // Only call useFundWallet when wallets are available to prevent re-render loops
+  const hasWallets = wallets && wallets.length > 0;
+  const fundWalletHook = useFundWallet({
     onUserExited: (params) => {
       if (params.balance > 0) {
         toast({
@@ -62,15 +64,16 @@ const WalletOverview = ({
 
   const handleDeposit = useCallback(async () => {
     try {
-      if (wallets.length > 0) {
-        await fundWallet(wallets[0].address);
-      } else {
+      if (!hasWallets) {
         toast({
           title: "No Wallet Available",
           description: "Please connect a wallet first.",
           variant: "destructive"
         });
+        return;
       }
+
+      await fundWalletHook.fundWallet(wallets[0].address);
     } catch (error: any) {
       console.error('Deposit error:', error);
       
@@ -89,7 +92,7 @@ const WalletOverview = ({
         });
       }
     }
-  }, [wallets, fundWallet]);
+  }, [hasWallets, wallets, fundWalletHook]);
 
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
@@ -132,7 +135,7 @@ const WalletOverview = ({
       <div className="grid grid-cols-3 gap-2">
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
-          disabled={isServiceProvider}
+          disabled={isServiceProvider || !hasWallets}
           onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>
