@@ -52,10 +52,10 @@ export const useMobileMoneyWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'transferring'>('form');
   
-  // Always run network manager but don't trigger validation automatically
+  // Enable automatic network switching
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    false // Never auto-validate
+    true // Enable automatic switching
   );
 
   const { signMessage } = useSignMessage({
@@ -211,16 +211,16 @@ export const useMobileMoneyWithdrawal = ({
 
     setIsProcessing(true);
     
-    // Simple network check without complex state management
-    if (!isCorrectNetwork && !isValidating) {
-      const currentNetworkDisplay = currentChain || 'Unknown';
-      const targetNetworkDisplay = token?.chain || 'target';
-      
-      toast({
-        title: "Wrong Network",
-        description: `Currently connected to ${currentNetworkDisplay} network. Please switch to ${targetNetworkDisplay} network in your wallet and try again.`,
-        variant: "destructive"
-      });
+    // Wait for network validation if it's in progress
+    if (isValidating) {
+      console.log('Waiting for network validation to complete...');
+      return;
+    }
+
+    // If not on correct network, let useNetworkManager handle automatic switching
+    if (!isCorrectNetwork) {
+      console.log('Wrong network detected, automatic switching should be triggered by useNetworkManager');
+      // Don't show error - let useNetworkManager handle the switching
       setIsProcessing(false);
       return;
     }
@@ -359,6 +359,6 @@ export const useMobileMoneyWithdrawal = ({
     isCorrectNetwork,
     currentChain,
     isValidating,
-    showNetworkStatus: isProcessing && step === 'transferring'
+    showNetworkStatus: isProcessing || isValidating
   };
 };

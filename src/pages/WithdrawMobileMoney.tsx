@@ -263,15 +263,15 @@ const WithdrawMobileMoney = () => {
         <Alert className="mb-4">
           <RefreshCw className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            Validating network connection...
+            Switching to {token?.chain} network...
           </AlertDescription>
         </Alert>
       );
     }
 
-    if (!isCorrectNetwork) {
+    if (!isCorrectNetwork && isProcessing) {
       const currentDisplay = currentChain || 'Unknown';
-      const targetDisplay = token.chain || 'target';
+      const targetDisplay = token?.chain || 'target';
       
       return (
         <Alert className="mb-4" variant="destructive">
@@ -325,6 +325,9 @@ const WithdrawMobileMoney = () => {
           </Button>
           <h1 className="text-2xl font-bold">Mobile Money</h1>
         </div>
+
+        {/* Network Status Alert - shown during processing */}
+        {getNetworkStatusAlert()}
 
         <Card className="mb-6">
           <CardHeader>
@@ -436,9 +439,9 @@ const WithdrawMobileMoney = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate}
+            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate || isValidating}
           >
-            {isProcessing ? "Processing..." : "Withdraw"}
+            {isValidating ? "Switching Network..." : isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -134,8 +133,8 @@ const WithdrawWallet = () => {
   }
 
   const getNetworkStatusAlert = () => {
-    // Only show network status during processing or when there's an issue
-    if (!isProcessing && isCorrectNetwork) {
+    // Show network status during processing or validation
+    if (!isProcessing && !isValidating) {
       return null;
     }
 
@@ -144,7 +143,7 @@ const WithdrawWallet = () => {
         <Alert className="mb-4">
           <RefreshCw className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            Validating network connection...
+            Switching to {token?.chain} network...
           </AlertDescription>
         </Alert>
       );
@@ -152,7 +151,7 @@ const WithdrawWallet = () => {
 
     if (!isCorrectNetwork && isProcessing) {
       const currentDisplay = currentChain || 'Unknown';
-      const targetDisplay = token.chain || 'target';
+      const targetDisplay = token?.chain || 'target';
       
       return (
         <Alert className="mb-4" variant="destructive">
@@ -242,9 +241,9 @@ const WithdrawWallet = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress}
+            disabled={isProcessing || !amount || !recipientAddress || isValidating}
           >
-            {isProcessing ? "Processing..." : "Withdraw"}
+            {isValidating ? "Switching Network..." : isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>
