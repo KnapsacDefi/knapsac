@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { ArrowLeft, Wallet2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
+import WalletConnectionGuard from '@/components/WalletConnectionGuard';
 import { useWalletWithdrawal } from '@/hooks/useWalletWithdrawal';
 
 const WithdrawWallet = () => {
@@ -41,7 +41,6 @@ const WithdrawWallet = () => {
     return null;
   }
 
-  // Show signing step on the current page instead of blank page
   if (step === 'signing') {
     return (
       <div className="min-h-screen flex flex-col bg-background pb-20">
@@ -131,89 +130,91 @@ const WithdrawWallet = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background pb-20">
-      <DashboardHeader />
-      
-      <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/withdraw')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
-        </div>
+    <WalletConnectionGuard requireWallet={true}>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full">
+          <div className="flex items-center gap-4 mb-6">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/withdraw')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
+          </div>
 
-        {/* Network Status Alert - only shown when needed */}
-        {getNetworkStatusAlert()}
+          {/* Network Status Alert - only shown when needed */}
+          {getNetworkStatusAlert()}
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet2 className="h-5 w-5" />
-              {token.symbol} on {token.chain.charAt(0).toUpperCase() + token.chain.slice(1)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
-            <p className="text-2xl font-bold">{balance} {token.symbol}</p>
-          </CardContent>
-        </Card>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet2 className="h-5 w-5" />
+                {token.symbol} on {token.chain.charAt(0).toUpperCase() + token.chain.slice(1)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
+              <p className="text-2xl font-bold">{balance} {token.symbol}</p>
+            </CardContent>
+          </Card>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <div className="relative">
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                step="0.000001"
-                min="0"
-                max={balance}
-              />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
-                {token.symbol}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <div className="relative">
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  step="0.000001"
+                  min="0"
+                  max={balance}
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                  {token.symbol}
+                </div>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span></span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAmount(balance)}
+                  className="h-auto p-0 text-primary"
+                >
+                  Max: {balance}
+                </Button>
               </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span></span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAmount(balance)}
-                className="h-auto p-0 text-primary"
-              >
-                Max: {balance}
-              </Button>
+
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Recipient Address</Label>
+              <Input
+                id="recipient"
+                placeholder="0x..."
+                value={recipientAddress}
+                onChange={(e) => setRecipientAddress(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Make sure the address is correct. Transactions cannot be reversed.
+              </p>
             </div>
+
+            <Button 
+              onClick={handleWithdraw} 
+              className="w-full" 
+              disabled={isProcessing || !amount || !recipientAddress}
+            >
+              {isProcessing ? "Processing..." : "Withdraw"}
+            </Button>
           </div>
+        </main>
 
-          <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Address</Label>
-            <Input
-              id="recipient"
-              placeholder="0x..."
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Make sure the address is correct. Transactions cannot be reversed.
-            </p>
-          </div>
-
-          <Button 
-            onClick={handleWithdraw} 
-            className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress}
-          >
-            {isProcessing ? "Processing..." : "Withdraw"}
-          </Button>
-        </div>
-      </main>
-
-      <BottomNavigation />
-    </div>
+        <BottomNavigation />
+      </div>
+    </WalletConnectionGuard>
   );
 };
 

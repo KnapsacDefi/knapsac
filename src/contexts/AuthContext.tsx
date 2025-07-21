@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useStableAuth } from '@/hooks/useStableAuth';
 
@@ -16,6 +16,10 @@ interface AuthContextType {
   
   // Combined stable state
   isStable: boolean;
+  
+  // Wallet connection status
+  hasConnectedWallet: boolean;
+  walletAddress: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +41,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Consider stable when auth is ready
   const isStable = ready;
 
+  // Enhanced logging for wallet state changes
+  useEffect(() => {
+    console.log('AuthContext: Wallet state update', {
+      ready,
+      authenticated,
+      walletsLength: wallets?.length || 0,
+      firstWalletAddress: wallets?.[0]?.address || null,
+      privyReady: privyAuth.ready,
+      privyAuthenticated: privyAuth.authenticated,
+      privyWalletsLength: wallets?.length || 0,
+      userEmail: user?.email?.address || 'N/A'
+    });
+  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address]);
+
   // Extract stable primitive values for memoization dependencies
   const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
   const firstWalletAddress = useMemo(() => wallets?.[0]?.address || null, [
@@ -44,7 +62,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ]);
 
   // Stabilize wallets array to prevent unnecessary re-renders
-  // Use stable primitive values in dependencies instead of object references
   const stableWallets = useMemo(() => {
     console.log('AuthContext: Recalculating stableWallets', { 
       walletsLength, 
@@ -53,8 +70,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return wallets;
   }, [walletsLength, firstWalletAddress]);
 
+  // Wallet connection status
+  const hasConnectedWallet = Boolean(walletsLength > 0 && firstWalletAddress);
+  const walletAddress = firstWalletAddress;
+
   // Memoize the context value to prevent unnecessary re-renders
-  // NOTE: login and logout functions are NOT included in dependencies as they recreate on every render
   const value: AuthContextType = useMemo(() => ({
     ready,
     authenticated,
@@ -63,7 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     wallets: stableWallets,
     isStable,
-  }), [ready, authenticated, user, stableWallets, isStable]);
+    hasConnectedWallet,
+    walletAddress,
+  }), [ready, authenticated, user, stableWallets, isStable, hasConnectedWallet, walletAddress]);
 
   return (
     <AuthContext.Provider value={value}>

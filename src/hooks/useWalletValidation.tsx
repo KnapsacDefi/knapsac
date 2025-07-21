@@ -8,19 +8,19 @@ export const useWalletValidation = () => {
   const [walletReady, setWalletReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Simplified wallet readiness check - be more optimistic
+  // Enhanced wallet readiness check with retry logic
   useEffect(() => {
     const checkWalletReady = () => {
-      // Basic check: do we have a wallet with an address?
       const hasConnectedWallet = wallets.length > 0;
       const walletAddress = wallets[0]?.address;
       const isReady = ready && hasConnectedWallet && walletAddress;
       
-      console.log('Wallet readiness check (simplified):', { 
+      console.log('Wallet readiness check (enhanced):', { 
         ready, 
         walletsLength: wallets.length, 
         walletAddress, 
-        isReady 
+        isReady,
+        userEmail: user?.email?.address || 'N/A'
       });
       
       setWalletReady(!!isReady);
@@ -28,13 +28,19 @@ export const useWalletValidation = () => {
       // Clear connection error if wallet is ready
       if (isReady) {
         setConnectionError(null);
+      } else if (ready && !hasConnectedWallet) {
+        // Set a specific error when wallet is disconnected
+        setConnectionError("Wallet disconnected. Please reconnect your wallet.");
       }
     };
 
-    // Reduced debounce delay for faster response
-    const timeoutId = setTimeout(checkWalletReady, 50);
+    // Immediate check
+    checkWalletReady();
+    
+    // Also check after a small delay to catch async updates
+    const timeoutId = setTimeout(checkWalletReady, 100);
     return () => clearTimeout(timeoutId);
-  }, [ready, wallets]);
+  }, [ready, wallets, user?.email?.address]);
 
   const walletAddress = wallets[0]?.address;
   const hasWallet = !!walletAddress && walletReady;
@@ -50,6 +56,7 @@ export const useWalletValidation = () => {
 
     // Check if we already have a connected wallet
     if (wallets.length > 0 && wallets[0]?.address) {
+      console.log('Wallet already connected:', wallets[0].address);
       return wallets[0].address;
     }
 
@@ -58,8 +65,8 @@ export const useWalletValidation = () => {
       
       await connectWallet();
       
-      // Reduced timeout for faster response
-      const timeout = 5000; // Reduced from 10 seconds
+      // Wait for wallet state to update with retry logic
+      const timeout = 8000; // Increased timeout
       const startTime = Date.now();
       
       while (Date.now() - startTime < timeout) {
@@ -67,7 +74,7 @@ export const useWalletValidation = () => {
           console.log('Wallet connected successfully:', wallets[0].address);
           return wallets[0].address;
         }
-        await new Promise(resolve => setTimeout(resolve, 50)); // Reduced polling interval
+        await new Promise(resolve => setTimeout(resolve, 100)); // More frequent checks
       }
       
       throw new Error("Wallet connection timed out. Please try again.");
