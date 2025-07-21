@@ -51,18 +51,16 @@ export const useMobileMoneyWithdrawal = ({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'transferring'>('form');
-  const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
-  // Validate network when explicitly requested
+  // Always run network manager but don't trigger validation automatically
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    shouldValidateNetwork
+    false // Never auto-validate
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       console.log('Message signed successfully:', signature);
-      // Proceed directly to token transfer after successful signing
       handleTokenTransfer();
     },
     onError: (error) => {
@@ -73,7 +71,6 @@ export const useMobileMoneyWithdrawal = ({
         variant: "destructive"
       });
       setIsProcessing(false);
-      setShouldValidateNetwork(false);
     }
   });
 
@@ -94,7 +91,6 @@ export const useMobileMoneyWithdrawal = ({
           console.error('Error updating transaction:', updateError);
         }
 
-        // Process mobile money transfer
         await processMobileMoneyTransfer(txHash.hash);
 
       } catch (error) {
@@ -106,7 +102,6 @@ export const useMobileMoneyWithdrawal = ({
         });
         setStep('form');
         setIsProcessing(false);
-        setShouldValidateNetwork(false);
       }
     },
     onError: (error) => {
@@ -118,7 +113,6 @@ export const useMobileMoneyWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
-      setShouldValidateNetwork(false);
     }
   });
 
@@ -210,62 +204,15 @@ export const useMobileMoneyWithdrawal = ({
     return true;
   };
 
-  const waitForNetworkValidation = async (): Promise<boolean> => {
-    console.log('Starting network validation wait...');
-    
-    const maxWaitTime = 10000; // 10 seconds max
-    const checkInterval = 500; // Check every 500ms
-    const startTime = Date.now();
-    
-    return new Promise((resolve) => {
-      const checkValidation = () => {
-        const elapsedTime = Date.now() - startTime;
-        
-        // If validation is complete (not validating anymore)
-        if (!isValidating) {
-          console.log('Network validation completed');
-          resolve(true);
-          return;
-        }
-        
-        // If we've exceeded max wait time
-        if (elapsedTime >= maxWaitTime) {
-          console.log('Network validation timeout reached');
-          resolve(false);
-          return;
-        }
-        
-        // Continue checking
-        setTimeout(checkValidation, checkInterval);
-      };
-      
-      checkValidation();
-    });
-  };
-
   const handleWithdraw = async () => {
     if (!validateMobileMoneyInputs()) {
       return;
     }
 
     setIsProcessing(true);
-    setShouldValidateNetwork(true);
     
-    // Wait for network validation to complete properly
-    const validationCompleted = await waitForNetworkValidation();
-
-    if (!validationCompleted) {
-      toast({
-        title: "Network Check Timeout",
-        description: "Network validation took too long. Please try again.",
-        variant: "destructive"
-      });
-      setIsProcessing(false);
-      setShouldValidateNetwork(false);
-      return;
-    }
-
-    if (!isCorrectNetwork) {
+    // Simple network check without complex state management
+    if (!isCorrectNetwork && !isValidating) {
       const currentNetworkDisplay = currentChain || 'Unknown';
       const targetNetworkDisplay = token?.chain || 'target';
       
@@ -275,7 +222,6 @@ export const useMobileMoneyWithdrawal = ({
         variant: "destructive"
       });
       setIsProcessing(false);
-      setShouldValidateNetwork(false);
       return;
     }
 
@@ -325,7 +271,6 @@ export const useMobileMoneyWithdrawal = ({
         variant: "destructive"
       });
       setIsProcessing(false);
-      setShouldValidateNetwork(false);
     }
   };
 
@@ -366,7 +311,6 @@ export const useMobileMoneyWithdrawal = ({
       });
       setStep('form');
       setIsProcessing(false);
-      setShouldValidateNetwork(false);
     }
   };
 
@@ -405,7 +349,6 @@ export const useMobileMoneyWithdrawal = ({
     } finally {
       setIsProcessing(false);
       setStep('form');
-      setShouldValidateNetwork(false);
     }
   };
 
@@ -413,9 +356,9 @@ export const useMobileMoneyWithdrawal = ({
     handleWithdraw,
     isProcessing,
     step,
-    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true,
+    isCorrectNetwork,
     currentChain,
-    isValidating: shouldValidateNetwork ? isValidating : false,
-    showNetworkStatus: shouldValidateNetwork && step === 'transferring'
+    isValidating,
+    showNetworkStatus: isProcessing && step === 'transferring'
   };
 };
