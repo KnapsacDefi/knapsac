@@ -21,6 +21,17 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['buffer'],
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress warnings about PURE annotations from Privy
+        if (warning.code === 'INVALID_ANNOTATION') {
+          return;
+        }
+        warn(warning);
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
