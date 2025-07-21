@@ -1,4 +1,5 @@
 
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -25,7 +26,10 @@ const Wallet = () => {
   const { ready, authenticated, user, wallets, isStable } = useAuth();
   const data = useWalletData({ ready, authenticated, user, wallets, isStable });
   
-  console.log('Wallet: Render state', { ready, authenticated, isStable, mountingStable, hasNavigated });
+  // Add debugging but avoid console.log in render to prevent infinite loops
+  React.useEffect(() => {
+    console.log('Wallet: Render state', { ready, authenticated, isStable, mountingStable, hasNavigated });
+  }, [ready, authenticated, isStable, mountingStable, hasNavigated]);
 
   // Handle authentication redirects
   useEffect(() => {

@@ -232,7 +232,8 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       hasInitialized.current = false;
     };
 
-  }, [ready, authenticated, user, wallets, isStable]);
+  // Add all dependencies to prevent stale closures
+  }, [ready, authenticated, user, wallets, isStable, user?.id]);
 
   return data;
 };
