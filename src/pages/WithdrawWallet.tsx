@@ -188,6 +188,19 @@ const WithdrawWallet = () => {
     return null;
   };
 
+  // Debug button state
+  const isButtonDisabled = isProcessing || !amount || !recipientAddress || isValidating;
+  
+  console.log('🔍 Button State Debug:', {
+    isProcessing,
+    amount,
+    recipientAddress,
+    isValidating,
+    isButtonDisabled,
+    token: token?.symbol,
+    balance
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
@@ -262,10 +275,17 @@ const WithdrawWallet = () => {
             </p>
           </div>
 
+          {/* Debug info for button state */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-muted-foreground border p-2 rounded">
+              <p>Debug: isProcessing={String(isProcessing)}, amount="{amount}", recipientAddress="{recipientAddress}", isValidating={String(isValidating)}</p>
+            </div>
+          )}
+
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !recipientAddress || isValidating}
+            disabled={isButtonDisabled}
           >
             {isValidating ? "Switching Network..." : isProcessing ? "Processing..." : "Withdraw"}
           </Button>
