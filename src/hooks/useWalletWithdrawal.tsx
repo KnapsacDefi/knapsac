@@ -45,17 +45,17 @@ export const useWalletWithdrawal = ({
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
-  // Only trigger network validation when explicitly requested (during withdrawal)
+  // Only trigger network validation when explicitly requested
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    shouldValidateNetwork // Only validate when withdrawal is initiated
+    shouldValidateNetwork
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       debugLog('WITHDRAWAL', 'Message signed successfully:', signature);
       
-      // Proceed with token transfer after successful signing
+      // Proceed directly with token transfer after successful signing
       handleTokenTransfer();
     },
     onError: (error) => {
@@ -196,14 +196,15 @@ export const useWalletWithdrawal = ({
       return;
     }
 
-    // Trigger network validation only when user actually tries to withdraw
-    setShouldValidateNetwork(true);
     setIsProcessing(true);
+    
+    // Validate network FIRST before proceeding with any signing
+    setShouldValidateNetwork(true);
 
-    // Wait a moment for network validation to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for network validation to complete
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Check network status after validation is triggered
+    // Check if network validation is still in progress
     if (isValidating) {
       toast({
         title: "Network Check",
@@ -214,6 +215,7 @@ export const useWalletWithdrawal = ({
       return;
     }
 
+    // Check if we're on the correct network
     if (!isCorrectNetwork) {
       const currentNetworkDisplay = currentChain || 'Unknown';
       const targetNetworkDisplay = token?.chain || 'target';
@@ -228,6 +230,7 @@ export const useWalletWithdrawal = ({
       return;
     }
 
+    // Network is correct, proceed with signing
     const walletAddress = wallets[0]?.address;
     setStep('signing');
 
@@ -345,8 +348,8 @@ export const useWalletWithdrawal = ({
     handleWithdraw,
     isProcessing,
     step,
-    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true, // Don't show network error until validation is triggered
+    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true,
     currentChain,
-    isValidating: shouldValidateNetwork ? isValidating : false // Don't show validating until triggered
+    isValidating: shouldValidateNetwork ? isValidating : false
   };
 };

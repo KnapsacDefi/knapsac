@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -222,35 +223,58 @@ const WithdrawMobileMoney = () => {
     return null;
   };
 
+  // Show signing step on the current page instead of blank page
   if (step === 'signing') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-sm mx-auto">
-          <CardContent className="pt-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold mb-2">Sign Message</h3>
-            <p className="text-muted-foreground">
-              Please sign the transaction in your wallet to proceed with the withdrawal.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
+          <Card className="w-full max-w-sm">
+            <CardContent className="pt-6 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Sign Message</h3>
+              <p className="text-muted-foreground">
+                Please sign the authorization message in your wallet to proceed with the mobile money withdrawal.
+              </p>
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>Amount:</strong> {amount} {token.symbol}</p>
+                <p><strong>Receive:</strong> {localAmount} {selectedCurrency}</p>
+                <p><strong>Phone:</strong> {phoneNumber}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+
+        <BottomNavigation />
       </div>
     );
   }
 
   if (step === 'transferring') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-sm mx-auto">
-          <CardContent className="pt-6 text-center">
-            {getNetworkStatusAlert()}
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold mb-2">Processing Transfer</h3>
-            <p className="text-muted-foreground">
-              Your mobile money transfer is being processed. You will receive an SMS confirmation shortly.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
+          <Card className="w-full max-w-sm">
+            <CardContent className="pt-6 text-center">
+              {getNetworkStatusAlert()}
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Processing Transfer</h3>
+              <p className="text-muted-foreground">
+                Your mobile money transfer is being processed. You will receive an SMS confirmation shortly.
+              </p>
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>Sending:</strong> {amount} {token.symbol}</p>
+                <p><strong>Receiving:</strong> {localAmount} {selectedCurrency}</p>
+                <p><strong>To:</strong> {phoneNumber}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+
+        <BottomNavigation />
       </div>
     );
   }

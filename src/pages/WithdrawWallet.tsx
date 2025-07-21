@@ -41,34 +41,57 @@ const WithdrawWallet = () => {
     return null;
   }
 
+  // Show signing step on the current page instead of blank page
   if (step === 'signing') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-sm mx-auto">
-          <CardContent className="pt-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold mb-2">Sign Message</h3>
-            <p className="text-muted-foreground">
-              Please sign the transaction in your wallet to proceed with the withdrawal.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
+          <Card className="w-full max-w-sm">
+            <CardContent className="pt-6 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Sign Message</h3>
+              <p className="text-muted-foreground">
+                Please sign the authorization message in your wallet to proceed with the withdrawal.
+              </p>
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>Amount:</strong> {amount} {token.symbol}</p>
+                <p><strong>To:</strong> {recipientAddress.slice(0, 6)}...{recipientAddress.slice(-4)}</p>
+                <p><strong>Chain:</strong> {token.chain}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+
+        <BottomNavigation />
       </div>
     );
   }
 
   if (step === 'confirming') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-sm mx-auto">
-          <CardContent className="pt-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold mb-2">Confirming Transaction</h3>
-            <p className="text-muted-foreground">
-              Your withdrawal is being processed on the blockchain. This may take a few minutes.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
+          <Card className="w-full max-w-sm">
+            <CardContent className="pt-6 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Confirming Transaction</h3>
+              <p className="text-muted-foreground">
+                Your withdrawal is being processed on the blockchain. This may take a few minutes.
+              </p>
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>Sending:</strong> {amount} {token.symbol}</p>
+                <p><strong>To:</strong> {recipientAddress.slice(0, 6)}...{recipientAddress.slice(-4)}</p>
+                <p><strong>Network:</strong> {token.chain}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+
+        <BottomNavigation />
       </div>
     );
   }

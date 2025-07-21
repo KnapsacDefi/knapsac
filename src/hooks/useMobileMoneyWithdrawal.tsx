@@ -52,7 +52,7 @@ export const useMobileMoneyWithdrawal = ({
   const [step, setStep] = useState<'form' | 'signing' | 'transferring'>('form');
   const [shouldValidateNetwork, setShouldValidateNetwork] = useState(false);
   
-  // Only validate network when explicitly requested (during actual transaction)
+  // Validate network when explicitly requested
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
     shouldValidateNetwork
@@ -61,24 +61,8 @@ export const useMobileMoneyWithdrawal = ({
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       console.log('Message signed successfully:', signature);
-      // Now trigger network validation for the actual transaction
-      setShouldValidateNetwork(true);
-      
-      // Give network validation time to complete, then proceed
-      setTimeout(() => {
-        if (isCorrectNetwork) {
-          handleTokenTransfer();
-        } else {
-          toast({
-            title: "Network Error",
-            description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-            variant: "destructive"
-          });
-          setStep('form');
-          setIsProcessing(false);
-          setShouldValidateNetwork(false);
-        }
-      }, 2000);
+      // Proceed directly to token transfer after successful signing
+      handleTokenTransfer();
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -239,8 +223,42 @@ export const useMobileMoneyWithdrawal = ({
       return;
     }
 
-    const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
+    
+    // Validate network FIRST before proceeding with any signing
+    setShouldValidateNetwork(true);
+    
+    // Wait for network validation to complete
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Check if network validation is still in progress
+    if (isValidating) {
+      toast({
+        title: "Network Check",
+        description: "Checking network connection, please wait...",
+      });
+      setIsProcessing(false);
+      setShouldValidateNetwork(false);
+      return;
+    }
+
+    // Check if we're on the correct network
+    if (!isCorrectNetwork) {
+      const currentNetworkDisplay = currentChain || 'Unknown';
+      const targetNetworkDisplay = token?.chain || 'target';
+      
+      toast({
+        title: "Wrong Network",
+        description: `Currently connected to ${currentNetworkDisplay} network. Please switch to ${targetNetworkDisplay} network in your wallet and try again.`,
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+      setShouldValidateNetwork(false);
+      return;
+    }
+
+    // Network is correct, proceed with signing
+    const walletAddress = wallets[0]?.address;
     setStep('signing');
 
     try {
@@ -273,8 +291,15 @@ export const useMobileMoneyWithdrawal = ({
       // Create authorization message
       const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
       
-      // Sign the message (network validation happens after signing)
-      signMessage({ message });
+      // Add UI options to keep signing within current context
+      const uiOptions = {
+        title: 'Authorize Mobile Money Withdrawal',
+        description: `Please sign this message to authorize the mobile money withdrawal of ${amount} ${token!.symbol}. This signature does not cost any gas fees.`,
+        buttonText: 'Sign & Authorize'
+      };
+
+      // Sign the message (network is already validated)
+      signMessage({ message }, { uiOptions });
 
     } catch (error) {
       console.error('Mobile money withdrawal setup error:', error);
@@ -373,9 +398,9 @@ export const useMobileMoneyWithdrawal = ({
     handleWithdraw,
     isProcessing,
     step,
-    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true, // Don't show network error until validation is triggered
+    isCorrectNetwork: shouldValidateNetwork ? isCorrectNetwork : true,
     currentChain,
-    isValidating: shouldValidateNetwork ? isValidating : false, // Don't show validating until triggered
-    showNetworkStatus: shouldValidateNetwork && step === 'transferring' // Only show network status during transfer step
+    isValidating: shouldValidateNetwork ? isValidating : false,
+    showNetworkStatus: shouldValidateNetwork && step === 'transferring'
   };
 };
