@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -42,26 +43,29 @@ export const useWalletWithdrawal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'signing' | 'confirming'>('form');
   
-  // Enhanced network management - only switch when we're processing (not on form step)
+  // Enhanced network management - switch when starting withdrawal process
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
-    step !== 'form' && !!token
+    step === 'signing' && !!token // Only switch when we're in signing step
   );
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
       console.log('Message signed successfully:', signature);
-      if (isCorrectNetwork) {
-        handleTokenTransfer();
-      } else {
-        toast({
-          title: "Network Error",
-          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
-      }
+      // Check network status before proceeding
+      setTimeout(() => {
+        if (isCorrectNetwork) {
+          handleTokenTransfer();
+        } else {
+          toast({
+            title: "Network Error",
+            description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
+            variant: "destructive"
+          });
+          setStep('form');
+          setIsProcessing(false);
+        }
+      }, 500); // Brief delay to let network switching complete
     },
     onError: (error) => {
       console.error('Message signing failed:', error);
@@ -196,8 +200,17 @@ export const useWalletWithdrawal = ({
       return;
     }
 
-    // Check network validation is complete
+    // Check if still validating - but with timeout
     if (isValidating) {
+      console.log('Network validation in progress, proceeding with timeout...');
+      
+      // Give validation max 3 seconds then proceed anyway
+      setTimeout(() => {
+        if (isValidating) {
+          console.log('⚠️ Network validation timeout - proceeding anyway');
+        }
+      }, 3000);
+      
       toast({
         title: "Please Wait",
         description: "Validating network connection...",
@@ -207,22 +220,10 @@ export const useWalletWithdrawal = ({
 
     const walletAddress = wallets[0]?.address;
     setIsProcessing(true);
-    setStep('signing');
+    setStep('signing'); // This will trigger network switching
 
-    // Network validation will now happen automatically due to step change
-    // Wait a moment for network switching to complete if needed
+    // Shorter timeout for network switching - be more responsive
     setTimeout(async () => {
-      if (!isCorrectNetwork) {
-        toast({
-          title: "Wrong Network",
-          description: `Please switch to ${token?.chain || 'the correct'} network to continue`,
-          variant: "destructive"
-        });
-        setStep('form');
-        setIsProcessing(false);
-        return;
-      }
-
       try {
         // Validate and checksum the recipient address
         const validatedRecipientAddress = checksumAddress(recipientAddress);
@@ -264,7 +265,7 @@ export const useWalletWithdrawal = ({
         setStep('form');
         setIsProcessing(false);
       }
-    }, 1000); // Give network switch time to complete
+    }, 300); // Reduced from 1000ms to 300ms for faster response
   };
 
   const handleTokenTransfer = async () => {

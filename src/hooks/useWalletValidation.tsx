@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 
@@ -7,15 +8,15 @@ export const useWalletValidation = () => {
   const [walletReady, setWalletReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Check wallet readiness using current SDK patterns
+  // Simplified wallet readiness check - be more optimistic
   useEffect(() => {
     const checkWalletReady = () => {
-      // Use wallets array as primary source, fallback to user.wallet only if needed
+      // Basic check: do we have a wallet with an address?
       const hasConnectedWallet = wallets.length > 0;
       const walletAddress = wallets[0]?.address;
       const isReady = ready && hasConnectedWallet && walletAddress;
       
-      console.log('Wallet readiness check:', { 
+      console.log('Wallet readiness check (simplified):', { 
         ready, 
         walletsLength: wallets.length, 
         walletAddress, 
@@ -30,7 +31,9 @@ export const useWalletValidation = () => {
       }
     };
 
-    checkWalletReady();
+    // Reduced debounce delay for faster response
+    const timeoutId = setTimeout(checkWalletReady, 50);
+    return () => clearTimeout(timeoutId);
   }, [ready, wallets]);
 
   const walletAddress = wallets[0]?.address;
@@ -53,11 +56,10 @@ export const useWalletValidation = () => {
     try {
       console.log('Attempting to connect wallet...');
       
-      // Use connectWallet method from latest SDK
       await connectWallet();
       
-      // Wait for wallet connection to complete with timeout
-      const timeout = 10000; // 10 seconds
+      // Reduced timeout for faster response
+      const timeout = 5000; // Reduced from 10 seconds
       const startTime = Date.now();
       
       while (Date.now() - startTime < timeout) {
@@ -65,7 +67,7 @@ export const useWalletValidation = () => {
           console.log('Wallet connected successfully:', wallets[0].address);
           return wallets[0].address;
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Reduced polling interval
       }
       
       throw new Error("Wallet connection timed out. Please try again.");

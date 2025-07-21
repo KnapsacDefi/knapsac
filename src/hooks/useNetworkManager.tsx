@@ -18,38 +18,40 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
   const [currentChain, setCurrentChain] = useState<SupportedChain | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const [retryConfig, setRetryConfig] = useState<RetryConfig>({ attempts: 0, maxAttempts: 3, delay: 1000 });
+  const [retryConfig, setRetryConfig] = useState<RetryConfig>({ attempts: 0, maxAttempts: 2, delay: 500 }); // Reduced retries and delay
 
   const { health, detectChainId, safeWalletAccess, attemptRecovery } = useWalletProviderHealth();
 
-  // Enhanced wallet detection with validation
+  // More lenient wallet detection
   const getActiveWallet = useCallback(() => {
-    // Wait for wallet provider to be healthy before proceeding
-    if (!health.isHealthy && health.lastError && health.lastError !== 'Chain ID detection failed') {
-      console.warn('Wallet provider is unhealthy:', health.lastError);
-      return null;
-    }
-
-    // Try wallets array first
+    // Check for basic wallet availability - don't wait for perfect health
     if (wallets && wallets.length > 0 && wallets[0]?.address) {
+      console.log('✅ Active wallet found:', wallets[0].address);
       return wallets[0];
     }
     
-    // Fallback: if authenticated but wallets array is empty, wait for wallet state to stabilize
+    // Fallback: if authenticated but wallets array is empty, wait briefly
     if (authenticated && user?.wallet?.address && (!wallets || wallets.length === 0)) {
-      console.log('Wallet state inconsistency detected - wallets array empty but user has wallet address');
+      console.log('⚠️ Wallet state inconsistency - will retry');
       return null; // Return null to trigger retry
     }
     
+    console.log('ℹ️ No active wallet available');
     return null;
-  }, [wallets, authenticated, user, health]);
+  }, [wallets, authenticated, user]);
 
-  // Enhanced network detection using health monitor
+  // Enhanced network detection with timeout
   const detectCurrentNetwork = useCallback(async (wallet: any): Promise<{ chainId: number | null; chainName: SupportedChain | null }> => {
     console.log('🔍 Detecting network for wallet:', safeWalletAccess(wallet, 'address'));
     
     try {
-      const chainId = await detectChainId(wallet);
+      // Add timeout to chain detection
+      const detectionPromise = detectChainId(wallet);
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('Chain detection timeout')), 5000);
+      });
+      
+      const chainId = await Promise.race([detectionPromise, timeoutPromise]);
       
       if (chainId && chainId > 0) {
         const chainName = getChainNameFromId(chainId);
@@ -66,23 +68,16 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [detectChainId, safeWalletAccess]);
 
-  // Enhanced network switch verification with progressive delays
-  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 6): Promise<boolean> => {
-    console.log(`🔄 Starting enhanced network switch verification for chainId: ${targetChainId}`);
+  // Simplified network switch verification
+  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 3): Promise<boolean> => {
+    console.log(`🔄 Starting network switch verification for chainId: ${targetChainId}`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`📡 Verification attempt ${attempt}/${maxAttempts}`);
       
-      // Progressive delay: 1s, 2s, 3s, etc.
-      const delay = 1000 * attempt;
+      // Shorter progressive delay
+      const delay = 800 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
-      
-      // Check wallet provider health before verification
-      if (!health.isHealthy && health.lastError && !health.lastError.includes('Unsupported chain')) {
-        console.log(`⚠️ Wallet provider unhealthy on attempt ${attempt}, attempting recovery...`);
-        await attemptRecovery();
-        continue;
-      }
       
       try {
         const { chainId } = await detectCurrentNetwork(wallet);
@@ -94,26 +89,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         
         console.log(`⏳ Verification attempt ${attempt} failed. Current: ${chainId}, Target: ${targetChainId}`);
         
-        // On later attempts, try to refresh wallet connection
-        if (attempt >= 4) {
-          console.log('🔄 Refreshing wallet connection...');
-          await attemptRecovery();
-        }
-        
       } catch (error) {
         console.error(`❌ Verification attempt ${attempt} error:`, error);
-        
-        // If we get provider errors, attempt recovery
-        if (error.message?.includes('properties of null') || error.message?.includes('chainId')) {
-          console.log('🚨 Provider error detected, attempting recovery...');
-          await attemptRecovery();
-        }
       }
     }
     
     console.error(`❌ Network switch verification failed after ${maxAttempts} attempts`);
     return false;
-  }, [health, detectCurrentNetwork, attemptRecovery]);
+  }, [detectCurrentNetwork]);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -124,53 +107,47 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setIsValidating(true);
       
       try {
-        // Wait for wallet provider to stabilize if it's recovering
-        if (health.isRecovering) {
-          console.log('Wallet provider is recovering, waiting...');
-          setIsValidating(false);
-          return;
-        }
-
+        // Don't wait for health recovery - proceed if we have basic wallet
         const activeWallet = getActiveWallet();
         
-        // If wallet state is inconsistent, wait and retry
+        // Implement simple retry logic for wallet state
         if (!activeWallet && authenticated && retryConfig.attempts < retryConfig.maxAttempts) {
-          console.log(`Wallet state not ready, retrying in ${retryConfig.delay}ms (attempt ${retryConfig.attempts + 1}/${retryConfig.maxAttempts})`);
+          console.log(`Wallet not ready, retrying... (attempt ${retryConfig.attempts + 1}/${retryConfig.maxAttempts})`);
           await sleep(retryConfig.delay);
           setRetryConfig(prev => ({ 
             ...prev, 
             attempts: prev.attempts + 1, 
-            delay: Math.min(prev.delay * 1.5, 5000) // Exponential backoff, max 5s
+            delay: Math.min(prev.delay * 1.2, 1000) // Smaller backoff
           }));
-          return; // This will trigger another useEffect run
+          return;
         }
 
-        // Reset retry config on successful wallet detection
-        if (activeWallet) {
-          setRetryConfig({ attempts: 0, maxAttempts: 3, delay: 1000 });
+        // Reset retry config on successful wallet detection or max retries reached
+        if (activeWallet || retryConfig.attempts >= retryConfig.maxAttempts) {
+          setRetryConfig({ attempts: 0, maxAttempts: 2, delay: 500 });
         }
 
         if (!activeWallet) {
-          console.log('No active wallet found');
+          console.log('No active wallet found after retries');
           setIsCorrectNetwork(false);
           setCurrentChain(null);
           setIsValidating(false);
           return;
         }
 
-        // Enhanced network detection with error handling
+        // Proceed with network detection even if health is not perfect
         const { chainId: currentChainId, chainName: currentChainName } = await detectCurrentNetwork(activeWallet);
         
         if (!currentChainId) {
-          console.error('Unable to detect current network - wallet provider may be in error state');
+          console.error('Unable to detect current network');
           setIsCorrectNetwork(false);
           setCurrentChain(null);
           setIsValidating(false);
           
-          // Attempt recovery if chain detection fails and provider is unhealthy
-          if (!health.isRecovering && health.lastError && health.lastError.includes('Chain ID detection failed')) {
-            console.log('🔄 Attempting recovery due to chain detection failure...');
-            await attemptRecovery();
+          // Only attempt recovery for serious health issues
+          if (!health.isRecovering && health.lastError?.includes('properties of null')) {
+            console.log('🔄 Attempting recovery due to serious health issue...');
+            setTimeout(attemptRecovery, 1000);
           }
           
           return;
@@ -190,16 +167,15 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
           try {
             console.log(`🔄 Attempting to switch from ${currentChainName} (${currentChainId}) to ${targetChain} (${targetChainId})`);
             
-            // Use safe wallet access for switch chain
             const switchChainMethod = safeWalletAccess(activeWallet, 'switchChain');
             if (!switchChainMethod || typeof switchChainMethod !== 'function') {
               throw new Error('Wallet does not support network switching');
             }
             
             await switchChainMethod(targetChainId);
-            console.log('📡 Switch chain command sent, starting enhanced verification...');
+            console.log('📡 Switch chain command sent, starting verification...');
             
-            // Enhanced verification with recovery capabilities
+            // Simplified verification
             const switchSuccessful = await verifyNetworkSwitch(activeWallet, targetChainId);
             
             if (switchSuccessful) {
@@ -211,37 +187,23 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
               setIsCorrectNetwork(true);
               setCurrentChain(targetChain);
             } else {
-              throw new Error('Network switch verification failed - wallet may not have switched networks');
+              throw new Error('Network switch verification failed');
             }
           } catch (switchError) {
             console.error(`❌ Failed to switch to ${targetChain}:`, switchError);
             
-            // Enhanced error handling with provider error detection
             const errorMessage = switchError?.message || switchError?.toString() || '';
-            const isProviderError = errorMessage.includes('properties of null') ||
-                                   errorMessage.includes('chainId') ||
-                                   errorMessage.includes('undefined');
             const isUserRejection = errorMessage.toLowerCase().includes('user') || 
                                    errorMessage.toLowerCase().includes('rejected') ||
                                    errorMessage.toLowerCase().includes('denied') ||
                                    errorMessage.toLowerCase().includes('cancelled');
-            const isUnsupportedNetwork = errorMessage.toLowerCase().includes('unsupported') ||
-                                        errorMessage.toLowerCase().includes('not supported');
             
             let title = "Network Switch Required";
             let description = `Please manually switch to ${targetChain} network in your wallet to continue.`;
             
-            if (isProviderError) {
-              title = "Wallet Provider Error";
-              description = "Wallet connection issue detected. Attempting to recover...";
-              // Trigger recovery for provider errors
-              setTimeout(attemptRecovery, 1000);
-            } else if (isUserRejection) {
+            if (isUserRejection) {
               title = "Network Switch Cancelled";
               description = `Network switch was cancelled. Please manually switch to ${targetChain} network to continue.`;
-            } else if (isUnsupportedNetwork) {
-              title = "Network Not Supported";
-              description = `Your wallet may not support ${targetChain} network. Please add it manually or use a different wallet.`;
             }
             
             toast({
@@ -258,31 +220,18 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         setIsCorrectNetwork(false);
         setCurrentChain(null);
         
-        // Check if this is a provider error
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('properties of null') || errorMessage.includes('chainId')) {
-          console.log('🚨 Provider error in network validation, triggering recovery...');
-          setTimeout(attemptRecovery, 1000);
-          
-          toast({
-            title: "Wallet Provider Error",
-            description: "Wallet connection issue detected. Attempting to recover...",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Network Error",
-            description: "Failed to validate network connection. Please try again.",
-            variant: "destructive"
-          });
-        }
+        toast({
+          title: "Network Error",
+          description: "Failed to validate network connection. Please try again.",
+          variant: "destructive"
+        });
       } finally {
         setIsValidating(false);
       }
     };
 
     validateAndSwitchNetwork();
-  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, health, getActiveWallet, detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, attemptRecovery]);
+  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery]);
 
   return {
     isCorrectNetwork,

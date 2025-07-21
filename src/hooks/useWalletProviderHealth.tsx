@@ -125,31 +125,17 @@ export const useWalletProviderHealth = () => {
       console.warn('❌ Method 3 failed - ethereum.request:', error);
     }
 
-    // Method 4: networkVersion fallback
-    try {
-      const networkVersion = safeWalletAccess(wallet, 'networkVersion');
-      if (networkVersion) {
-        const parsed = parseEIP155ChainId(networkVersion);
-        if (parsed) {
-          console.log('✅ Method 4 success - networkVersion:', parsed);
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.warn('❌ Method 4 failed - networkVersion access:', error);
-    }
-
     console.error('❌ All chain ID detection methods failed');
     return null;
   }, [safeWalletAccess, parseEIP155ChainId]);
 
-  // Circuit breaker check
+  // Circuit breaker check with reduced threshold
   const isCircuitBreakerOpen = useCallback((): boolean => {
     const now = Date.now();
     const timeSinceLastFailure = now - circuitBreaker.lastFailure;
-    const cooldownPeriod = 30000; // 30 seconds
+    const cooldownPeriod = 15000; // Reduced to 15 seconds
     
-    if (circuitBreaker.failures >= 3 && timeSinceLastFailure < cooldownPeriod) {
+    if (circuitBreaker.failures >= 2 && timeSinceLastFailure < cooldownPeriod) { // Reduced threshold
       return true;
     }
     
@@ -167,24 +153,27 @@ export const useWalletProviderHealth = () => {
     setCircuitBreaker(prev => ({
       failures: prev.failures + 1,
       lastFailure: Date.now(),
-      isOpen: prev.failures + 1 >= 3
+      isOpen: prev.failures + 1 >= 2 // Reduced threshold
     }));
   }, []);
 
-  // Validate wallet state before performing health check
+  // Improved wallet state validation - be more lenient
   const validateWalletState = useCallback((): boolean => {
-    // If wallets array exists and has items, validate them
+    // If wallets array exists and has items with addresses, that's valid
     if (wallets && wallets.length > 0) {
       const wallet = wallets[0];
       const address = safeWalletAccess(wallet, 'address');
-      return !!address;
+      if (address) {
+        console.log('✅ Wallet state valid - address found:', address);
+        return true;
+      }
     }
     
-    // If no wallets but we're not authenticated, that's expected
+    console.log('⚠️ Wallet state not ready - no address found');
     return false;
   }, [wallets, safeWalletAccess]);
 
-  // Health check function with improved logic
+  // Optimistic health check - assume healthy unless proven otherwise
   const performHealthCheck = useCallback(async () => {
     // Skip if circuit breaker is open
     if (isCircuitBreakerOpen()) {
@@ -192,74 +181,79 @@ export const useWalletProviderHealth = () => {
       return;
     }
 
-    // Validate wallet state first
+    // Check if we have a basic valid wallet first
     if (!validateWalletState()) {
-      // Only set as unhealthy if we have wallets array but invalid state
-      if (wallets && wallets.length > 0) {
-        console.warn('❌ Invalid wallet state detected');
-        setHealth(prev => ({ 
-          ...prev, 
-          isHealthy: false, 
-          lastError: 'Invalid wallet state - wallet exists but missing address',
-          chainId: null 
-        }));
-        recordFailure();
-      } else {
-        // No wallets available - this is normal state, not an error
-        console.log('ℹ️ No wallets available - normal state');
-        setHealth(prev => ({ 
-          ...prev, 
-          isHealthy: true, // Don't mark as unhealthy when no wallets
-          lastError: null,
-          chainId: null 
-        }));
-      }
+      // Only set as unhealthy if we actually expect a wallet but it's invalid
+      // Don't mark as unhealthy during normal initialization
+      console.log('ℹ️ No valid wallet state - normal during initialization');
+      setHealth(prev => ({ 
+        ...prev, 
+        isHealthy: true, // Stay optimistic
+        lastError: null,
+        chainId: null 
+      }));
       return;
     }
 
     const wallet = wallets[0];
     
     try {
-      // Check basic wallet properties
-      const address = safeWalletAccess(wallet, 'address');
-      if (!address) {
-        throw new Error('Wallet address not accessible');
-      }
-
-      // Detect chain ID with enhanced methods
+      // We have a valid wallet, now try to detect chain
       const chainId = await detectChainId(wallet);
       
-      // Validate that the detected chain is supported
-      const chainName = chainId ? getChainNameFromId(chainId) : null;
-      const isValidChain = !!chainName;
-      
-      setHealth({
-        isHealthy: !!chainId && isValidChain,
-        lastError: chainId ? (isValidChain ? null : `Unsupported chain ID: ${chainId}`) : 'Chain ID detection failed',
-        chainId,
-        isRecovering: false
-      });
+      if (chainId) {
+        // Validate that the detected chain is supported
+        const chainName = getChainNameFromId(chainId);
+        const isValidChain = !!chainName;
+        
+        setHealth({
+          isHealthy: true, // Mark as healthy if we can detect chain
+          lastError: isValidChain ? null : `Unsupported chain ID: ${chainId}`,
+          chainId,
+          isRecovering: false
+        });
 
-      if (chainId && isValidChain) {
-        console.log(`✅ Wallet health check passed - Chain: ${chainName} (${chainId})`);
+        console.log(`✅ Wallet health check passed - Chain: ${chainName || 'Unknown'} (${chainId})`);
+        
         // Reset circuit breaker on success
         setCircuitBreaker(prev => ({ ...prev, failures: 0, isOpen: false }));
       } else {
-        console.error(`❌ Wallet health check failed - Chain ID: ${chainId}, Valid: ${isValidChain}`);
-        recordFailure();
+        // Can't detect chain but wallet exists - be more lenient
+        console.warn('⚠️ Chain detection failed but wallet exists - staying optimistic');
+        setHealth(prev => ({ 
+          ...prev, 
+          isHealthy: true, // Stay optimistic - maybe chain detection will work later
+          lastError: 'Chain ID detection failed - retrying...',
+          isRecovering: false 
+        }));
       }
 
     } catch (error) {
       console.error('💥 Wallet health check error:', error);
-      setHealth(prev => ({ 
-        ...prev, 
-        isHealthy: false, 
-        lastError: error.message,
-        isRecovering: false 
-      }));
-      recordFailure();
+      
+      // Only mark as unhealthy for serious errors
+      const isSeriousError = error.message?.includes('properties of null') || 
+                            error.message?.includes('undefined');
+      
+      if (isSeriousError) {
+        setHealth(prev => ({ 
+          ...prev, 
+          isHealthy: false, 
+          lastError: error.message,
+          isRecovering: false 
+        }));
+        recordFailure();
+      } else {
+        // For minor errors, stay optimistic
+        setHealth(prev => ({ 
+          ...prev, 
+          isHealthy: true,
+          lastError: null,
+          isRecovering: false 
+        }));
+      }
     }
-  }, [wallets, detectChainId, safeWalletAccess, isCircuitBreakerOpen, validateWalletState, recordFailure]);
+  }, [wallets, detectChainId, isCircuitBreakerOpen, validateWalletState, recordFailure]);
 
   // Recovery function with circuit breaker
   const attemptRecovery = useCallback(async () => {
@@ -272,21 +266,14 @@ export const useWalletProviderHealth = () => {
     setHealth(prev => ({ ...prev, isRecovering: true }));
 
     try {
-      // Wait for wallet state to settle
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Shorter wait for wallet state to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Perform health check again
       await performHealthCheck();
       
-      if (health.isHealthy) {
-        toast({
-          title: "Wallet Recovered",
-          description: "Wallet connection has been restored.",
-        });
-        console.log('✅ Wallet recovery successful');
-      } else {
-        console.warn('⚠️ Wallet recovery incomplete');
-      }
+      setHealth(prev => ({ ...prev, isRecovering: false }));
+      
     } catch (error) {
       console.error('❌ Wallet recovery failed:', error);
       setHealth(prev => ({ 
@@ -296,30 +283,27 @@ export const useWalletProviderHealth = () => {
       }));
       recordFailure();
     }
-  }, [performHealthCheck, health.isHealthy, isCircuitBreakerOpen, recordFailure]);
+  }, [performHealthCheck, isCircuitBreakerOpen, recordFailure]);
 
-  // Monitor wallet health with debouncing
+  // Monitor wallet health with debouncing - reduced delay
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       performHealthCheck();
-    }, 100); // Small delay to let wallet state settle
+    }, 50); // Reduced delay
 
     return () => clearTimeout(timeoutId);
   }, [performHealthCheck]);
 
-  // Improved auto-recovery logic
+  // Less aggressive auto-recovery
   useEffect(() => {
     if (!health.isHealthy && !health.isRecovering && health.lastError && !isCircuitBreakerOpen()) {
       console.log('🚨 Wallet health issue detected:', health.lastError);
       
-      // Only show notifications and attempt recovery for genuine provider issues
-      const isProviderError = health.lastError.includes('properties of null') || 
-                             health.lastError.includes('Chain ID detection failed') ||
-                             health.lastError.includes('Invalid wallet state');
+      // Only show notifications for serious issues
+      const isSeriousIssue = health.lastError.includes('properties of null') || 
+                            health.lastError.includes('Recovery failed');
       
-      const isUnsupportedChain = health.lastError.includes('Unsupported chain ID');
-      
-      if (isProviderError) {
+      if (isSeriousIssue) {
         toast({
           title: "Wallet Connection Issue",
           description: "Attempting to restore wallet connection...",
@@ -327,13 +311,7 @@ export const useWalletProviderHealth = () => {
         });
         
         // Attempt recovery after a delay
-        setTimeout(attemptRecovery, 2000);
-      } else if (isUnsupportedChain) {
-        toast({
-          title: "Unsupported Network",
-          description: "Please switch to a supported network in your wallet.",
-          variant: "destructive"
-        });
+        setTimeout(attemptRecovery, 1500);
       }
     }
   }, [health.isHealthy, health.isRecovering, health.lastError, attemptRecovery, isCircuitBreakerOpen]);
