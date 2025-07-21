@@ -18,7 +18,9 @@ const CURRENCIES = [
   { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
   { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' },
   { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh' },
-  { code: 'XOF', name: 'West African CFA Franc', symbol: 'CFA' }
+  { code: 'XOF', name: 'West African CFA Franc', symbol: 'CFA' },
+  { code: 'CDF', name: 'Congolese Franc', symbol: 'CDF' },
+  { code: 'XAF', name: 'Central African CFA Franc', symbol: 'FCFA' }
 ];
 
 interface MobileNetwork {
@@ -26,6 +28,9 @@ interface MobileNetwork {
   name: string;
   currency: string;
   country: string;
+  mobile_network?: string;
+  mobile_network_name?: string;
+  country_code?: string;
 }
 
 const WithdrawMobileMoney = () => {
@@ -71,12 +76,50 @@ const WithdrawMobileMoney = () => {
   const fetchMobileNetworks = async (currency?: string) => {
     setLoadingNetworks(true);
     try {
+      console.log('Fetching mobile networks for currency:', currency || 'All');
+      
       const { data, error } = await supabase.functions.invoke('get-mobile-networks', {
         body: { currency: currency || 'All' }
       });
-      if (!error && data?.networks) {
-        setMobileNetworks(data.networks);
+      
+      console.log('Mobile networks API response:', data);
+      
+      if (error) {
+        console.error('Error from mobile networks API:', error);
+        throw error;
       }
+      
+      // Handle different response structures
+      let networks = [];
+      if (data?.networks) {
+        networks = data.networks;
+      } else if (Array.isArray(data)) {
+        networks = data;
+      } else if (data && typeof data === 'object') {
+        // Handle currency-grouped response
+        networks = Object.values(data).flat();
+      }
+      
+      // Ensure networks is always an array
+      if (!Array.isArray(networks)) {
+        console.warn('Networks data is not an array, using empty array');
+        networks = [];
+      }
+      
+      // Normalize network data structure
+      const normalizedNetworks = networks.map((network: any) => ({
+        id: network.id || `${network.mobile_network || network.name}_${network.currency}`,
+        name: network.mobile_network_name || network.mobile_network || network.name,
+        currency: network.currency,
+        country: network.country,
+        mobile_network: network.mobile_network,
+        mobile_network_name: network.mobile_network_name,
+        country_code: network.country_code
+      }));
+      
+      console.log('Normalized networks:', normalizedNetworks);
+      setMobileNetworks(normalizedNetworks);
+      
     } catch (error) {
       console.error('Error fetching mobile networks:', error);
       toast({
@@ -84,6 +127,8 @@ const WithdrawMobileMoney = () => {
         description: "Failed to load mobile networks",
         variant: "destructive"
       });
+      // Ensure we always have an array even on error
+      setMobileNetworks([]);
     } finally {
       setLoadingNetworks(false);
     }
@@ -130,9 +175,10 @@ const WithdrawMobileMoney = () => {
     return `+${digits}`;
   };
 
-  const filteredNetworks = mobileNetworks.filter(network => 
-    network.currency === selectedCurrency
-  );
+  // Defensive filter to ensure mobileNetworks is always an array
+  const filteredNetworks = Array.isArray(mobileNetworks) 
+    ? mobileNetworks.filter(network => network.currency === selectedCurrency)
+    : [];
 
   const handleWithdraw = async () => {
     if (!amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate) {
