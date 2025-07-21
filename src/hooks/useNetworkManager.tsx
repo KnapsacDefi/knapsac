@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { celo, mainnet, base } from 'viem/chains';
 import { toast } from '@/hooks/use-toast';
-import { getChainIdFromName, getChainNameFromId, SupportedChain } from '@/utils/withdrawalValidation';
+import { getChainIdFromName, getChainNameFromId } from '@/utils/withdrawalValidation';
+import { SupportedChain } from '@/constants/tokens';
 
 export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boolean = true) => {
   const { wallets } = useWallets();
@@ -19,7 +20,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       
       try {
         // Get current chain ID
-        const currentChainId = await wallets[0].getChainId();
+        const currentChainId = parseInt(wallets[0].chainId);
         const currentChainName = getChainNameFromId(currentChainId);
         setCurrentChain(currentChainName);
 
