@@ -215,10 +215,10 @@ export const useMobileMoneyWithdrawal = ({
     }
 
     setIsProcessing(true);
-    
     setShouldValidateNetwork(true);
     
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Wait longer for network validation to complete
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     if (isValidating) {
       toast({
