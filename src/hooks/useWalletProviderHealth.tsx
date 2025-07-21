@@ -79,7 +79,7 @@ export const useWalletProviderHealth = () => {
 
     // Method 3: ethereum.request for chainId
     try {
-      if (typeof window !== 'undefined' && window.ethereum) {
+      if (typeof window !== 'undefined' && window.ethereum && typeof window.ethereum.request === 'function') {
         const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
         if (chainIdHex && typeof chainIdHex === 'string') {
           const parsed = parseInt(chainIdHex, 16);
