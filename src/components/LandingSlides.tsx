@@ -1,5 +1,4 @@
 
-import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
@@ -7,6 +6,7 @@ import { useState, useEffect } from "react";
 
 interface LandingSlidesProps {
   onGetStarted: () => void;
+  authenticated: boolean;
 }
 
 const slides = [
@@ -28,10 +28,9 @@ const slides = [
   },
 ];
 
-const LandingSlides = ({ onGetStarted }: LandingSlidesProps) => {
+const LandingSlides = ({ onGetStarted, authenticated }: LandingSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [api, setApi] = useState<CarouselApi>();
-  const { authenticated } = usePrivy();
 
   useEffect(() => {
     if (!api) {
