@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
 import { useToast } from '@/hooks/use-toast';
@@ -31,13 +30,15 @@ interface UseWalletWithdrawalProps {
   amount: string;
   recipientAddress: string;
   balance?: string;
+  onSuccess?: () => void;
 }
 
 export const useWalletWithdrawal = ({
   token,
   amount,
   recipientAddress,
-  balance
+  balance,
+  onSuccess
 }: UseWalletWithdrawalProps) => {
   const { wallets } = useWallets();
   const { toast } = useToast();
@@ -49,6 +50,10 @@ export const useWalletWithdrawal = ({
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
     true // Enable automatic switching
   );
+
+  const resetForm = useCallback(() => {
+    onSuccess?.();
+  }, [onSuccess]);
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
@@ -87,6 +92,10 @@ export const useWalletWithdrawal = ({
           title: "Success",
           description: "Withdrawal completed successfully"
         });
+
+        // Reset form after successful withdrawal
+        resetForm();
+        
       } catch (error) {
         console.error('Error updating transaction:', error);
       }

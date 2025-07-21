@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,12 +19,23 @@ const WithdrawWallet = () => {
   const location = useLocation();
   const { ready, authenticated, hasConnectedWallet } = useAuth();
   const { toast } = useToast();
+  const amountInputRef = useRef<HTMLInputElement>(null);
   
   const { token, balance } = location.state || {};
   
   const [amount, setAmount] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Reset form function
+  const resetForm = () => {
+    setAmount('');
+    setRecipientAddress('');
+    // Focus amount input after reset
+    setTimeout(() => {
+      amountInputRef.current?.focus();
+    }, 100);
+  };
 
   // Set a timeout for loading state
   useEffect(() => {
@@ -36,6 +48,15 @@ const WithdrawWallet = () => {
     return () => clearTimeout(timer);
   }, [ready, authenticated, hasConnectedWallet]);
 
+  // Auto-focus amount input when ready
+  useEffect(() => {
+    if (ready && authenticated && hasConnectedWallet && !loadingTimeout) {
+      setTimeout(() => {
+        amountInputRef.current?.focus();
+      }, 100);
+    }
+  }, [ready, authenticated, hasConnectedWallet, loadingTimeout]);
+
   const { 
     handleWithdraw, 
     isProcessing, 
@@ -47,7 +68,8 @@ const WithdrawWallet = () => {
     token,
     amount,
     recipientAddress,
-    balance
+    balance,
+    onSuccess: resetForm
   });
 
   // Early return AFTER all hooks are called
@@ -199,6 +221,7 @@ const WithdrawWallet = () => {
             <Label htmlFor="amount">Amount</Label>
             <div className="relative">
               <Input
+                ref={amountInputRef}
                 id="amount"
                 type="number"
                 placeholder="0.00"
@@ -207,8 +230,9 @@ const WithdrawWallet = () => {
                 step="0.000001"
                 min="0"
                 max={balance}
+                className="text-2xl font-bold h-14 pr-16"
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg font-semibold text-muted-foreground">
                 {token.symbol}
               </div>
             </div>

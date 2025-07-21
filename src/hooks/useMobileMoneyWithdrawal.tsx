@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ interface UseMobileMoneyWithdrawalProps {
   conversionRate: number;
   localAmount: string;
   balance?: string;
+  onSuccess?: () => void;
 }
 
 export const useMobileMoneyWithdrawal = ({
@@ -44,7 +45,8 @@ export const useMobileMoneyWithdrawal = ({
   selectedNetwork,
   conversionRate,
   localAmount,
-  balance
+  balance,
+  onSuccess
 }: UseMobileMoneyWithdrawalProps) => {
   const { wallets } = useWallets();
   const { toast } = useToast();
@@ -57,6 +59,10 @@ export const useMobileMoneyWithdrawal = ({
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
     true // Enable automatic switching
   );
+
+  const resetForm = useCallback(() => {
+    onSuccess?.();
+  }, [onSuccess]);
 
   const { signMessage } = useSignMessage({
     onSuccess: (signature) => {
@@ -339,6 +345,9 @@ export const useMobileMoneyWithdrawal = ({
         title: "Success",
         description: "Mobile money transfer initiated successfully"
       });
+
+      // Reset form after successful transfer
+      resetForm();
 
     } catch (error) {
       console.error('Mobile money processing error:', error);

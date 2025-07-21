@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +41,7 @@ const WithdrawMobileMoney = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { ready, authenticated, hasConnectedWallet } = useAuth();
+  const amountInputRef = useRef<HTMLInputElement>(null);
   
   const { token, balance } = location.state || {};
   
@@ -54,6 +55,20 @@ const WithdrawMobileMoney = () => {
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Reset form function
+  const resetForm = () => {
+    setAmount('');
+    setSelectedCurrency('');
+    setPhoneNumber('');
+    setSelectedNetwork('');
+    setConversionRate(null);
+    setLocalAmount('0.00');
+    // Focus amount input after reset
+    setTimeout(() => {
+      amountInputRef.current?.focus();
+    }, 100);
+  };
 
   const { 
     handleWithdraw, 
@@ -71,7 +86,8 @@ const WithdrawMobileMoney = () => {
     selectedNetwork,
     conversionRate: conversionRate || 0,
     localAmount,
-    balance
+    balance,
+    onSuccess: resetForm
   });
 
   // Set a timeout for loading state
@@ -84,6 +100,15 @@ const WithdrawMobileMoney = () => {
 
     return () => clearTimeout(timer);
   }, [ready, authenticated, hasConnectedWallet]);
+
+  // Auto-focus amount input when ready
+  useEffect(() => {
+    if (ready && authenticated && hasConnectedWallet && !loadingTimeout) {
+      setTimeout(() => {
+        amountInputRef.current?.focus();
+      }, 100);
+    }
+  }, [ready, authenticated, hasConnectedWallet, loadingTimeout]);
 
   if (!token) {
     navigate('/withdraw');
@@ -347,6 +372,7 @@ const WithdrawMobileMoney = () => {
             <Label htmlFor="amount">Amount</Label>
             <div className="relative">
               <Input
+                ref={amountInputRef}
                 id="amount"
                 type="number"
                 placeholder="0.00"
@@ -355,8 +381,9 @@ const WithdrawMobileMoney = () => {
                 step="0.000001"
                 min="0"
                 max={balance}
+                className="text-2xl font-bold h-14 pr-16"
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg font-semibold text-muted-foreground">
                 {token.symbol}
               </div>
             </div>
