@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -51,6 +50,7 @@ export const useMobileMoneyWithdrawal = ({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'form' | 'transferring'>('form');
+  const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   
   // Enable automatic network switching
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
@@ -79,6 +79,7 @@ export const useMobileMoneyWithdrawal = ({
       console.log('Token transfer successful:', txHash);
       
       try {
+        // Update transaction with hash and status
         const { error: updateError } = await supabase.functions.invoke('update-withdrawal', {
           body: {
             transactionId: currentTransactionId,
@@ -91,6 +92,7 @@ export const useMobileMoneyWithdrawal = ({
           console.error('Error updating transaction:', updateError);
         }
 
+        // Process mobile money transfer with transaction hash
         await processMobileMoneyTransfer(txHash.hash);
 
       } catch (error) {
@@ -115,8 +117,6 @@ export const useMobileMoneyWithdrawal = ({
       setIsProcessing(false);
     }
   });
-
-  let currentTransactionId: string;
 
   const formatPhoneNumber = (input: string) => {
     const digits = input.replace(/\D/g, '');
@@ -251,7 +251,7 @@ export const useMobileMoneyWithdrawal = ({
         throw createError;
       }
 
-      currentTransactionId = transaction.id;
+      setCurrentTransactionId(transaction.id);
 
       const message = `Authorize mobile money withdrawal of ${amount} ${token!.symbol} to ${formattedPhone}\n\nReceive: ${localAmount} ${selectedCurrency}\nNetwork: ${selectedNetwork}\nRate: 1 ${token!.symbol} = ${conversionRate} ${selectedCurrency}\n\nTimestamp: ${new Date().toISOString()}`;
       
@@ -314,7 +314,7 @@ export const useMobileMoneyWithdrawal = ({
     }
   };
 
-  const processMobileMoneyTransfer = async (txHash: string) => {
+  const processMobileMoneyTransfer = async (transactionHash: string) => {
     try {
       const walletAddress = wallets[0]?.address;
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -322,6 +322,7 @@ export const useMobileMoneyWithdrawal = ({
       const { data: transferResult, error: transferError } = await supabase.functions.invoke('process-mobile-money-transfer', {
         body: {
           transactionId: currentTransactionId,
+          transactionHash: transactionHash,
           amount: localAmount,
           currency: selectedCurrency,
           phoneNumber: formattedPhone,

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transactionId, amount, currency, phoneNumber, mobileNetwork, walletAddress } = await req.json();
+    const { transactionId, transactionHash, amount, currency, phoneNumber, mobileNetwork, walletAddress } = await req.json();
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -27,7 +28,7 @@ serve(async (req) => {
 
     const payboxApiKey = Deno.env.get('PAYBOX_TRANSFER_API_KEY');
     if (!payboxApiKey) {
-      console.error('PAYBOX_API_KEY not found');
+      console.error('PAYBOX_TRANSFER_API_KEY not found');
       return new Response(
         JSON.stringify({ error: 'API configuration error' }),
         { 
@@ -39,14 +40,15 @@ serve(async (req) => {
 
     console.log('Processing mobile money transfer:', {
       transactionId,
+      transactionHash,
       amount,
       currency,
       phoneNumber,
       mobileNetwork
     });
 
-    // Generate order ID for PayBox
-    const orderId = `tx_${transactionId}_${Date.now()}`;
+    // Use transaction hash as PayBox order ID directly
+    const orderId = transactionHash;
 
     try {
       // Call PayBox transfer API
@@ -72,11 +74,11 @@ serve(async (req) => {
       const result = await response.json();
       console.log('PayBox transfer response:', result);
 
-      // Update transaction with PayBox response
+      // Update transaction with PayBox response and set order_id to transaction hash
       const { error: updateError } = await supabaseClient
         .from('transactions')
         .update({
-          order_id: orderId,
+          order_id: orderId, // This is now the transaction hash
           paybox_response: result,
           status: result.status === 'Success' ? 'completed' : 'failed',
           updated_at: new Date().toISOString()
