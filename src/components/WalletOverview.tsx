@@ -6,6 +6,7 @@ import { useFundWallet } from "@privy-io/react-auth";
 import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import WalletOverviewSkeleton from "./skeletons/WalletOverviewSkeleton";
+import { isWalletConnected } from "@/utils/walletUtils";
 
 interface WalletOverviewProps {
   userProfile?: any;
@@ -35,8 +36,8 @@ const WalletOverview = ({
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
 
-  // Check if we have valid wallets
-  const hasWallets = wallets && wallets.length > 0 && wallets[0]?.address;
+  // Use unified wallet connection check
+  const hasWallet = isWalletConnected(wallets, user);
   
   // ALWAYS call useFundWallet hook to maintain consistent hook order
   const fundWalletHook = useFundWallet({
@@ -52,7 +53,7 @@ const WalletOverview = ({
 
   const handleDeposit = useCallback(async () => {
     try {
-      if (!hasWallets) {
+      if (!hasWallet) {
         toast({
           title: "No Wallet Available",
           description: "Please connect a wallet first.",
@@ -61,7 +62,11 @@ const WalletOverview = ({
         return;
       }
 
-      await fundWalletHook.fundWallet(wallets[0].address);
+      // Use the first available wallet address for funding
+      const walletToFund = wallets.length > 0 ? wallets[0] : user?.wallet;
+      if (walletToFund?.address) {
+        await fundWalletHook.fundWallet(walletToFund.address);
+      }
     } catch (error: any) {
       console.error('Deposit error:', error);
       
@@ -80,7 +85,7 @@ const WalletOverview = ({
         });
       }
     }
-  }, [hasWallets, wallets, fundWalletHook]);
+  }, [hasWallet, wallets, user, fundWalletHook]);
 
   // NOW check for loading state AFTER all hooks are called
   const isLoading = loading.usdc || loading.gooddollar;
@@ -139,7 +144,7 @@ const WalletOverview = ({
       <div className="grid grid-cols-3 gap-2">
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
-          disabled={isServiceProvider || !hasWallets}
+          disabled={isServiceProvider || !hasWallet}
           onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>

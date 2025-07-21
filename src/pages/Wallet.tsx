@@ -15,6 +15,7 @@ import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton"
 import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleton";
 import { useMountingGuard } from "@/hooks/useMountingGuard";
 import { useAuth } from "@/contexts/AuthContext";
+import { getWalletAddress } from "@/utils/walletUtils";
 
 const Wallet = () => {
   // ALWAYS call hooks in the same order at the top
@@ -25,6 +26,9 @@ const Wallet = () => {
   // Get auth data from context
   const { ready, authenticated, user, wallets, isStable } = useAuth();
   const data = useWalletData({ ready, authenticated, user, wallets, isStable });
+
+  // Get unified wallet address
+  const walletAddress = getWalletAddress(wallets, user);
 
   // Handle authentication redirects
   useEffect(() => {
@@ -116,12 +120,11 @@ const Wallet = () => {
           wallets={wallets}
         />
         
-        {/* Progressive address display loading */}
-        {wallets.length === 0 ? (
-          <AddressDisplaySkeleton />
-        ) : (
-          <UserAddressDisplay user={user} />
-        )}
+        {/* Use unified wallet address for display */}
+        <UserAddressDisplay 
+          walletAddress={walletAddress}
+          isLoading={data.loading.profile}
+        />
         
         {/* Show credit score for startups only */}
         {data.userProfile?.profile_type === 'Startup' && <CreditScore />}
