@@ -37,8 +37,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Consider stable when auth is ready
   const isStable = ready;
 
+  // Extract stable primitive values for memoization dependencies
+  const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
+  const firstWalletAddress = useMemo(() => wallets?.[0]?.address || null, [
+    walletsLength > 0 ? wallets[0]?.address : null
+  ]);
+
   // Stabilize wallets array to prevent unnecessary re-renders
-  const stableWallets = useMemo(() => wallets, [wallets.length, wallets[0]?.address]);
+  // Use stable primitive values in dependencies instead of object references
+  const stableWallets = useMemo(() => {
+    console.log('AuthContext: Recalculating stableWallets', { 
+      walletsLength, 
+      firstWalletAddress 
+    });
+    return wallets;
+  }, [walletsLength, firstWalletAddress]);
 
   // Memoize the context value to prevent unnecessary re-renders
   // NOTE: login and logout functions are NOT included in dependencies as they recreate on every render
