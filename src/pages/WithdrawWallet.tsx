@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Wallet2, AlertCircle, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import WithdrawalLoader from '@/components/WithdrawalLoader';
+import NetworkStatus from '@/components/NetworkStatus';
 import { useWalletWithdrawal } from '@/hooks/useWalletWithdrawal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +63,10 @@ const WithdrawWallet = () => {
     step, 
     isCorrectNetwork, 
     currentChain, 
-    isValidating 
+    isValidating,
+    isSwitching,
+    switchError,
+    retryNetworkSwitch
   } = useWalletWithdrawal({
     token,
     amount,
@@ -154,48 +157,15 @@ const WithdrawWallet = () => {
     );
   }
 
-  const getNetworkStatusAlert = () => {
-    // Show network status during processing or validation
-    if (!isProcessing && !isValidating) {
-      return null;
-    }
-
-    if (isValidating) {
-      return (
-        <Alert className="mb-4">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <AlertDescription>
-            Switching to {token?.chain} network...
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (!isCorrectNetwork && isProcessing) {
-      const currentDisplay = currentChain || 'Unknown';
-      const targetDisplay = token?.chain || 'target';
-      
-      return (
-        <Alert className="mb-4" variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Connected to {currentDisplay} network. Please switch to {targetDisplay} network in your wallet to continue.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return null;
-  };
-
   // Debug button state
-  const isButtonDisabled = isProcessing || !amount || !recipientAddress || isValidating;
+  const isButtonDisabled = isProcessing || !amount || !recipientAddress || isValidating || isSwitching;
   
   console.log('🔍 Button State Debug:', {
     isProcessing,
     amount,
     recipientAddress,
     isValidating,
+    isSwitching,
     isButtonDisabled,
     token: token?.symbol,
     balance
@@ -213,8 +183,16 @@ const WithdrawWallet = () => {
           <h1 className="text-2xl font-bold">Withdraw to Wallet</h1>
         </div>
 
-        {/* Network Status Alert - only shown when needed */}
-        {getNetworkStatusAlert()}
+        {/* Enhanced Network Status */}
+        <NetworkStatus
+          isCorrectNetwork={isCorrectNetwork}
+          currentChain={currentChain}
+          targetChain={token.chain}
+          isValidating={isValidating}
+          isSwitching={isSwitching}
+          switchError={switchError}
+          onRetry={retryNetworkSwitch}
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -278,7 +256,7 @@ const WithdrawWallet = () => {
           {/* Debug info for button state */}
           {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-muted-foreground border p-2 rounded">
-              <p>Debug: isProcessing={String(isProcessing)}, amount="{amount}", recipientAddress="{recipientAddress}", isValidating={String(isValidating)}</p>
+              <p>Debug: isProcessing={String(isProcessing)}, amount="{amount}", recipientAddress="{recipientAddress}", isValidating={String(isValidating)}, isSwitching={String(isSwitching)}</p>
             </div>
           )}
 
@@ -287,7 +265,9 @@ const WithdrawWallet = () => {
             className="w-full" 
             disabled={isButtonDisabled}
           >
-            {isValidating ? "Switching Network..." : isProcessing ? "Processing..." : "Withdraw"}
+            {isSwitching ? "Switching Network..." : 
+             isValidating ? "Validating Network..." : 
+             isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>

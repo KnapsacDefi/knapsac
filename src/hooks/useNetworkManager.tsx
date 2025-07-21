@@ -19,6 +19,8 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
   const [currentChain, setCurrentChain] = useState<SupportedChain | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
   const [retryConfig, setRetryConfig] = useState<RetryConfig>({ 
     attempts: 0, 
     maxAttempts: 2, 
@@ -27,7 +29,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
   const { health, detectChainId, safeWalletAccess, attemptRecovery } = useWalletProviderHealth();
   
-  // Add refs to prevent excessive validation
+  // Add refs to prevent excessive validation - reduced throttle from 3s to 1.5s
   const lastValidationRef = useRef<number>(0);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isValidatingRef = useRef<boolean>(false);
@@ -53,7 +55,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     try {
       const detectionPromise = detectChainId(wallet);
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('Chain detection timeout')), 8000);
+        setTimeout(() => reject(new Error('Chain detection timeout')), 6000); // Reduced from 8s to 6s
       });
       
       const chainId = await Promise.race([detectionPromise, timeoutPromise]);
@@ -73,13 +75,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [detectChainId, safeWalletAccess]);
 
-  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 2): Promise<boolean> => {
+  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 3): Promise<boolean> => {
     debugLog('NETWORK_MANAGER', `Starting network switch verification for chainId: ${targetChainId}`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       debugLog('NETWORK_MANAGER', `Verification attempt ${attempt}/${maxAttempts}`);
       
-      const delay = 1500 * attempt;
+      // Reduced delay for faster feedback
+      const delay = 1000 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       try {
@@ -101,9 +104,80 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     return false;
   }, [detectCurrentNetwork]);
 
-  // Validation function that respects shouldSwitch flag
+  const performNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, targetChain: SupportedChain, currentChainName: SupportedChain | null) => {
+    setIsSwitching(true);
+    setSwitchError(null);
+    
+    try {
+      debugLog('NETWORK_MANAGER', `Attempting to switch from ${currentChainName} (${await detectCurrentNetwork(wallet).then(r => r.chainId)}) to ${targetChain} (${targetChainId})`);
+      
+      const switchChainMethod = safeWalletAccess(wallet, 'switchChain');
+      if (!switchChainMethod || typeof switchChainMethod !== 'function') {
+        throw new Error('Wallet does not support network switching');
+      }
+      
+      // Show immediate feedback
+      toast({
+        title: "Switching Network",
+        description: `Switching to ${targetChain} network...`,
+      });
+      
+      await switchChainMethod(targetChainId);
+      debugLog('NETWORK_MANAGER', 'Switch chain command sent, starting verification...');
+      
+      const switchSuccessful = await verifyNetworkSwitch(wallet, targetChainId);
+      
+      if (switchSuccessful) {
+        toast({
+          title: "Network Switched",
+          description: `Successfully switched to ${targetChain} network.`,
+        });
+        
+        setIsCorrectNetwork(true);
+        setCurrentChain(targetChain);
+        return true;
+      } else {
+        throw new Error('Network switch verification failed');
+      }
+    } catch (switchError) {
+      const errorMessage = switchError?.message || switchError?.toString() || '';
+      debugLog('NETWORK_MANAGER', `Network switch failed:`, switchError);
+      
+      const isUserRejection = errorMessage.toLowerCase().includes('user') || 
+                             errorMessage.toLowerCase().includes('rejected') ||
+                             errorMessage.toLowerCase().includes('denied') ||
+                             errorMessage.toLowerCase().includes('cancelled');
+      
+      let title = "Network Switch Required";
+      let description = `Currently on ${currentChainName || 'Unknown'} network. Please switch to ${targetChain} network in your wallet to continue.`;
+      
+      if (isUserRejection) {
+        title = "Network Switch Cancelled";
+        description = `Network switch was cancelled. Please manually switch from ${currentChainName || 'current'} to ${targetChain} network to continue.`;
+      } else if (errorMessage.toLowerCase().includes('unsupported')) {
+        title = "Unsupported Network";
+        description = `Your wallet doesn't support ${targetChain} network. Please add it manually or switch using your wallet.`;
+      } else {
+        title = "Network Switch Failed";
+        description = `Failed to switch to ${targetChain}. Please try switching manually in your wallet.`;
+      }
+      
+      setSwitchError(description);
+      toast({
+        title,
+        description,
+        variant: "destructive"
+      });
+      
+      setIsCorrectNetwork(false);
+      return false;
+    } finally {
+      setIsSwitching(false);
+    }
+  }, [detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, toast]);
+
+  // Main validation function with enhanced error handling
   const validateAndSwitchNetwork = useCallback(async () => {
-    // Skip validation entirely if shouldSwitch is false
     if (!shouldSwitch) {
       debugLog('NETWORK_MANAGER', 'Network validation skipped - shouldSwitch is false');
       return;
@@ -111,13 +185,12 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
     const now = Date.now();
     
-    // Prevent excessive validations - minimum 3 seconds between validations
-    if (now - lastValidationRef.current < 3000) {
-      debugLog('NETWORK_MANAGER', 'Validation throttled');
+    // Reduced throttle from 3s to 1.5s for better responsiveness
+    if (now - lastValidationRef.current < 1500) {
+      debugLog('NETWORK_MANAGER', 'Validation throttled - too soon since last validation');
       return;
     }
     
-    // Prevent concurrent validations
     if (isValidatingRef.current) {
       debugLog('NETWORK_MANAGER', 'Validation already in progress');
       return;
@@ -126,6 +199,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     isValidatingRef.current = true;
     lastValidationRef.current = now;
     setIsValidating(true);
+    setSwitchError(null);
     
     try {
       const activeWallet = getActiveWallet();
@@ -179,58 +253,8 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       if (!isCorrect) {
         debugLog('NETWORK_MANAGER', `Wrong network detected: Currently on ${currentChainName || 'Unknown'} (${currentChainId}), need ${targetChain} (${targetChainId})`);
         
-        try {
-          debugLog('NETWORK_MANAGER', `Attempting to switch from ${currentChainName} (${currentChainId}) to ${targetChain} (${targetChainId})`);
-          
-          const switchChainMethod = safeWalletAccess(activeWallet, 'switchChain');
-          if (!switchChainMethod || typeof switchChainMethod !== 'function') {
-            throw new Error('Wallet does not support network switching');
-          }
-          
-          await switchChainMethod(targetChainId);
-          debugLog('NETWORK_MANAGER', 'Switch chain command sent, starting verification...');
-          
-          const switchSuccessful = await verifyNetworkSwitch(activeWallet, targetChainId);
-          
-          if (switchSuccessful) {
-            toast({
-              title: "Network Switched",
-              description: `Successfully switched to ${targetChain} network.`,
-            });
-            
-            setIsCorrectNetwork(true);
-            setCurrentChain(targetChain);
-          } else {
-            throw new Error('Network switch verification failed');
-          }
-        } catch (switchError) {
-          console.error(`Failed to switch to ${targetChain}:`, switchError);
-          
-          const errorMessage = switchError?.message || switchError?.toString() || '';
-          const isUserRejection = errorMessage.toLowerCase().includes('user') || 
-                                 errorMessage.toLowerCase().includes('rejected') ||
-                                 errorMessage.toLowerCase().includes('denied') ||
-                                 errorMessage.toLowerCase().includes('cancelled');
-          
-          let title = "Network Switch Required";
-          let description = `Currently on ${currentChainName || 'Unknown'} network. Please switch to ${targetChain} network in your wallet to continue.`;
-          
-          if (isUserRejection) {
-            title = "Network Switch Cancelled";
-            description = `Network switch was cancelled. Please manually switch from ${currentChainName || 'current'} to ${targetChain} network to continue.`;
-          } else if (errorMessage.toLowerCase().includes('unsupported')) {
-            title = "Unsupported Network";
-            description = `Your wallet doesn't support ${targetChain} network. Please add it manually or switch using your wallet.`;
-          }
-          
-          toast({
-            title,
-            description,
-            variant: "destructive"
-          });
-          
-          setIsCorrectNetwork(false);
-        }
+        // Attempt automatic network switch
+        await performNetworkSwitch(activeWallet, targetChainId, targetChain, currentChainName);
       }
     } catch (error) {
       console.error(`Network validation error:`, error);
@@ -238,6 +262,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setCurrentChain(null);
       
       if (error.message?.includes('properties of null')) {
+        setSwitchError("Failed to validate network connection. Please try again.");
         toast({
           title: "Network Error",
           description: "Failed to validate network connection. Please try again.",
@@ -248,7 +273,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setIsValidating(false);
       isValidatingRef.current = false;
     }
-  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery]);
+  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, performNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery, toast]);
+
+  // Manual retry function for users
+  const retryNetworkSwitch = useCallback(async () => {
+    // Reset throttle to allow immediate retry
+    lastValidationRef.current = 0;
+    await validateAndSwitchNetwork();
+  }, [validateAndSwitchNetwork]);
 
   // Only run validation when shouldSwitch is true
   useEffect(() => {
@@ -261,9 +293,10 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       clearTimeout(validationTimeoutRef.current);
     }
     
+    // Reduced delay from 1.5s to 1s for better responsiveness
     validationTimeoutRef.current = setTimeout(() => {
       validateAndSwitchNetwork();
-    }, 1500);
+    }, 1000);
 
     return () => {
       if (validationTimeoutRef.current) {
@@ -276,7 +309,10 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     isCorrectNetwork,
     currentChain,
     isValidating,
+    isSwitching,
+    switchError,
     targetChain,
-    walletHealth: health
+    walletHealth: health,
+    retryNetworkSwitch
   };
 };

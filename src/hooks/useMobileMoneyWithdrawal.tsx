@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -55,7 +56,14 @@ export const useMobileMoneyWithdrawal = ({
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   
   // Enable automatic network switching
-  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager(
+  const { 
+    isCorrectNetwork, 
+    currentChain, 
+    isValidating, 
+    isSwitching, 
+    switchError, 
+    retryNetworkSwitch 
+  } = useNetworkManager(
     token?.chain as 'celo' | 'ethereum' | 'base' || 'ethereum', 
     true // Enable automatic switching
   );
@@ -218,8 +226,8 @@ export const useMobileMoneyWithdrawal = ({
     setIsProcessing(true);
     
     // Wait for network validation if it's in progress
-    if (isValidating) {
-      console.log('Waiting for network validation to complete...');
+    if (isValidating || isSwitching) {
+      console.log('Waiting for network validation/switching to complete...');
       return;
     }
 
@@ -369,6 +377,8 @@ export const useMobileMoneyWithdrawal = ({
     isCorrectNetwork,
     currentChain,
     isValidating,
-    showNetworkStatus: isProcessing || isValidating
+    isSwitching,
+    switchError,
+    retryNetworkSwitch
   };
 };

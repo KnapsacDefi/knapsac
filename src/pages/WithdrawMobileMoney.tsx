@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Smartphone, RefreshCw, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import WithdrawalLoader from '@/components/WithdrawalLoader';
+import NetworkStatus from '@/components/NetworkStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useMobileMoneyWithdrawal } from '@/hooks/useMobileMoneyWithdrawal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,7 +77,9 @@ const WithdrawMobileMoney = () => {
     isCorrectNetwork, 
     currentChain, 
     isValidating,
-    showNetworkStatus 
+    isSwitching,
+    switchError,
+    retryNetworkSwitch 
   } = useMobileMoneyWithdrawal({
     token,
     amount,
@@ -278,39 +280,6 @@ const WithdrawMobileMoney = () => {
     ? mobileNetworks.filter(network => network.currency === selectedCurrency)
     : [];
 
-  const getNetworkStatusAlert = () => {
-    if (!showNetworkStatus) {
-      return null;
-    }
-
-    if (isValidating) {
-      return (
-        <Alert className="mb-4">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <AlertDescription>
-            Switching to {token?.chain} network...
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (!isCorrectNetwork && isProcessing) {
-      const currentDisplay = currentChain || 'Unknown';
-      const targetDisplay = token?.chain || 'target';
-      
-      return (
-        <Alert className="mb-4" variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Connected to {currentDisplay} network. Please switch to {targetDisplay} network in your wallet to continue.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return null;
-  };
-
   if (step === 'transferring') {
     return (
       <div className="min-h-screen flex flex-col bg-background pb-20">
@@ -319,7 +288,15 @@ const WithdrawMobileMoney = () => {
         <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
           <Card className="w-full max-w-sm">
             <CardContent className="pt-6 text-center">
-              {getNetworkStatusAlert()}
+              <NetworkStatus
+                isCorrectNetwork={isCorrectNetwork}
+                currentChain={currentChain}
+                targetChain={token.chain}
+                isValidating={isValidating}
+                isSwitching={isSwitching}
+                switchError={switchError}
+                onRetry={retryNetworkSwitch}
+              />
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <h3 className="text-lg font-semibold mb-2">Processing Transfer</h3>
               <p className="text-muted-foreground">
@@ -351,8 +328,16 @@ const WithdrawMobileMoney = () => {
           <h1 className="text-2xl font-bold">Mobile Money</h1>
         </div>
 
-        {/* Network Status Alert - shown during processing */}
-        {getNetworkStatusAlert()}
+        {/* Enhanced Network Status */}
+        <NetworkStatus
+          isCorrectNetwork={isCorrectNetwork}
+          currentChain={currentChain}
+          targetChain={token.chain}
+          isValidating={isValidating}
+          isSwitching={isSwitching}
+          switchError={switchError}
+          onRetry={retryNetworkSwitch}
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -466,9 +451,11 @@ const WithdrawMobileMoney = () => {
           <Button 
             onClick={handleWithdraw} 
             className="w-full" 
-            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate || isValidating}
+            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate || isValidating || isSwitching}
           >
-            {isValidating ? "Switching Network..." : isProcessing ? "Processing..." : "Withdraw"}
+            {isSwitching ? "Switching Network..." : 
+             isValidating ? "Validating Network..." : 
+             isProcessing ? "Processing..." : "Withdraw"}
           </Button>
         </div>
       </main>
