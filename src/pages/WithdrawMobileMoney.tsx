@@ -55,8 +55,12 @@ const WithdrawMobileMoney = () => {
   }
 
   useEffect(() => {
-    fetchMobileNetworks();
-  }, []);
+    if (selectedCurrency) {
+      fetchMobileNetworks(selectedCurrency);
+    } else {
+      fetchMobileNetworks();
+    }
+  }, [selectedCurrency]);
 
   useEffect(() => {
     if (selectedCurrency && amount) {
@@ -64,10 +68,12 @@ const WithdrawMobileMoney = () => {
     }
   }, [selectedCurrency, amount]);
 
-  const fetchMobileNetworks = async () => {
+  const fetchMobileNetworks = async (currency?: string) => {
     setLoadingNetworks(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-mobile-networks');
+      const { data, error } = await supabase.functions.invoke('get-mobile-networks', {
+        body: { currency: currency || 'All' }
+      });
       if (!error && data?.networks) {
         setMobileNetworks(data.networks);
       }

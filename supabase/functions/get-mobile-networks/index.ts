@@ -11,6 +11,17 @@ serve(async (req) => {
   }
 
   try {
+    // Get currency from request body or default to 'All'
+    let currency = 'All';
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        currency = body.currency || 'All';
+      } catch (e) {
+        console.log('No valid JSON body, using default currency');
+      }
+    }
+
     const payboxApiKey = Deno.env.get('PAYBOX_API_KEY');
     if (!payboxApiKey) {
       console.error('PAYBOX_API_KEY not found');
@@ -23,11 +34,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('Fetching mobile networks from PayBox API');
+    console.log(`Fetching mobile networks from PayBox API for currency: ${currency}`);
 
     try {
       const response = await fetch(
-        'https://paybox.com.co/active_networks_transfer?currency=All',
+        `https://paybox.com.co/active_networks_transfer?currency=${currency}`,
         {
           method: 'GET',
           headers: {
