@@ -10,9 +10,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
-import WalletConnectionGuard from '@/components/WalletConnectionGuard';
+import WithdrawalLoader from '@/components/WithdrawalLoader';
 import { supabase } from '@/integrations/supabase/client';
 import { useMobileMoneyWithdrawal } from '@/hooks/useMobileMoneyWithdrawal';
+import { useAuth } from '@/contexts/AuthContext';
 
 const CURRENCIES = [
   { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
@@ -39,6 +40,7 @@ const WithdrawMobileMoney = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { ready, authenticated, hasConnectedWallet } = useAuth();
   
   const { token, balance } = location.state || {};
   
@@ -51,6 +53,7 @@ const WithdrawMobileMoney = () => {
   const [mobileNetworks, setMobileNetworks] = useState<MobileNetwork[]>([]);
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   const { 
     handleWithdraw, 
@@ -71,9 +74,69 @@ const WithdrawMobileMoney = () => {
     balance
   });
 
+  // Set a timeout for loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!ready || !authenticated || !hasConnectedWallet) {
+        setLoadingTimeout(true);
+      }
+    }, 8000); // 8 second timeout
+
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, hasConnectedWallet]);
+
   if (!token) {
     navigate('/withdraw');
     return null;
+  }
+
+  // Show loading while auth/wallet is initializing
+  if (!ready || (ready && authenticated && !hasConnectedWallet && !loadingTimeout)) {
+    return <WithdrawalLoader message="Connecting wallet..." />;
+  }
+
+  // Handle timeout or auth failures
+  if (loadingTimeout || !authenticated || (ready && !hasConnectedWallet)) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
+          <Card className="w-full">
+            <CardContent className="pt-6 text-center space-y-4">
+              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-semibold">Connection Issue</h3>
+              <p className="text-muted-foreground">
+                {!authenticated 
+                  ? "Please log in to access withdrawal features."
+                  : "Unable to connect to your wallet. Please try again."
+                }
+              </p>
+              
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => window.location.reload()}
+                  className="w-full"
+                >
+                  <RefreshCw className="w-4 w-4 mr-2" />
+                  Retry
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/')}
+                  className="w-full"
+                >
+                  Return to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+
+        <BottomNavigation />
+      </div>
+    );
   }
 
   useEffect(() => {
@@ -252,138 +315,136 @@ const WithdrawMobileMoney = () => {
   }
 
   return (
-    <WalletConnectionGuard requireWallet={true}>
-      <div className="min-h-screen flex flex-col bg-background pb-20">
-        <DashboardHeader />
-        
-        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full">
-          <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/withdraw')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">Mobile Money</h1>
-          </div>
+    <div className="min-h-screen flex flex-col bg-background pb-20">
+      <DashboardHeader />
+      
+      <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/withdraw')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">Mobile Money</h1>
+        </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                {token.symbol} on {token.chain.charAt(0).toUpperCase() + token.chain.slice(1)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
-              <p className="text-2xl font-bold">{balance} {token.symbol}</p>
-            </CardContent>
-          </Card>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              {token.symbol} on {token.chain.charAt(0).toUpperCase() + token.chain.slice(1)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-2">Available Balance</p>
+            <p className="text-2xl font-bold">{balance} {token.symbol}</p>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <div className="relative">
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  step="0.000001"
-                  min="0"
-                  max={balance}
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
-                  {token.symbol}
-                </div>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span></span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAmount(balance)}
-                  className="h-auto p-0 text-primary"
-                >
-                  Max: {balance}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="currency">Receiving Currency</Label>
-              <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((currency) => (
-                    <SelectItem key={currency.code} value={currency.code}>
-                      {currency.symbol} {currency.name} ({currency.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedCurrency && conversionRate && (
-              <Card className="bg-muted/50">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">You will receive</span>
-                    {loadingRate && <RefreshCw className="h-4 w-4 animate-spin" />}
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {CURRENCIES.find(c => c.code === selectedCurrency)?.symbol}{localAmount}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Rate: 1 {token.symbol} = {conversionRate.toFixed(4)} {selectedCurrency}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Mobile Number</Label>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount</Label>
+            <div className="relative">
               <Input
-                id="phone"
-                type="tel"
-                placeholder="+233264022229"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                step="0.000001"
+                min="0"
+                max={balance}
               />
-              <p className="text-xs text-muted-foreground">
-                Include country code (e.g., +233 for Ghana)
-              </p>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                {token.symbol}
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="network">Mobile Network</Label>
-              <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={!selectedCurrency || loadingNetworks}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingNetworks ? "Loading networks..." : "Select network"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredNetworks.map((network) => (
-                    <SelectItem key={network.id} value={network.name}>
-                      {network.name} ({network.country})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex justify-between text-sm">
+              <span></span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAmount(balance)}
+                className="h-auto p-0 text-primary"
+              >
+                Max: {balance}
+              </Button>
             </div>
-
-            <Button 
-              onClick={handleWithdraw} 
-              className="w-full" 
-              disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate}
-            >
-              {isProcessing ? "Processing..." : "Withdraw"}
-            </Button>
           </div>
-        </main>
 
-        <BottomNavigation />
-      </div>
-    </WalletConnectionGuard>
+          <div className="space-y-2">
+            <Label htmlFor="currency">Receiving Currency</Label>
+            <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((currency) => (
+                  <SelectItem key={currency.code} value={currency.code}>
+                    {currency.symbol} {currency.name} ({currency.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedCurrency && conversionRate && (
+            <Card className="bg-muted/50">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">You will receive</span>
+                  {loadingRate && <RefreshCw className="h-4 w-4 animate-spin" />}
+                </div>
+                <p className="text-2xl font-bold">
+                  {CURRENCIES.find(c => c.code === selectedCurrency)?.symbol}{localAmount}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Rate: 1 {token.symbol} = {conversionRate.toFixed(4)} {selectedCurrency}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Mobile Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="+233264022229"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Include country code (e.g., +233 for Ghana)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="network">Mobile Network</Label>
+            <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={!selectedCurrency || loadingNetworks}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingNetworks ? "Loading networks..." : "Select network"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredNetworks.map((network) => (
+                  <SelectItem key={network.id} value={network.name}>
+                    {network.name} ({network.country})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button 
+            onClick={handleWithdraw} 
+            className="w-full" 
+            disabled={isProcessing || !amount || !selectedCurrency || !phoneNumber || !selectedNetwork || !conversionRate}
+          >
+            {isProcessing ? "Processing..." : "Withdraw"}
+          </Button>
+        </div>
+      </main>
+
+      <BottomNavigation />
+    </div>
   );
 };
 
