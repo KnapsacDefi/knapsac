@@ -36,6 +36,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Consider stable when auth is ready
   const isStable = ready;
 
+  // Stabilize wallets array to prevent unnecessary re-renders
+  const stableWallets = useMemo(() => wallets, [wallets.length, wallets[0]?.address]);
+
   // Memoize the context value to prevent unnecessary re-renders
   const value: AuthContextType = useMemo(() => ({
     ready,
@@ -43,9 +46,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
-    wallets,
+    wallets: stableWallets,
     isStable,
-  }), [ready, authenticated, user, login, logout, wallets, isStable]);
+  }), [ready, authenticated, user, login, logout, stableWallets, isStable]);
 
   return (
     <AuthContext.Provider value={value}>

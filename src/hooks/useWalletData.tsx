@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface WalletData {
@@ -52,6 +52,11 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
   });
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
+  // Memoize the wallet address to prevent unnecessary re-triggers
+  const walletAddress = useMemo(() => {
+    return wallets[0]?.address || user?.wallet?.address || null;
+  }, [wallets, user?.wallet?.address]);
+
   useEffect(() => {
     console.log('useWalletData: useEffect triggered', { 
       ready, 
@@ -59,24 +64,18 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       user: !!user,
       isStable,
       walletsCount: wallets.length,
+      walletAddress,
       hasInit: hasInitialized.current
     });
 
     // Use state flags instead of early returns to prevent hook ordering issues
-
-    const canFetchData = ready && authenticated && user && isStable && wallets.length > 0;
+    const canFetchData = ready && authenticated && user && isStable && walletAddress;
     const shouldFetch = canFetchData && !hasInitialized.current;
     
     if (!shouldFetch) {
       if (!canFetchData) {
         console.log('useWalletData: Not ready for API calls');
       }
-      return;
-    }
-
-    const walletAddress = wallets[0]?.address || user?.wallet?.address;
-    if (!walletAddress) {
-      console.log('useWalletData: No wallet address available');
       return;
     }
 
@@ -232,8 +231,8 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       hasInitialized.current = false;
     };
 
-  // Add all dependencies to prevent stale closures
-  }, [ready, authenticated, user, wallets, isStable, user?.id]);
+  // Use walletAddress in dependencies instead of the entire wallets array
+  }, [ready, authenticated, user, walletAddress, isStable, user?.id]);
 
   return data;
 };
