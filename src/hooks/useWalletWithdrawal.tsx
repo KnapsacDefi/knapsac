@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useWallets, useSignMessage, useSendTransaction } from '@privy-io/react-auth';
 import { encodeFunctionData, parseUnits } from 'viem';
@@ -181,6 +182,39 @@ export const useWalletWithdrawal = ({
     return true;
   };
 
+  const waitForNetworkValidation = async (): Promise<boolean> => {
+    console.log('Starting network validation wait...');
+    
+    const maxWaitTime = 10000; // 10 seconds max
+    const checkInterval = 500; // Check every 500ms
+    const startTime = Date.now();
+    
+    return new Promise((resolve) => {
+      const checkValidation = () => {
+        const elapsedTime = Date.now() - startTime;
+        
+        // If validation is complete (not validating anymore)
+        if (!isValidating) {
+          console.log('Network validation completed');
+          resolve(true);
+          return;
+        }
+        
+        // If we've exceeded max wait time
+        if (elapsedTime >= maxWaitTime) {
+          console.log('Network validation timeout reached');
+          resolve(false);
+          return;
+        }
+        
+        // Continue checking
+        setTimeout(checkValidation, checkInterval);
+      };
+      
+      checkValidation();
+    });
+  };
+
   const handleWithdraw = async () => {
     console.log('🚀 Starting withdrawal process...', {
       token: token?.symbol,
@@ -199,14 +233,14 @@ export const useWalletWithdrawal = ({
     // Validate network FIRST before proceeding with any signing
     setShouldValidateNetwork(true);
 
-    // Wait for network validation to complete
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Wait for network validation to complete properly
+    const validationCompleted = await waitForNetworkValidation();
 
-    // Check if network validation is still in progress
-    if (isValidating) {
+    if (!validationCompleted) {
       toast({
-        title: "Network Check",
-        description: "Checking network connection, please wait...",
+        title: "Network Check Timeout",
+        description: "Network validation took too long. Please try again.",
+        variant: "destructive"
       });
       setIsProcessing(false);
       setShouldValidateNetwork(false);
