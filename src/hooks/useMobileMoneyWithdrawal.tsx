@@ -300,10 +300,10 @@ export const useMobileMoneyWithdrawal = ({
         args: [validatedRecipientAddress as `0x${string}`, amountInWei],
       });
 
-      const formattedPhone = formatPhoneNumber(phoneNumber);
+      const formattedPhone = formatPhoneNumber(phoneNumber || '');
       const uiOptions = {
         title: "Confirm Mobile Money Transfer",
-        description: `Send ${amount} ${token.symbol} to receive ${localAmount} ${selectedCurrency} at ${formattedPhone}`,
+        description: `Send ${amount || '0'} ${token?.symbol || 'TOKEN'} to receive ${localAmount || '0'} ${selectedCurrency || 'CURRENCY'} at ${formattedPhone}`,
         buttonText: "Confirm Transfer"
       };
 

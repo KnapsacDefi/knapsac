@@ -268,7 +268,7 @@ export const useWalletWithdrawal = ({
 
       const uiOptions = {
         title: "Confirm Withdrawal",
-        description: `Send ${amount} ${token.symbol} to ${validatedRecipientAddress.slice(0, 6)}...${validatedRecipientAddress.slice(-4)}`,
+        description: `Send ${amount || '0'} ${token?.symbol || 'TOKEN'} to ${validatedRecipientAddress.slice(0, 6)}...${validatedRecipientAddress.slice(-4)}`,
         buttonText: "Confirm Withdrawal"
       };
 
