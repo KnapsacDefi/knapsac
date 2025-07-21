@@ -9,7 +9,6 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
 import LenderComingSoonBanner from "@/components/LenderComingSoonBanner";
-import { useGoodDollarIdentity } from "@/hooks/useGoodDollarIdentity";
 import { useWalletData } from "@/hooks/useWalletData";
 import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton";
 import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleton";
@@ -24,12 +23,6 @@ const Wallet = () => {
   const walletData = useWalletData();
   const { isStable } = useMountingGuard();
   const [hasNavigated, setHasNavigated] = useState(false);
-
-  const {
-    startIdentityVerification,
-    isVerifying,
-    checkIdentityVerification
-  } = useGoodDollarIdentity();
 
   // Handle authentication redirects
   useEffect(() => {
@@ -112,21 +105,20 @@ const Wallet = () => {
         )}
         
         <WalletOverview 
-          startIdentityVerification={startIdentityVerification}
-          isVerifying={isVerifying}
-          checkIdentityVerification={checkIdentityVerification}
           userProfile={walletData.userProfile}
           hasSubscription={walletData.hasSubscription}
           balance={walletData.balance}
           gooddollarBalance={walletData.gooddollarBalance}
           loading={walletData.loading}
+          user={user}
+          wallets={wallets}
         />
         
         {/* Progressive address display loading */}
         {wallets.length === 0 ? (
           <AddressDisplaySkeleton />
         ) : (
-          <UserAddressDisplay />
+          <UserAddressDisplay user={user} />
         )}
         
         {/* Show credit score for startups only */}

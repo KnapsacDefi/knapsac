@@ -1,11 +1,13 @@
 
-import { usePrivy } from "@privy-io/react-auth";
 import { Copy, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-const UserAddressDisplay = () => {
-  const { user } = usePrivy();
+interface UserAddressDisplayProps {
+  user?: any;
+}
+
+const UserAddressDisplay = ({ user }: UserAddressDisplayProps) => {
   const { toast } = useToast();
 
   const walletAddress = user?.wallet?.address;

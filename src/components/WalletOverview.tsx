@@ -2,15 +2,12 @@
 import { Banknote, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { usePrivy, useWallets, useFundWallet } from "@privy-io/react-auth";
+import { useFundWallet } from "@privy-io/react-auth";
 import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import WalletOverviewSkeleton from "./skeletons/WalletOverviewSkeleton";
 
 interface WalletOverviewProps {
-  startIdentityVerification: () => Promise<any>;
-  isVerifying: boolean;
-  checkIdentityVerification: () => Promise<any>;
   userProfile?: any;
   hasSubscription?: boolean;
   balance?: string;
@@ -21,20 +18,19 @@ interface WalletOverviewProps {
     usdc?: boolean;
     gooddollar?: boolean;
   };
+  user?: any;
+  wallets?: any[];
 }
 
 const WalletOverview = ({ 
-  startIdentityVerification, 
-  isVerifying, 
-  checkIdentityVerification,
   userProfile,
   hasSubscription,
   balance = "0.00",
   gooddollarBalance = "0.00",
-  loading = {}
+  loading = {},
+  user,
+  wallets = []
 }: WalletOverviewProps) => {
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
   const navigate = useNavigate();
   const [showBalance, setShowBalance] = useState(true);
 
@@ -94,37 +90,6 @@ const WalletOverview = ({
       }
     }
   }, [wallets, fundWallet]);
-
-  const handleClaimClick = async () => {
-    try {
-      const identityCheck = await checkIdentityVerification();
-      
-      if (!identityCheck.isVerified) {
-        toast({
-          title: "Identity Verification Required",
-          description: "You'll be redirected to GoodDollar to complete face verification.",
-        });
-        
-        await startIdentityVerification();
-        
-        toast({
-          title: "Return After Verification",
-          description: "After completing verification, return here and click 'Claim G$' again.",
-          duration: 5000,
-        });
-        
-      } else {
-        navigate('/claim');
-      }
-    } catch (error) {
-      console.error('Error in claim flow:', error);
-      toast({
-        title: "Error",
-        description: "Failed to check verification status. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
 
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">

@@ -13,7 +13,6 @@ import WithdrawWallet from '@/pages/WithdrawWallet';
 import WithdrawMobileMoney from '@/pages/WithdrawMobileMoney';
 import Profile from '@/pages/Profile';
 import Terms from '@/pages/Terms';
-import GoodDollarClaim from '@/pages/GoodDollarClaim';
 import ServiceProviderMotivation from '@/pages/ServiceProviderMotivation';
 import Subscription from '@/pages/Subscription';
 import NotFound from '@/pages/NotFound';
@@ -132,7 +131,6 @@ function App() {
                   <Route path="/withdraw/mobile-money" element={<WithdrawMobileMoney />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/terms" element={<Terms />} />
-                  <Route path="/claim" element={<GoodDollarClaim />} />
                   <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
                   <Route path="/subscription" element={<Subscription />} />
                   <Route path="*" element={<NotFound />} />
