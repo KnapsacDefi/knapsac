@@ -49,8 +49,10 @@ const WalletOverview = ({
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
   const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
-  // Only call useFundWallet when wallets are available to prevent re-render loops
-  const hasWallets = wallets && wallets.length > 0;
+  // Check if we have valid wallets - fix the inconsistency
+  const hasWallets = wallets && wallets.length > 0 && wallets[0]?.address;
+  
+  // ALWAYS call useFundWallet hook to maintain consistent hook order
   const fundWalletHook = useFundWallet({
     onUserExited: (params) => {
       if (params.balance > 0) {

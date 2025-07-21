@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -51,11 +52,31 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
   });
 
   // Extract stable primitive values to prevent object reference changes
-  const userWalletAddress = useMemo(() => user?.wallet?.address || null, [user?.wallet?.address]);
-  const walletsFirstAddress = useMemo(() => wallets?.[0]?.address || null, [wallets?.[0]?.address]);
-  const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
+  const userWalletAddress = useMemo(() => {
+    const address = user?.wallet?.address;
+    console.log('useWalletData: Extracting userWalletAddress:', address);
+    return address || null;
+  }, [user?.wallet?.address]);
 
-  // Fix memoization to use actual string values instead of object references
+  const walletsFirstAddress = useMemo(() => {
+    const address = wallets?.[0]?.address;
+    console.log('useWalletData: Extracting walletsFirstAddress:', address);
+    return address || null;
+  }, [wallets?.[0]?.address]);
+
+  const walletsLength = useMemo(() => {
+    const length = wallets?.length || 0;
+    console.log('useWalletData: Extracting walletsLength:', length);
+    return length;
+  }, [wallets?.length]);
+
+  const userId = useMemo(() => {
+    const id = user?.id;
+    console.log('useWalletData: Extracting userId:', id);
+    return id || null;
+  }, [user?.id]);
+
+  // Use stable primitive values for wallet address determination
   const walletAddress = useMemo(() => {
     console.log('useWalletData: Recalculating walletAddress', { 
       walletsFirstAddress, 
@@ -73,9 +94,6 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
     }
     return null;
   }, [walletsLength, walletsFirstAddress, userWalletAddress]);
-
-  // Extract user ID to avoid object reference issues
-  const userId = useMemo(() => user?.id || null, [user?.id]);
 
   useEffect(() => {
     console.log('useWalletData: useEffect triggered', { 
@@ -249,7 +267,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
 
     // Note: Don't reset hasInitialized in cleanup to prevent re-initialization
 
-  // Use stable primitive values in dependencies
+  // Use stable primitive values in dependencies - this should only change when actual values change
   }, [ready, authenticated, isStable, walletAddress, userId]);
 
   return data;
