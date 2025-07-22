@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster"
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PrivyErrorBoundary } from '@/components/PrivyErrorBoundary';
+import { AuthErrorBoundary } from '@/components/AuthErrorBoundary';
 import WalletConnectionGuard from '@/components/WalletConnectionGuard';
 import Index from '@/pages/Index';
 import Wallet from '@/pages/Wallet';
@@ -122,39 +123,41 @@ function App() {
       >
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <Toaster />
-              <ErrorBoundary>
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/wallet" element={<Wallet />} />
-                    <Route path="/withdraw" element={<Withdraw />} />
-                    <Route 
-                      path="/withdraw/wallet" 
-                      element={
-                        <WalletConnectionGuard requireWallet={true}>
-                          <WithdrawWallet />
-                        </WalletConnectionGuard>
-                      } 
-                    />
-                    <Route 
-                      path="/withdraw/mobile-money" 
-                      element={
-                        <WalletConnectionGuard requireWallet={true}>
-                          <WithdrawMobileMoney />
-                        </WalletConnectionGuard>
-                      } 
-                    />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
-                    <Route path="/subscription" element={<Subscription />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </ErrorBoundary>
-            </AuthProvider>
+            <AuthErrorBoundary>
+              <AuthProvider>
+                <Toaster />
+                <ErrorBoundary>
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/wallet" element={<Wallet />} />
+                      <Route path="/withdraw" element={<Withdraw />} />
+                      <Route 
+                        path="/withdraw/wallet" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <WithdrawWallet />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/withdraw/mobile-money" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <WithdrawMobileMoney />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
+                      <Route path="/subscription" element={<Subscription />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </BrowserRouter>
+                </ErrorBoundary>
+              </AuthProvider>
+            </AuthErrorBoundary>
           </QueryClientProvider>
         </WagmiProvider>
       </PrivyProvider>

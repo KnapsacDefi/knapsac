@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useStableAuth } from '@/hooks/useStableAuth';
@@ -40,30 +39,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [walletsLoading, setWalletsLoading] = useState(false);
   const [walletTimeoutReached, setWalletTimeoutReached] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutStarted, setLogoutStarted] = useState(false);
   
   // Extract what we need from the hooks (stable data)
   const { login } = privyAuth;
   const { ready, authenticated, user } = stableAuth;
   
-  // Enhanced logout function with state management
+  // Enhanced logout function with better state management
   const logout = async () => {
+    console.log('Logout initiated');
     setIsLoggingOut(true);
+    setLogoutStarted(true);
+    
     try {
       await privyAuth.logout();
+      console.log('Logout completed successfully');
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      // Reset logout state after a short delay to allow navigation
-      setTimeout(() => setIsLoggingOut(false), 100);
     }
+    
+    // Keep logout state for navigation, then reset
+    setTimeout(() => {
+      setIsLoggingOut(false);
+      setLogoutStarted(false);
+    }, 1000);
   };
   
-  // Consider stable when auth is ready
-  const isStable = ready;
+  // Reset logout state when user becomes unauthenticated
+  useEffect(() => {
+    if (logoutStarted && !authenticated && ready) {
+      console.log('User successfully logged out, resetting logout state');
+      setIsLoggingOut(false);
+      setLogoutStarted(false);
+    }
+  }, [authenticated, ready, logoutStarted]);
+  
+  // Consider stable when auth is ready and not in logout transition
+  const isStable = ready && !isLoggingOut;
 
   // Wallet loading detection logic
   useEffect(() => {
-    if (authenticated && ready) {
+    if (authenticated && ready && !isLoggingOut) {
       // Reset timeout flag when starting fresh
       setWalletTimeoutReached(false);
       
@@ -92,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setWalletsLoading(false);
       setWalletTimeoutReached(false);
     }
-  }, [authenticated, ready, wallets?.length]);
+  }, [authenticated, ready, wallets?.length, isLoggingOut]);
 
   // Enhanced logging for wallet state changes
   useEffect(() => {
@@ -107,9 +123,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       userEmail: user?.email?.address || 'N/A',
       walletsLoading,
       walletTimeoutReached,
-      isLoggingOut
+      isLoggingOut,
+      logoutStarted
     });
-  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading, walletTimeoutReached, isLoggingOut]);
+  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading, walletTimeoutReached, isLoggingOut, logoutStarted]);
 
   // Extract stable primitive values for memoization dependencies
   const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);

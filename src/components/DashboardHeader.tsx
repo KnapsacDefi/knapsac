@@ -1,20 +1,16 @@
 
-import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DashboardHeader = () => {
-  const { logout } = usePrivy();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { logout, isLoggingOut } = useAuth();
 
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
       await logout();
     } catch (error) {
       console.error('Logout error:', error);
-      setIsLoggingOut(false);
     }
   };
 
