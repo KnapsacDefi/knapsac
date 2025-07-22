@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
@@ -63,97 +64,182 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Handle GET operation (no signature required)
-    if (operation === 'get') {
-      console.log('📖 Proceeding with read operation (no signature required)...');
+    // Handle operations that don't require signatures (GET and UPDATE PREFERENCE)
+    if (operation === 'get' || operation === 'updatePreference') {
+      console.log(`📖 Proceeding with ${operation} operation (no signature required)...`);
       
-      try {
-        console.log('🔍 Querying database for wallet:', walletAddress);
-        const { data: profiles, error: queryError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('crypto_address', walletAddress);
-
-        console.log('📊 Database query result:', {
-          profiles: profiles,
-          profilesLength: profiles?.length || 0,
-          queryError: queryError,
-          firstProfile: profiles?.[0] || null
-        });
-
-        if (queryError) {
-          console.error('❌ Database query error:', queryError);
-          throw queryError;
-        }
-
-        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
-        
-        console.log('🎯 Profile processing:', {
-          profileExists: !!profile,
-          profileId: profile?.id || 'none',
-          profileType: profile?.profile_type || 'none',
-          cryptoAddress: profile?.crypto_address || 'none',
-          signedTermsHash: profile?.signed_terms_hash || 'none'
-        });
-
-        // Log audit entry
-        await supabase.from('security_audit_log').insert({
-          operation_type: 'profile_get',
-          wallet_address: walletAddress,
-          success: true,
-          additional_data: { 
-            profileFound: !!profile,
-            profileId: profile?.id || null,
-            profileType: profile?.profile_type || null
-          }
-        });
-
-        const responseData = { profile };
-        console.log('📤 Preparing response:', {
-          responseData,
-          profileIsNull: profile === null,
-          profileKeys: profile ? Object.keys(profile) : [],
-          responseStringified: JSON.stringify(responseData)
-        });
-
-        // Test JSON serialization
+      if (operation === 'get') {
         try {
-          const testSerialization = JSON.stringify(responseData);
-          console.log('✅ JSON serialization test passed, length:', testSerialization.length);
-        } catch (serializationError) {
-          console.error('❌ JSON serialization failed:', serializationError);
-          throw new Error('Profile data cannot be serialized');
+          console.log('🔍 Querying database for wallet:', walletAddress);
+          const { data: profiles, error: queryError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('crypto_address', walletAddress);
+
+          console.log('📊 Database query result:', {
+            profiles: profiles,
+            profilesLength: profiles?.length || 0,
+            queryError: queryError,
+            firstProfile: profiles?.[0] || null
+          });
+
+          if (queryError) {
+            console.error('❌ Database query error:', queryError);
+            throw queryError;
+          }
+
+          const profile = profiles && profiles.length > 0 ? profiles[0] : null;
+          
+          console.log('🎯 Profile processing:', {
+            profileExists: !!profile,
+            profileId: profile?.id || 'none',
+            profileType: profile?.profile_type || 'none',
+            cryptoAddress: profile?.crypto_address || 'none',
+            signedTermsHash: profile?.signed_terms_hash || 'none'
+          });
+
+          // Log audit entry
+          await supabase.from('security_audit_log').insert({
+            operation_type: 'profile_get',
+            wallet_address: walletAddress,
+            success: true,
+            additional_data: { 
+              profileFound: !!profile,
+              profileId: profile?.id || null,
+              profileType: profile?.profile_type || null
+            }
+          });
+
+          const responseData = { profile };
+          console.log('📤 Preparing response:', {
+            responseData,
+            profileIsNull: profile === null,
+            profileKeys: profile ? Object.keys(profile) : [],
+            responseStringified: JSON.stringify(responseData)
+          });
+
+          // Test JSON serialization
+          try {
+            const testSerialization = JSON.stringify(responseData);
+            console.log('✅ JSON serialization test passed, length:', testSerialization.length);
+          } catch (serializationError) {
+            console.error('❌ JSON serialization failed:', serializationError);
+            throw new Error('Profile data cannot be serialized');
+          }
+
+          return new Response(
+            JSON.stringify(responseData),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+
+        } catch (error) {
+          console.error('❌ GET operation failed:', error);
+          
+          await supabase.from('security_audit_log').insert({
+            operation_type: 'profile_get',
+            wallet_address: walletAddress,
+            success: false,
+            error_message: error.message
+          });
+
+          return new Response(
+            JSON.stringify({ error: 'Failed to get profile' }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
+      }
 
-        return new Response(
-          JSON.stringify(responseData),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-
-      } catch (error) {
-        console.error('❌ GET operation failed:', error);
+      // Handle UPDATE PREFERENCE operation
+      if (operation === 'updatePreference') {
+        console.log('🔄 Updating profile preferences...');
         
-        await supabase.from('security_audit_log').insert({
-          operation_type: 'profile_get',
-          wallet_address: walletAddress,
-          success: false,
-          error_message: error.message
-        });
+        try {
+          // First check if profile exists for this wallet
+          const { data: existingProfiles, error: checkError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('crypto_address', walletAddress);
 
-        return new Response(
-          JSON.stringify({ error: 'Failed to get profile' }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          if (checkError) {
+            console.error('❌ Profile check error:', checkError);
+            throw checkError;
           }
-        );
+
+          if (!existingProfiles || existingProfiles.length === 0) {
+            console.error('❌ No profile found for wallet:', walletAddress);
+            return new Response(
+              JSON.stringify({ error: 'Profile not found' }),
+              { 
+                status: 404, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            );
+          }
+
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              ...profileData,
+              updated_at: new Date().toISOString()
+            })
+            .eq('crypto_address', walletAddress)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('❌ Profile update error:', updateError);
+            throw updateError;
+          }
+
+          console.log('✅ Profile updated successfully:', updatedProfile);
+
+          // Log successful update
+          await supabase.from('security_audit_log').insert({
+            operation_type: 'profile_update_preference',
+            wallet_address: walletAddress,
+            success: true,
+            additional_data: { 
+              profileId: updatedProfile.id,
+              updatedFields: Object.keys(profileData)
+            }
+          });
+
+          return new Response(
+            JSON.stringify({ profile: updatedProfile }),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+
+        } catch (error) {
+          console.error('❌ Profile preference update failed:', error);
+          
+          await supabase.from('security_audit_log').insert({
+            operation_type: 'profile_update_preference',
+            wallet_address: walletAddress,
+            success: false,
+            error_message: error.message
+          });
+
+          return new Response(
+            JSON.stringify({ error: 'Failed to update profile preferences' }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
       }
     }
 
-    // Handle other operations (create, update, etc.)
+    // Handle other operations that require signatures (create, checkExisting, update)
     if (!walletAddress || !signature || !message) {
       console.error('❌ Missing required fields for secure operation');
       return new Response(
@@ -281,64 +367,6 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ error: 'Failed to create profile' }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
-    }
-
-    // Handle UPDATE operation
-    if (operation === 'updatePreference') {
-      console.log('🔄 Updating profile preferences...');
-      
-      try {
-        const { data: updatedProfile, error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            ...profileData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('crypto_address', walletAddress)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error('❌ Profile update error:', updateError);
-          throw updateError;
-        }
-
-        console.log('✅ Profile updated successfully:', updatedProfile);
-
-        // Log successful update
-        await supabase.from('security_audit_log').insert({
-          operation_type: 'profile_update',
-          wallet_address: walletAddress,
-          success: true,
-          additional_data: { profileId: updatedProfile.id }
-        });
-
-        return new Response(
-          JSON.stringify({ profile: updatedProfile }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-
-      } catch (error) {
-        console.error('❌ Profile update failed:', error);
-        
-        await supabase.from('security_audit_log').insert({
-          operation_type: 'profile_update',
-          wallet_address: walletAddress,
-          success: false,
-          error_message: error.message
-        });
-
-        return new Response(
-          JSON.stringify({ error: 'Failed to update profile' }),
           { 
             status: 500, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
