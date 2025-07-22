@@ -31,7 +31,7 @@ const AddProfileBanner = () => {
             <span>Set up your profile to get started</span>
           </div>
           
-          <Button onClick={() => navigate('/profile')} size="sm" variant="destructive">
+          <Button onClick={() => navigate('/profile?redirect=/wallet')} size="sm" variant="destructive">
             Create Profile
           </Button>
         </div>

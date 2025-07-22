@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -38,6 +38,7 @@ const inspirationalQuotes = {
 const Profile = () => {
   const { user, authenticated, ready, wallets } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState("");
   const [existingProfile, setExistingProfile] = useState<any>(null);
@@ -106,6 +107,14 @@ const Profile = () => {
     checkExistingProfile();
   }, [walletAddress]);
 
+  // Redirect users with complete profiles immediately
+  useEffect(() => {
+    if (existingProfile && existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '') {
+      const redirectTo = searchParams.get('redirect') || '/wallet';
+      navigate(redirectTo, { replace: true });
+    }
+  }, [existingProfile, navigate, searchParams]);
+
   const handleSubmit = async () => {
     if (!selectedProfile) {
       toast({
@@ -153,43 +162,7 @@ const Profile = () => {
     );
   }
 
-  // Show motivation page if profile has signed terms
-  if (existingProfile && existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '') {
-    const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
-    
-    return (
-      <div className="min-h-screen flex flex-col bg-background pb-20">
-        <div className="flex-1 flex items-center justify-center px-4">
-          <Card className="max-w-md w-full">
-            <CardHeader className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Sparkles className="w-8 h-8 text-primary" />
-                <CardTitle className="text-2xl">Welcome Back!</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-center space-y-6">
-              <div className="p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
-                <Quote className="w-6 h-6 text-primary mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground italic">
-                  "{quote}"
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Profile Type: <span className="font-semibold text-foreground">{existingProfile.profile_type}</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Connected since {new Date(existingProfile.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
-  }
+  // Users with complete profiles are redirected via useEffect above
 
   // Show inspiration message if profile exists but no signed terms
   if (existingProfile && (!existingProfile.signed_terms_hash || existingProfile.signed_terms_hash.trim() === '')) {
