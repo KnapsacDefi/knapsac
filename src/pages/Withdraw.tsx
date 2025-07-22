@@ -5,7 +5,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Wallet, AlertCircle, Settings, RefreshCw } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { 
+  Drawer, 
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle, 
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose 
+} from "@/components/ui/drawer";
+import { ArrowLeft, Wallet, AlertCircle, Settings, RefreshCw, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUPPORTED_TOKENS, CHAIN_CONFIG, type SupportedChain } from "@/constants/tokens";
@@ -36,6 +46,12 @@ const Withdraw = () => {
   const [showAllTokens, setShowAllTokens] = useState(false);
   const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
   const [localSwitchState, setLocalSwitchState] = useState(false);
+  
+  // Bottom sheet state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<EnhancedToken | null>(null);
+  const [selectedBalance, setSelectedBalance] = useState<string>('0.00');
+  const [withdrawalMethod, setWithdrawalMethod] = useState<string>('');
 
   const walletAddress = getWalletAddress(wallets, user);
   const { profile, isLoading: profileLoading, error: profileError } = useProfileData({
@@ -48,7 +64,6 @@ const Withdraw = () => {
     enabled: authenticated && ready && !!walletAddress && !walletsLoading
   });
 
-  // Load user preference from profile and sync with local state
   useEffect(() => {
     if (profile && typeof profile.show_all_tokens === 'boolean') {
       console.log('🔧 Loading user preference from profile:', profile.show_all_tokens);
@@ -105,7 +120,6 @@ const Withdraw = () => {
     }
   };
 
-  // Create enhanced tokens array with chain context
   const createEnhancedTokens = (): EnhancedToken[] => {
     const enhancedTokens: EnhancedToken[] = [];
 
@@ -140,33 +154,41 @@ const Withdraw = () => {
     const tokenBalance = getTokenBalance(token.symbol, token.chain);
     const balance = tokenBalance?.balance || '0.00';
 
+    setSelectedToken(token);
+    setSelectedBalance(balance);
+    setWithdrawalMethod(''); // Reset selection
+    setIsDrawerOpen(true);
+  };
+
+  const handleProceed = () => {
+    if (!selectedToken || !withdrawalMethod) return;
+
     const tokenWithChain = {
-      ...token,
-      chain: token.chain
+      ...selectedToken,
+      chain: selectedToken.chain
     };
 
-    if (token.symbol === 'USDC') {
-      // Fixed route: /withdraw/wallet instead of /withdraw-wallet
+    if (withdrawalMethod === 'wallet') {
       navigate('/withdraw/wallet', { 
         state: { 
           token: tokenWithChain,
-          balance: balance
+          balance: selectedBalance
         } 
       });
-    } else if (token.symbol === 'G$') {
-      // Fixed route: /withdraw/mobile-money instead of /withdraw-mobile-money
+    } else if (withdrawalMethod === 'mobile-money') {
       navigate('/withdraw/mobile-money', { 
         state: { 
           token: tokenWithChain,
-          balance: balance
+          balance: selectedBalance
         } 
       });
     }
+    
+    setIsDrawerOpen(false);
   };
 
   const hasCompleteProfile = profile && profile.signed_terms_hash && profile.signed_terms_hash.trim() !== '';
 
-  // Show loading state when wallets are still loading
   if (authenticated && ready && (walletsLoading || (!walletAddress && profileLoading))) {
     return (
       <div className="min-h-screen bg-background pb-20">
@@ -208,7 +230,6 @@ const Withdraw = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Profile Status */}
         {profileLoading && (
           <Alert>
             <Settings className="h-4 w-4" />
@@ -243,7 +264,6 @@ const Withdraw = () => {
           </Alert>
         )}
 
-        {/* Token Display Preference */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -271,7 +291,6 @@ const Withdraw = () => {
           </CardContent>
         </Card>
 
-        {/* Token Selection */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -313,22 +332,22 @@ const Withdraw = () => {
                             {token.chainDisplayName}
                           </Badge>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground mb-1">
                           {token.name}
-                        </div>
-                        <div className="text-sm font-medium mt-1">
-                          {tokenBalance?.loading ? (
-                            <Skeleton className="h-4 w-16" />
-                          ) : tokenBalance?.error ? (
-                            <span className="text-destructive">Error loading</span>
-                          ) : (
-                            <span>Balance: {tokenBalance?.balance || '0.00'}</span>
-                          )}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-muted-foreground">
-                          {token.symbol === 'USDC' ? 'Wallet Transfer' : 'Mobile Money'}
+                        <div className="text-lg font-semibold">
+                          {tokenBalance?.loading ? (
+                            <Skeleton className="h-6 w-16" />
+                          ) : tokenBalance?.error ? (
+                            <span className="text-destructive text-sm">Error</span>
+                          ) : (
+                            <span>{tokenBalance?.balance || '0.00'}</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {token.symbol}
                         </div>
                       </div>
                     </div>
@@ -352,6 +371,85 @@ const Withdraw = () => {
           {!localSwitchState && " (Ethereum USDC only)"}
         </div>
       </div>
+
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader className="text-center">
+            <DrawerTitle>Select Withdrawal Method</DrawerTitle>
+            <DrawerDescription>
+              Choose how you want to withdraw your {selectedToken?.symbol}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <div className="px-4 pb-6">
+            {selectedToken && (
+              <div className="mb-6 p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-lg font-semibold text-primary">
+                      {selectedToken.symbol.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold">{selectedToken.symbol}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedToken.chainDisplayName}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Balance: {selectedBalance} {selectedToken.symbol}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <RadioGroup value={withdrawalMethod} onValueChange={setWithdrawalMethod}>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="wallet" id="wallet" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="wallet" className="font-medium cursor-pointer">
+                      Wallet Transfer
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Send to another wallet address
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="mobile-money" id="mobile-money" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="mobile-money" className="font-medium cursor-pointer">
+                      Mobile Money
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Convert to mobile money transfer
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <DrawerFooter>
+            <Button 
+              onClick={handleProceed} 
+              disabled={!withdrawalMethod}
+              className="w-full"
+            >
+              Continue
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       <BottomNavigation />
     </div>
