@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Wallet, AlertCircle, Settings } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SUPPORTED_TOKENS } from "@/constants/tokens";
+// Fixed import to use default export
 import BottomNavigation from "@/components/BottomNavigation";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useAuth } from "@/contexts/AuthContext";
