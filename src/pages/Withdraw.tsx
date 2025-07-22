@@ -13,11 +13,14 @@ import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { SUPPORTED_TOKENS } from '@/constants/tokens';
+import { profileService } from '@/services/profileService';
+import { useToast } from '@/hooks/use-toast';
 
 const Withdraw = () => {
   const navigate = useNavigate();
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const { toast } = useToast();
   const [selectedToken, setSelectedToken] = useState<{
     symbol: string;
     address: string;
@@ -29,14 +32,59 @@ const Withdraw = () => {
   const [balances, setBalances] = useState<Record<string, Record<string, string>>>({});
   const [loading, setLoading] = useState(true);
   const [showAllTokens, setShowAllTokens] = useState(false);
+  const [loadingPreference, setLoadingPreference] = useState(false);
 
   useEffect(() => {
     if (!authenticated) {
       navigate('/');
       return;
     }
+    loadUserPreference();
     fetchBalances();
   }, [authenticated, navigate, wallets]);
+
+  const loadUserPreference = async () => {
+    if (wallets.length === 0) return;
+    
+    const walletAddress = wallets[0]?.address;
+    if (!walletAddress) return;
+
+    try {
+      const profile = await profileService.getProfile(walletAddress);
+      if (profile?.show_all_tokens !== undefined) {
+        setShowAllTokens(profile.show_all_tokens);
+      }
+    } catch (error) {
+      // Profile might not exist yet, keep default value
+      console.log('Profile not found, using default preference');
+    }
+  };
+
+  const handleShowAllTokensChange = async (checked: boolean) => {
+    if (wallets.length === 0) return;
+    
+    const walletAddress = wallets[0]?.address;
+    if (!walletAddress) return;
+
+    setLoadingPreference(true);
+    try {
+      await profileService.updateShowAllTokens(walletAddress, checked);
+      setShowAllTokens(checked);
+      toast({
+        title: "Preference saved",
+        description: `Token display preference updated successfully.`,
+      });
+    } catch (error) {
+      console.error('Failed to update preference:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save preference. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPreference(false);
+    }
+  };
 
   const fetchBalances = async () => {
     if (wallets.length === 0) return;
@@ -179,7 +227,8 @@ const Withdraw = () => {
           <Switch
             id="show-all-tokens"
             checked={showAllTokens}
-            onCheckedChange={setShowAllTokens}
+            onCheckedChange={handleShowAllTokensChange}
+            disabled={loadingPreference}
           />
         </div>
 

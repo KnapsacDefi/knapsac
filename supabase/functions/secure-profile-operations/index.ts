@@ -86,7 +86,7 @@ async function checkSignatureReplay(
 
 
 interface ProfileOperationRequest {
-  operation: 'get' | 'create' | 'update' | 'checkExisting'
+  operation: 'get' | 'create' | 'update' | 'checkExisting' | 'updatePreference'
   walletAddress: string
   signature?: string
   message?: string
@@ -94,6 +94,7 @@ interface ProfileOperationRequest {
     userEmail?: string
     profileType?: "Startup" | "Lender" | "Service Provider"
     signedTermsHash?: string
+    show_all_tokens?: boolean
   }
 }
 
@@ -175,7 +176,7 @@ serve(async (req) => {
     }
     
     // Message is only required for operations that need signatures
-    if (operation !== 'get' && !message) {
+    if (!['get', 'updatePreference'].includes(operation) && !message) {
       return new Response(
         JSON.stringify({ error: 'Message required for this operation' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -430,6 +431,36 @@ serve(async (req) => {
         await logOperation(true, null, { updated: true })
         return new Response(
           JSON.stringify({ profile: updatedProfile }),
+          { headers: corsHeaders }
+        )
+
+      case 'updatePreference':
+        if (!profileData || typeof profileData.show_all_tokens !== 'boolean') {
+          await logOperation(false, 'Missing or invalid show_all_tokens preference')
+          return new Response(
+            JSON.stringify({ error: 'Boolean show_all_tokens preference required' }),
+            { status: 400, headers: corsHeaders }
+          )
+        }
+
+        const { data: updatedPreference, error: preferenceError } = await supabase
+          .from('profiles')
+          .update({ show_all_tokens: profileData.show_all_tokens })
+          .eq('crypto_address', walletAddress)
+          .select()
+          .single()
+
+        if (preferenceError) {
+          await logOperation(false, 'Database error during preference update', { error: preferenceError.message })
+          return new Response(
+            JSON.stringify({ error: 'Failed to update preference' }),
+            { status: 500, headers: corsHeaders }
+          )
+        }
+
+        await logOperation(true, null, { preference_updated: true })
+        return new Response(
+          JSON.stringify({ profile: updatedPreference }),
           { headers: corsHeaders }
         )
 

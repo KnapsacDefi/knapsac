@@ -128,6 +128,30 @@ export const profileService = {
     }
   },
 
+  async updateShowAllTokens(walletAddress: string, showAllTokens: boolean) {
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
+        body: {
+          operation: 'updatePreference',
+          walletAddress,
+          profileData: {
+            show_all_tokens: showAllTokens
+          }
+        }
+      });
+
+      if (error) {
+        console.error("Secure preference update error:", error);
+        throw new Error('Failed to update preference');
+      }
+
+      return data.profile;
+    } catch (error) {
+      console.error("Preference update failed:", error);
+      throw new Error('Failed to update preference');
+    }
+  },
+
   async createSignedTermsHash(message: string, signature: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(message + signature);

@@ -22,6 +22,7 @@ export type Database = {
           crypto_address: string
           id: string
           profile_type: string
+          show_all_tokens: boolean | null
           signed_terms_hash: string | null
           updated_at: string
           user_email: string | null
@@ -33,6 +34,7 @@ export type Database = {
           crypto_address: string
           id?: string
           profile_type: string
+          show_all_tokens?: boolean | null
           signed_terms_hash?: string | null
           updated_at?: string
           user_email?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           crypto_address?: string
           id?: string
           profile_type?: string
+          show_all_tokens?: boolean | null
           signed_terms_hash?: string | null
           updated_at?: string
           user_email?: string | null
