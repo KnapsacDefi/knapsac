@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { profileCache } from "./profileCache";
 
 export interface ProfileCreationData {
   userEmail?: string;
@@ -41,25 +43,36 @@ export const profileService = {
     }
   },
 
-  async getProfile(walletAddress: string) {
-    try {
-      const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
-        body: {
-          operation: 'get',
-          walletAddress
-        }
-      });
+  async getProfile(walletAddress: string, useCache: boolean = true) {
+    console.log('🔍 ProfileService.getProfile called with:', { walletAddress, useCache });
+    
+    if (!useCache) {
+      profileCache.invalidate(walletAddress);
+    }
+    
+    return profileCache.getOrSetPromise(walletAddress, async () => {
+      console.log('📡 Making fresh API call for profile:', walletAddress);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
+          body: {
+            operation: 'get',
+            walletAddress
+          }
+        });
 
-      if (error) {
-        console.error("Secure profile get error:", error);
+        if (error) {
+          console.error("Secure profile get error:", error);
+          throw new Error('Failed to get profile');
+        }
+
+        console.log('✅ Profile fetched from API:', data?.profile);
+        return data.profile;
+      } catch (error) {
+        console.error("Profile get failed:", error);
         throw new Error('Failed to get profile');
       }
-
-      return data.profile;
-    } catch (error) {
-      console.error("Profile get failed:", error);
-      throw new Error('Failed to get profile');
-    }
+    });
   },
 
   async createProfile(data: ProfileCreationData, signature: string, originalMessage: string) {
@@ -116,6 +129,14 @@ export const profileService = {
       }
 
       console.log('✅ Profile created successfully:', result);
+      
+      // Invalidate cache since we created a new profile
+      profileCache.invalidate(data.walletAddress);
+      // Cache the new profile
+      if (result?.profile) {
+        profileCache.set(data.walletAddress, result.profile);
+      }
+      
       return result.profile;
     } catch (error) {
       console.error("❌ Profile creation failed in service:", {
@@ -143,6 +164,11 @@ export const profileService = {
       if (error) {
         console.error("Secure preference update error:", error);
         throw new Error('Failed to update preference');
+      }
+
+      // Update cache with new data
+      if (data?.profile) {
+        profileCache.set(walletAddress, data.profile);
       }
 
       return data.profile;

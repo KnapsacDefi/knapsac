@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getWalletAddress } from "@/utils/walletUtils";
+import { profileService } from "@/services/profileService";
 
 interface WalletData {
   userProfile: any;
@@ -93,31 +94,14 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
 
     const fetchProfileData = async () => {
       try {
-        console.log('useWalletData: Fetching profile data');
-        const { data: profileResult, error: profileError } = await supabase.functions.invoke('secure-profile-operations', {
-          body: {
-            operation: 'get',
-            walletAddress: walletAddress
-          }
-        });
-
-        let profile = null;
-        if (profileResult && typeof profileResult === 'string') {
-          try {
-            const parsedResult = JSON.parse(profileResult);
-            profile = parsedResult?.profile || null;
-          } catch (parseError) {
-            console.error('Failed to parse profile result:', parseError);
-          }
-        } else if (profileResult?.profile) {
-          profile = profileResult.profile;
-        }
+        console.log('useWalletData: Fetching profile data via cached service');
+        const profile = await profileService.getProfile(walletAddress);
 
         setData(prev => ({
           ...prev,
           userProfile: profile,
           loading: { ...prev.loading, profile: false },
-          errors: { ...prev.errors, profile: profileError ? 'Failed to load profile' : null }
+          errors: { ...prev.errors, profile: null }
         }));
       } catch (error) {
         console.error('Error fetching profile:', error);
