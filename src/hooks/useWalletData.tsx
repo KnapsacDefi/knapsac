@@ -36,6 +36,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
   // ALWAYS call hooks in the same order - move all hooks to the top
   const hasInitialized = useRef(false);
   const walletWaitTimeoutRef = useRef<NodeJS.Timeout>();
+  const [noWalletsAvailable, setNoWalletsAvailable] = useState(false);
   const [data, setData] = useState<WalletData>({
     userProfile: null,
     hasSubscription: false,
@@ -68,6 +69,11 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
     return id || null;
   }, [user?.id]);
 
+  // Validate wallet address format
+  const isValidWalletAddress = (address: string | null): boolean => {
+    return address !== null && address.length === 42 && address.startsWith('0x');
+  };
+
   useEffect(() => {
     console.log('useWalletData: useEffect triggered', { 
       ready, 
@@ -78,7 +84,9 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
       walletAddress,
       userId,
       hasInit: hasInitialized.current,
-      walletsLoading
+      walletsLoading,
+      noWalletsAvailable,
+      isValidAddress: isValidWalletAddress(walletAddress)
     });
 
     // Clear any existing timeout
@@ -94,33 +102,36 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
       return;
     }
 
-    // If we have wallet address, proceed immediately
-    if (walletAddress && !hasInitialized.current) {
-      console.log('useWalletData: Wallet address available, starting API calls');
+    // If we have valid wallet address, proceed immediately
+    if (isValidWalletAddress(walletAddress) && !hasInitialized.current) {
+      console.log('useWalletData: Valid wallet address available, starting API calls');
       hasInitialized.current = true;
+      setNoWalletsAvailable(false);
       startApiCalls();
       return;
     }
 
     // If wallets are still loading, wait for them
-    if (walletsLoading && !walletAddress) {
+    if (walletsLoading && !isValidWalletAddress(walletAddress)) {
       console.log('useWalletData: Waiting for wallets to load...');
       return;
     }
 
-    // If wallets finished loading but no address, wait a bit more
-    if (!walletsLoading && !walletAddress && !hasInitialized.current) {
-      console.log('useWalletData: Wallets finished loading but no address, waiting 3 more seconds...');
+    // If wallets finished loading but no valid address, wait a bit more
+    if (!walletsLoading && !isValidWalletAddress(walletAddress) && !hasInitialized.current && !noWalletsAvailable) {
+      console.log('useWalletData: Wallets finished loading but no valid address, waiting 3 more seconds...');
       walletWaitTimeoutRef.current = setTimeout(() => {
         console.log('useWalletData: Additional wait complete, checking wallet address again');
         const currentAddress = getWalletAddress(wallets, user);
-        if (currentAddress) {
-          console.log('useWalletData: Found wallet address after wait:', currentAddress);
+        if (isValidWalletAddress(currentAddress)) {
+          console.log('useWalletData: Found valid wallet address after wait:', currentAddress);
           hasInitialized.current = true;
+          setNoWalletsAvailable(false);
           startApiCalls();
         } else {
-          console.log('useWalletData: No wallet address found after additional wait');
-          // Set loading states to false since we can't proceed
+          console.log('useWalletData: No valid wallet address found after additional wait');
+          setNoWalletsAvailable(true);
+          // Set loading states to false since we can't proceed without wallet
           setData(prev => ({
             ...prev,
             loading: {
@@ -130,10 +141,10 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
               gooddollar: false,
             },
             errors: {
-              profile: 'No wallet address available',
-              subscription: 'No wallet address available',
-              usdc: 'No wallet address available',
-              gooddollar: 'No wallet address available',
+              profile: 'No wallet connected',
+              subscription: 'No wallet connected',
+              usdc: 'No wallet connected',
+              gooddollar: 'No wallet connected',
             }
           }));
         }
@@ -147,23 +158,39 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable, w
     };
 
     // Use unified wallet address and userId in dependencies
-  }, [ready, authenticated, isStable, walletAddress, userId, walletsLoading]);
+  }, [ready, authenticated, isStable, walletAddress, userId, walletsLoading, noWalletsAvailable]);
 
   const startApiCalls = () => {
     const currentWalletAddress = getWalletAddress(wallets, user);
     const currentUserId = user?.id;
     
-    if (!currentWalletAddress) {
-      console.log('useWalletData: No wallet address available for API calls');
+    // Validate wallet address before proceeding
+    if (!isValidWalletAddress(currentWalletAddress)) {
+      console.log('useWalletData: Invalid or missing wallet address, cannot start API calls:', currentWalletAddress);
+      setData(prev => ({
+        ...prev,
+        loading: {
+          profile: false,
+          subscription: false,
+          usdc: false,
+          gooddollar: false,
+        },
+        errors: {
+          profile: 'Invalid wallet address',
+          subscription: 'Invalid wallet address',
+          usdc: 'Invalid wallet address',
+          gooddollar: 'Invalid wallet address',
+        }
+      }));
       return;
     }
 
-    console.log('useWalletData: Starting API calls with wallet:', currentWalletAddress);
+    console.log('useWalletData: Starting API calls with valid wallet:', currentWalletAddress);
 
     const fetchProfileData = async () => {
       try {
         console.log('useWalletData: Fetching profile data via cached service');
-        const profile = await profileService.getProfile(currentWalletAddress);
+        const profile = await profileService.getProfile(currentWalletAddress!);
 
         setData(prev => ({
           ...prev,

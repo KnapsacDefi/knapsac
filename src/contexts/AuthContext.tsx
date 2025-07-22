@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { wallets } = useWallets(); 
   const stableAuth = useStableAuth();  
   const [walletsLoading, setWalletsLoading] = useState(false);
+  const [walletTimeoutReached, setWalletTimeoutReached] = useState(false);
   
   // Extract what we need from the hooks (stable data)
   const { login, logout } = privyAuth;
@@ -46,27 +47,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Wallet loading detection logic
   useEffect(() => {
     if (authenticated && ready) {
+      // Reset timeout flag when starting fresh
+      setWalletTimeoutReached(false);
+      
+      // Check if wallets are already loaded
+      if (wallets && wallets.length > 0) {
+        console.log('AuthContext: Wallets already loaded');
+        setWalletsLoading(false);
+        return;
+      }
+      
       // Start wallet loading detection
+      console.log('AuthContext: Starting wallet loading detection');
       setWalletsLoading(true);
       
       // Set a timeout to stop waiting for wallets after reasonable time
       const walletTimeout = setTimeout(() => {
         console.log('AuthContext: Wallet loading timeout reached');
         setWalletsLoading(false);
+        setWalletTimeoutReached(true);
       }, 10000); // 10 second timeout
-      
-      // Check if wallets are already loaded
-      if (wallets && wallets.length > 0) {
-        console.log('AuthContext: Wallets already loaded');
-        setWalletsLoading(false);
-        clearTimeout(walletTimeout);
-      }
       
       return () => {
         clearTimeout(walletTimeout);
       };
     } else {
       setWalletsLoading(false);
+      setWalletTimeoutReached(false);
     }
   }, [authenticated, ready, wallets?.length]);
 
@@ -81,9 +88,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       privyAuthenticated: privyAuth.authenticated,
       privyWalletsLength: wallets?.length || 0,
       userEmail: user?.email?.address || 'N/A',
-      walletsLoading
+      walletsLoading,
+      walletTimeoutReached
     });
-  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading]);
+  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading, walletTimeoutReached]);
 
   // Extract stable primitive values for memoization dependencies
   const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
@@ -95,13 +103,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const stableWallets = useMemo(() => {
     console.log('AuthContext: Recalculating stableWallets', { 
       walletsLength, 
-      firstWalletAddress 
+      firstWalletAddress,
+      walletTimeoutReached
     });
     return wallets;
-  }, [walletsLength, firstWalletAddress]);
+  }, [walletsLength, firstWalletAddress, walletTimeoutReached]);
 
-  // Wallet connection status
-  const hasConnectedWallet = Boolean(walletsLength > 0 && firstWalletAddress);
+  // Wallet connection status - only consider connected if we have a valid address
+  const hasConnectedWallet = Boolean(walletsLength > 0 && firstWalletAddress && firstWalletAddress.length === 42);
   const walletAddress = firstWalletAddress;
 
   // Memoize the context value to prevent unnecessary re-renders
