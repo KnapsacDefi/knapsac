@@ -24,8 +24,8 @@ const Wallet = () => {
   const [hasNavigated, setHasNavigated] = useState(false);
   
   // Get auth data from context
-  const { ready, authenticated, user, wallets, isStable } = useAuth();
-  const data = useWalletData({ ready, authenticated, user, wallets, isStable });
+  const { ready, authenticated, user, wallets, isStable, walletsLoading } = useAuth();
+  const data = useWalletData({ ready, authenticated, user, wallets, isStable, walletsLoading });
 
   // Get unified wallet address
   const walletAddress = getWalletAddress(wallets, user);
