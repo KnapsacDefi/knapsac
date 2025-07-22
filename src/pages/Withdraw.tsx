@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Wallet, AlertCircle, Settings, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { SUPPORTED_TOKENS } from "@/constants/tokens";
-// Fixed import to use default export
+import { SUPPORTED_TOKENS, CHAIN_CONFIG, type SupportedChain } from "@/constants/tokens";
 import BottomNavigation from "@/components/BottomNavigation";
 import NetworkStatus from "@/components/NetworkStatus";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,17 @@ import { getWalletAddress } from "@/utils/walletUtils";
 import { useProfileData } from "@/hooks/useProfileData";
 import { profileService } from "@/services/profileService";
 import { useToast } from "@/hooks/use-toast";
+
+// Enhanced token type that includes chain information
+interface EnhancedToken {
+  symbol: string;
+  address: string;
+  decimals: number;
+  chain: SupportedChain;
+  chainDisplayName: string;
+  name: string;
+  isPopular: boolean;
+}
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -65,7 +76,7 @@ const Withdraw = () => {
       setShowAllTokens(checked);
       toast({
         title: "Preference Updated",
-        description: `${checked ? 'All tokens' : 'Only popular tokens'} will be shown`,
+        description: `${checked ? 'All tokens' : 'Only Ethereum USDC'} will be shown`,
       });
     } catch (error) {
       console.error('Failed to update preference:', error);
@@ -79,23 +90,46 @@ const Withdraw = () => {
     }
   };
 
-  // Create tokens array from SUPPORTED_TOKENS with isPopular flag
-  const allTokens = Object.values(SUPPORTED_TOKENS).flat().map(token => ({
-    ...token,
-    name: token.symbol === 'G$' ? 'GoodDollar' : token.symbol,
-    isPopular: ['USDC', 'G$'].includes(token.symbol)
-  }));
+  // Create enhanced tokens array with chain context
+  const createEnhancedTokens = (): EnhancedToken[] => {
+    const enhancedTokens: EnhancedToken[] = [];
+
+    Object.entries(SUPPORTED_TOKENS).forEach(([chainKey, tokens]) => {
+      const chain = chainKey as SupportedChain;
+      const chainConfig = CHAIN_CONFIG[chain];
+
+      tokens.forEach(token => {
+        enhancedTokens.push({
+          ...token,
+          chain,
+          chainDisplayName: chainConfig.displayName,
+          name: token.symbol === 'G$' ? 'GoodDollar' : token.symbol,
+          // Only Ethereum USDC is considered popular for the initial filter
+          isPopular: token.symbol === 'USDC' && chain === 'ethereum'
+        });
+      });
+    });
+
+    return enhancedTokens;
+  };
+
+  const allTokens = createEnhancedTokens();
 
   // Filter tokens based on user preference
   const filteredTokens = showAllTokens 
     ? allTokens 
-    : allTokens.filter(token => token.isPopular);
+    : allTokens.filter(token => token.isPopular); // Only Ethereum USDC when false
 
-  const handleTokenSelect = (token: any) => {
+  const handleTokenSelect = (token: EnhancedToken) => {
+    const tokenWithChain = {
+      ...token,
+      chain: token.chain
+    };
+
     if (token.symbol === 'USDC') {
-      navigate('/withdraw-wallet', { state: { selectedToken: token } });
+      navigate('/withdraw-wallet', { state: { selectedToken: tokenWithChain } });
     } else if (token.symbol === 'G$') {
-      navigate('/withdraw-mobile-money', { state: { selectedToken: token } });
+      navigate('/withdraw-mobile-money', { state: { selectedToken: tokenWithChain } });
     }
   };
 
@@ -140,8 +174,6 @@ const Withdraw = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Temporarily remove NetworkStatus as it needs network management props */}
-        
         {/* Profile Status */}
         {profileLoading && (
           <Alert>
@@ -192,7 +224,7 @@ const Withdraw = () => {
                   Show All Tokens
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Display all available tokens instead of just popular ones
+                  Display all available tokens instead of just Ethereum USDC
                 </p>
               </div>
               <Switch
@@ -215,7 +247,7 @@ const Withdraw = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {filteredTokens.map((token, index) => (
-              <div key={token.symbol}>
+              <div key={`${token.symbol}-${token.chain}`}>
                 <Button
                   variant="outline"
                   className="w-full justify-start p-4 h-auto"
@@ -228,7 +260,12 @@ const Withdraw = () => {
                       </span>
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium">{token.symbol}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{token.symbol}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {token.chainDisplayName}
+                        </Badge>
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {token.name}
                       </div>
@@ -255,6 +292,7 @@ const Withdraw = () => {
 
         <div className="text-xs text-muted-foreground text-center">
           Showing {filteredTokens.length} of {allTokens.length} available tokens
+          {!showAllTokens && " (Ethereum USDC only)"}
         </div>
       </div>
 
