@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { profileCache } from "./profileCache";
 
@@ -54,6 +53,11 @@ export const profileService = {
       console.log('📡 Making fresh API call for profile:', walletAddress);
       
       try {
+        console.log('🚀 Calling edge function with request body:', {
+          operation: 'get',
+          walletAddress
+        });
+
         const { data, error } = await supabase.functions.invoke('secure-profile-operations', {
           body: {
             operation: 'get',
@@ -61,15 +65,40 @@ export const profileService = {
           }
         });
 
+        console.log('📨 Edge function response received:', {
+          data,
+          error,
+          dataType: typeof data,
+          dataKeys: data ? Object.keys(data) : [],
+          dataProfile: data?.profile,
+          profileType: typeof data?.profile,
+          profileKeys: data?.profile ? Object.keys(data.profile) : []
+        });
+
         if (error) {
-          console.error("Secure profile get error:", error);
+          console.error("❌ Secure profile get error:", error);
           throw new Error('Failed to get profile');
         }
 
-        console.log('✅ Profile fetched from API:', data?.profile);
-        return data.profile;
+        console.log('🔍 Detailed response analysis:', {
+          hasData: !!data,
+          hasProfile: !!(data?.profile),
+          profileValue: data?.profile,
+          profileIsNull: data?.profile === null,
+          profileIsUndefined: data?.profile === undefined,
+          rawResponse: JSON.stringify(data)
+        });
+
+        const profile = data?.profile;
+        console.log('✅ Profile extracted and returning:', {
+          profile,
+          profileExists: !!profile,
+          profileId: profile?.id || 'none'
+        });
+        
+        return profile;
       } catch (error) {
-        console.error("Profile get failed:", error);
+        console.error("❌ Profile get failed:", error);
         throw new Error('Failed to get profile');
       }
     });
