@@ -8,13 +8,14 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Wallet, AlertCircle, Settings, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SUPPORTED_TOKENS, CHAIN_CONFIG, type SupportedChain } from "@/constants/tokens";
 import BottomNavigation from "@/components/BottomNavigation";
-import NetworkStatus from "@/components/NetworkStatus";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getWalletAddress } from "@/utils/walletUtils";
 import { useProfileData } from "@/hooks/useProfileData";
+import { useTokenBalances } from "@/hooks/useTokenBalances";
 import { profileService } from "@/services/profileService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,6 +36,7 @@ const Withdraw = () => {
   const { toast } = useToast();
   const [showAllTokens, setShowAllTokens] = useState(false);
   const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
+  const [localSwitchState, setLocalSwitchState] = useState(false);
 
   const walletAddress = getWalletAddress(wallets, user);
   const { profile, isLoading: profileLoading, error: profileError } = useProfileData({
@@ -42,21 +44,33 @@ const Withdraw = () => {
     enabled: authenticated && ready && !!walletAddress && !walletsLoading
   });
 
-  // Load user preference from profile
+  const { tokenBalances, isLoading: balancesLoading, getTokenBalance, refreshBalances } = useTokenBalances({
+    walletAddress,
+    enabled: authenticated && ready && !!walletAddress && !walletsLoading
+  });
+
+  // Load user preference from profile and sync with local state
   useEffect(() => {
     if (profile && typeof profile.show_all_tokens === 'boolean') {
       console.log('🔧 Loading user preference from profile:', profile.show_all_tokens);
       setShowAllTokens(profile.show_all_tokens);
+      setLocalSwitchState(profile.show_all_tokens);
     }
   }, [profile]);
 
   const handleShowAllTokensChange = async (checked: boolean) => {
+    console.log('🔄 Switch toggled to:', checked);
+    
+    // Immediately update local state for responsive UI
+    setLocalSwitchState(checked);
+    
     if (!walletAddress) {
       toast({
         title: "Error",
         description: "Wallet address not found",
         variant: "destructive",
       });
+      setLocalSwitchState(showAllTokens); // Revert local state
       return;
     }
 
@@ -74,12 +88,14 @@ const Withdraw = () => {
     try {
       await profileService.updateShowAllTokens(walletAddress, checked);
       setShowAllTokens(checked);
+      console.log('✅ Preference updated successfully');
       toast({
         title: "Preference Updated",
         description: `${checked ? 'All tokens' : 'Only Ethereum USDC'} will be shown`,
       });
     } catch (error) {
-      console.error('Failed to update preference:', error);
+      console.error('❌ Failed to update preference:', error);
+      setLocalSwitchState(showAllTokens); // Revert local state on error
       toast({
         title: "Update Failed",
         description: "Failed to save preference. Please try again.",
@@ -115,8 +131,8 @@ const Withdraw = () => {
 
   const allTokens = createEnhancedTokens();
 
-  // Filter tokens based on user preference
-  const filteredTokens = showAllTokens 
+  // Filter tokens based on user preference - use local state for immediate feedback
+  const filteredTokens = localSwitchState 
     ? allTokens 
     : allTokens.filter(token => token.isPopular); // Only Ethereum USDC when false
 
@@ -170,6 +186,9 @@ const Withdraw = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Withdraw</h1>
+          {balancesLoading && (
+            <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground ml-auto" />
+          )}
         </div>
       </div>
 
@@ -229,7 +248,7 @@ const Withdraw = () => {
               </div>
               <Switch
                 id="show-all-tokens"
-                checked={showAllTokens}
+                checked={localSwitchState}
                 onCheckedChange={handleShowAllTokensChange}
                 disabled={isUpdatingPreference}
               />
@@ -240,46 +259,69 @@ const Withdraw = () => {
         {/* Token Selection */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              Select Token to Withdraw
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                Select Token to Withdraw
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshBalances}
+                disabled={balancesLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${balancesLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {filteredTokens.map((token, index) => (
-              <div key={`${token.symbol}-${token.chain}`}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start p-4 h-auto"
-                  onClick={() => handleTokenSelect(token)}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-primary">
-                        {token.symbol.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{token.symbol}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {token.chainDisplayName}
-                        </Badge>
+            {filteredTokens.map((token, index) => {
+              const tokenBalance = getTokenBalance(token.symbol, token.chain);
+              
+              return (
+                <div key={`${token.symbol}-${token.chain}`}>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start p-4 h-auto"
+                    onClick={() => handleTokenSelect(token)}
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-primary">
+                          {token.symbol.charAt(0)}
+                        </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {token.name}
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{token.symbol}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {token.chainDisplayName}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {token.name}
+                        </div>
+                        <div className="text-sm font-medium mt-1">
+                          {tokenBalance?.loading ? (
+                            <Skeleton className="h-4 w-16" />
+                          ) : tokenBalance?.error ? (
+                            <span className="text-destructive">Error loading</span>
+                          ) : (
+                            <span>Balance: {tokenBalance?.balance || '0.00'}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">
+                          {token.symbol === 'USDC' ? 'Wallet Transfer' : 'Mobile Money'}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {token.symbol === 'USDC' ? 'Wallet Transfer' : 'Mobile Money'}
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-                {index < filteredTokens.length - 1 && <Separator className="my-2" />}
-              </div>
-            ))}
+                  </Button>
+                  {index < filteredTokens.length - 1 && <Separator className="my-2" />}
+                </div>
+              );
+            })}
             
             {filteredTokens.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
@@ -292,7 +334,7 @@ const Withdraw = () => {
 
         <div className="text-xs text-muted-foreground text-center">
           Showing {filteredTokens.length} of {allTokens.length} available tokens
-          {!showAllTokens && " (Ethereum USDC only)"}
+          {!localSwitchState && " (Ethereum USDC only)"}
         </div>
       </div>
 
