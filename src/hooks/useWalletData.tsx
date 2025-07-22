@@ -29,11 +29,13 @@ interface UseWalletDataParams {
   user: any;
   wallets: any[];
   isStable: boolean;
+  walletsLoading: boolean;
 }
 
-export const useWalletData = ({ ready, authenticated, user, wallets, isStable }: UseWalletDataParams) => {
+export const useWalletData = ({ ready, authenticated, user, wallets, isStable, walletsLoading }: UseWalletDataParams) => {
   // ALWAYS call hooks in the same order - move all hooks to the top
   const hasInitialized = useRef(false);
+  const walletWaitTimeoutRef = useRef<NodeJS.Timeout>();
   const [data, setData] = useState<WalletData>({
     userProfile: null,
     hasSubscription: false,
@@ -75,27 +77,93 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       walletsLength: wallets?.length || 0,
       walletAddress,
       userId,
-      hasInit: hasInitialized.current
+      hasInit: hasInitialized.current,
+      walletsLoading
     });
 
-    // Use state flags instead of early returns to prevent hook ordering issues
-    const canFetchData = ready && authenticated && user && isStable && walletAddress;
-    const shouldFetch = canFetchData && !hasInitialized.current;
+    // Clear any existing timeout
+    if (walletWaitTimeoutRef.current) {
+      clearTimeout(walletWaitTimeoutRef.current);
+    }
+
+    // Check if we have basic requirements
+    const hasBasicRequirements = ready && authenticated && user && isStable;
     
-    if (!shouldFetch) {
-      if (!canFetchData) {
-        console.log('useWalletData: Not ready for API calls');
-      }
+    if (!hasBasicRequirements) {
+      console.log('useWalletData: Basic requirements not met');
       return;
     }
 
-    console.log('useWalletData: Starting API calls with wallet:', walletAddress);
-    hasInitialized.current = true;
+    // If we have wallet address, proceed immediately
+    if (walletAddress && !hasInitialized.current) {
+      console.log('useWalletData: Wallet address available, starting API calls');
+      hasInitialized.current = true;
+      startApiCalls();
+      return;
+    }
+
+    // If wallets are still loading, wait for them
+    if (walletsLoading && !walletAddress) {
+      console.log('useWalletData: Waiting for wallets to load...');
+      return;
+    }
+
+    // If wallets finished loading but no address, wait a bit more
+    if (!walletsLoading && !walletAddress && !hasInitialized.current) {
+      console.log('useWalletData: Wallets finished loading but no address, waiting 3 more seconds...');
+      walletWaitTimeoutRef.current = setTimeout(() => {
+        console.log('useWalletData: Additional wait complete, checking wallet address again');
+        const currentAddress = getWalletAddress(wallets, user);
+        if (currentAddress) {
+          console.log('useWalletData: Found wallet address after wait:', currentAddress);
+          hasInitialized.current = true;
+          startApiCalls();
+        } else {
+          console.log('useWalletData: No wallet address found after additional wait');
+          // Set loading states to false since we can't proceed
+          setData(prev => ({
+            ...prev,
+            loading: {
+              profile: false,
+              subscription: false,
+              usdc: false,
+              gooddollar: false,
+            },
+            errors: {
+              profile: 'No wallet address available',
+              subscription: 'No wallet address available',
+              usdc: 'No wallet address available',
+              gooddollar: 'No wallet address available',
+            }
+          }));
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (walletWaitTimeoutRef.current) {
+        clearTimeout(walletWaitTimeoutRef.current);
+      }
+    };
+
+    // Use unified wallet address and userId in dependencies
+  }, [ready, authenticated, isStable, walletAddress, userId, walletsLoading]);
+
+  const startApiCalls = () => {
+    const currentWalletAddress = getWalletAddress(wallets, user);
+    const currentUserId = user?.id;
+    
+    if (!currentWalletAddress) {
+      console.log('useWalletData: No wallet address available for API calls');
+      return;
+    }
+
+    console.log('useWalletData: Starting API calls with wallet:', currentWalletAddress);
 
     const fetchProfileData = async () => {
       try {
         console.log('useWalletData: Fetching profile data via cached service');
-        const profile = await profileService.getProfile(walletAddress);
+        const profile = await profileService.getProfile(currentWalletAddress);
 
         setData(prev => ({
           ...prev,
@@ -119,10 +187,10 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
         const { data: subscription, error: subscriptionError } = await supabase.functions.invoke('secure-subscription-operations', {
           body: {
             operation: 'get',
-            walletAddress: walletAddress,
+            walletAddress: currentWalletAddress,
             signature: '',
             message: '',
-            privyUserId: userId
+            privyUserId: currentUserId
           }
         });
 
@@ -185,7 +253,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
       try {
         console.log('useWalletData: Fetching GoodDollar balance');
         const { data: result, error } = await supabase.functions.invoke('get-gooddollar-balance', {
-          body: { walletAddress: walletAddress }
+          body: { walletAddress: currentWalletAddress }
         });
 
         if (error) {
@@ -218,11 +286,7 @@ export const useWalletData = ({ ready, authenticated, user, wallets, isStable }:
     ]).then(results => {
       console.log('useWalletData: All API calls completed', results);
     });
-
-    // Note: Don't reset hasInitialized in cleanup to prevent re-initialization
-
-  // Use unified wallet address and userId in dependencies
-  }, [ready, authenticated, isStable, walletAddress, userId]);
+  };
 
   return data;
 };
