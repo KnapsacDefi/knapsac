@@ -46,6 +46,15 @@ export const useTokenBalances = ({ walletAddress, enabled = true }: UseTokenBala
 
       setTokenBalances(balances);
 
+      // Create address to token mapping for easier lookup
+      const addressToTokenMap = new Map<string, { symbol: string; chain: SupportedChain }>();
+      Object.entries(SUPPORTED_TOKENS).forEach(([chainKey, tokens]) => {
+        const chain = chainKey as SupportedChain;
+        tokens.forEach(token => {
+          addressToTokenMap.set(token.address.toLowerCase(), { symbol: token.symbol, chain });
+        });
+      });
+
       // Fetch balances for each chain
       for (const [chainKey] of Object.entries(SUPPORTED_TOKENS)) {
         const chain = chainKey as SupportedChain;
@@ -69,30 +78,41 @@ export const useTokenBalances = ({ walletAddress, enabled = true }: UseTokenBala
               }
             });
           } else if (data?.portfolio) {
+            console.log(`Portfolio data for ${chain}:`, JSON.stringify(data.portfolio, null, 2));
+            
             // Process portfolio data and update balances
             const portfolio = data.portfolio;
             
-            // Update tokens for this chain
-            Object.keys(balances).forEach(key => {
-              if (balances[key].chain === chain) {
-                const tokenSymbol = balances[key].symbol;
+            // Handle the correct structure: portfolio.result (not portfolio.data)
+            if (portfolio.result && Array.isArray(portfolio.result)) {
+              portfolio.result.forEach((item: any) => {
+                const tokenAddress = item.tokenAddress?.toLowerCase();
+                const tokenInfo = addressToTokenMap.get(tokenAddress);
                 
-                // Find matching token in portfolio
-                let tokenBalance = '0.00';
-                
-                if (portfolio.data && Array.isArray(portfolio.data)) {
-                  const tokenData = portfolio.data.find((item: any) => 
-                    item.asset?.symbol?.toUpperCase() === tokenSymbol.toUpperCase()
-                  );
+                if (tokenInfo) {
+                  const key = `${tokenInfo.symbol}-${tokenInfo.chain}`;
+                  const balance = item.balance ? parseFloat(item.balance).toFixed(2) : '0.00';
                   
-                  if (tokenData?.balance) {
-                    tokenBalance = parseFloat(tokenData.balance).toFixed(2);
-                  }
+                  console.log(`Found token: ${tokenInfo.symbol} on ${tokenInfo.chain} with balance: ${balance}`);
+                  
+                  balances[key] = {
+                    ...balances[key],
+                    balance,
+                    loading: false,
+                    error: null
+                  };
+                } else {
+                  console.log(`Token not found in our supported list: ${tokenAddress}`);
                 }
-                
+              });
+            }
+            
+            // Update tokens for this chain that weren't found in the portfolio
+            Object.keys(balances).forEach(key => {
+              if (balances[key].chain === chain && balances[key].loading) {
                 balances[key] = {
                   ...balances[key],
-                  balance: tokenBalance,
+                  balance: '0.00',
                   loading: false,
                   error: null
                 };

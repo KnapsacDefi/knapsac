@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -137,15 +136,31 @@ const Withdraw = () => {
     : allTokens.filter(token => token.isPopular); // Only Ethereum USDC when false
 
   const handleTokenSelect = (token: EnhancedToken) => {
+    // Get the actual balance for this token
+    const tokenBalance = getTokenBalance(token.symbol, token.chain);
+    const balance = tokenBalance?.balance || '0.00';
+
     const tokenWithChain = {
       ...token,
       chain: token.chain
     };
 
     if (token.symbol === 'USDC') {
-      navigate('/withdraw-wallet', { state: { selectedToken: tokenWithChain } });
+      // Fixed route: /withdraw/wallet instead of /withdraw-wallet
+      navigate('/withdraw/wallet', { 
+        state: { 
+          token: tokenWithChain,
+          balance: balance
+        } 
+      });
     } else if (token.symbol === 'G$') {
-      navigate('/withdraw-mobile-money', { state: { selectedToken: tokenWithChain } });
+      // Fixed route: /withdraw/mobile-money instead of /withdraw-mobile-money
+      navigate('/withdraw/mobile-money', { 
+        state: { 
+          token: tokenWithChain,
+          balance: balance
+        } 
+      });
     }
   };
 
