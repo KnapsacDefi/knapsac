@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Wallet, AlertCircle, Settings } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { tokens } from "@/constants/tokens";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { NetworkStatus } from "@/components/NetworkStatus";
+import { SUPPORTED_TOKENS } from "@/constants/tokens";
+import BottomNavigation from "@/components/BottomNavigation";
+import NetworkStatus from "@/components/NetworkStatus";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getWalletAddress } from "@/utils/walletUtils";
@@ -78,10 +78,17 @@ const Withdraw = () => {
     }
   };
 
+  // Create tokens array from SUPPORTED_TOKENS with isPopular flag
+  const allTokens = Object.values(SUPPORTED_TOKENS).flat().map(token => ({
+    ...token,
+    name: token.symbol === 'G$' ? 'GoodDollar' : token.symbol,
+    isPopular: ['USDC', 'G$'].includes(token.symbol)
+  }));
+
   // Filter tokens based on user preference
   const filteredTokens = showAllTokens 
-    ? tokens 
-    : tokens.filter(token => token.isPopular);
+    ? allTokens 
+    : allTokens.filter(token => token.isPopular);
 
   const handleTokenSelect = (token: any) => {
     if (token.symbol === 'USDC') {
@@ -105,7 +112,7 @@ const Withdraw = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        <NetworkStatus />
+        {/* Temporarily remove NetworkStatus as it needs network management props */}
         
         {/* Profile Status */}
         {profileLoading && (
@@ -219,7 +226,7 @@ const Withdraw = () => {
         </Card>
 
         <div className="text-xs text-muted-foreground text-center">
-          Showing {filteredTokens.length} of {tokens.length} available tokens
+          Showing {filteredTokens.length} of {allTokens.length} available tokens
         </div>
       </div>
 
