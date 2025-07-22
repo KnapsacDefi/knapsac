@@ -21,6 +21,9 @@ interface AuthContextType {
   hasConnectedWallet: boolean;
   walletAddress: string | null;
   walletsLoading: boolean;
+  
+  // Logout state
+  isLoggingOut: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,10 +39,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const stableAuth = useStableAuth();  
   const [walletsLoading, setWalletsLoading] = useState(false);
   const [walletTimeoutReached, setWalletTimeoutReached] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Extract what we need from the hooks (stable data)
-  const { login, logout } = privyAuth;
+  const { login } = privyAuth;
   const { ready, authenticated, user } = stableAuth;
+  
+  // Enhanced logout function with state management
+  const logout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await privyAuth.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Reset logout state after a short delay to allow navigation
+      setTimeout(() => setIsLoggingOut(false), 100);
+    }
+  };
   
   // Consider stable when auth is ready
   const isStable = ready;
@@ -89,9 +106,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       privyWalletsLength: wallets?.length || 0,
       userEmail: user?.email?.address || 'N/A',
       walletsLoading,
-      walletTimeoutReached
+      walletTimeoutReached,
+      isLoggingOut
     });
-  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading, walletTimeoutReached]);
+  }, [ready, authenticated, wallets, privyAuth.ready, privyAuth.authenticated, user?.email?.address, walletsLoading, walletTimeoutReached, isLoggingOut]);
 
   // Extract stable primitive values for memoization dependencies
   const walletsLength = useMemo(() => wallets?.length || 0, [wallets?.length]);
@@ -125,7 +143,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasConnectedWallet,
     walletAddress,
     walletsLoading,
-  }), [ready, authenticated, user, stableWallets, isStable, hasConnectedWallet, walletAddress, walletsLoading]);
+    isLoggingOut,
+  }), [ready, authenticated, user, stableWallets, isStable, hasConnectedWallet, walletAddress, walletsLoading, isLoggingOut]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -28,14 +28,25 @@ export const useStableAuth = () => {
     if (stateChanged) {
       lastStateRef.current = { ready, authenticated, user };
       
-      // Debounce state updates to prevent rapid changes
+      // Immediate update for logout (when authenticated becomes false)
+      if (!authenticated && lastStateRef.current.authenticated) {
+        console.log('useStableAuth: Immediate logout detected');
+        setStableState({
+          ready,
+          authenticated,
+          user
+        });
+        return;
+      }
+      
+      // Debounce other state updates to prevent rapid changes
       timeoutRef.current = setTimeout(() => {
         setStableState({
           ready,
           authenticated,
           user
         });
-      }, 50);
+      }, 25); // Reduced debounce for faster response
     }
 
     return () => {

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -24,7 +25,7 @@ const Wallet = () => {
   const [hasNavigated, setHasNavigated] = useState(false);
   
   // Get auth data from context
-  const { ready, authenticated, user, wallets, isStable, walletsLoading } = useAuth();
+  const { ready, authenticated, user, wallets, isStable, walletsLoading, isLoggingOut } = useAuth();
   const data = useWalletData({ ready, authenticated, user, wallets, isStable, walletsLoading });
 
   // Get unified wallet address
@@ -33,20 +34,22 @@ const Wallet = () => {
   // Add network management to default to Ethereum - with silent: true
   const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager('ethereum', true, true);
 
-  // Handle authentication redirects
+  // Handle authentication redirects - prioritize logout detection
   useEffect(() => {
     if (!isStable || !mountingStable || hasNavigated) return;
 
-    if (ready && !authenticated) {
+    // Immediate redirect on logout
+    if (ready && !authenticated && !isLoggingOut) {
       console.log('Wallet: User not authenticated, redirecting to home');
       setHasNavigated(true);
       navigate('/');
+      return;
     }
-  }, [ready, authenticated, isStable, mountingStable, hasNavigated, navigate]);
+  }, [ready, authenticated, isStable, mountingStable, hasNavigated, isLoggingOut, navigate]);
 
   // Handle Service Provider redirection
   useEffect(() => {
-    if (!isStable || !mountingStable || hasNavigated) return;
+    if (!isStable || !mountingStable || hasNavigated || !authenticated) return;
 
     if (
       data.userProfile?.profile_type === 'Service Provider' && 
@@ -56,7 +59,7 @@ const Wallet = () => {
       setHasNavigated(true);
       navigate('/service-provider-motivation');
     }
-  }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, navigate]);
+  }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, authenticated, navigate]);
 
   // Show loading state during initialization
   if (!ready || !isStable || !mountingStable || isValidating) {
@@ -65,6 +68,18 @@ const Wallet = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading wallet...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show logout state
+  if (isLoggingOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Logging out...</p>
         </div>
       </div>
     );

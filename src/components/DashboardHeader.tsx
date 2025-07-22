@@ -1,13 +1,21 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 const DashboardHeader = () => {
   const { logout } = usePrivy();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -19,8 +27,17 @@ const DashboardHeader = () => {
           className="h-8"
         />
       </div>
-      <Button variant="ghost" size="icon" onClick={handleLogout}>
-        <LogOut className="w-5 h-5" />
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+      >
+        {isLoggingOut ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <LogOut className="w-5 h-5" />
+        )}
       </Button>
     </header>
   );
