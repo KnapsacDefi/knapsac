@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { PrivyProvider } from '@privy-io/react-auth';
@@ -6,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster"
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PrivyErrorBoundary } from '@/components/PrivyErrorBoundary';
+import WalletConnectionGuard from '@/components/WalletConnectionGuard';
 import Index from '@/pages/Index';
 import Wallet from '@/pages/Wallet';
 import Withdraw from '@/pages/Withdraw';
@@ -129,8 +129,22 @@ function App() {
                     <Route path="/" element={<Index />} />
                     <Route path="/wallet" element={<Wallet />} />
                     <Route path="/withdraw" element={<Withdraw />} />
-                    <Route path="/withdraw/wallet" element={<WithdrawWallet />} />
-                    <Route path="/withdraw/mobile-money" element={<WithdrawMobileMoney />} />
+                    <Route 
+                      path="/withdraw/wallet" 
+                      element={
+                        <WalletConnectionGuard requireWallet={true}>
+                          <WithdrawWallet />
+                        </WalletConnectionGuard>
+                      } 
+                    />
+                    <Route 
+                      path="/withdraw/mobile-money" 
+                      element={
+                        <WalletConnectionGuard requireWallet={true}>
+                          <WithdrawMobileMoney />
+                        </WalletConnectionGuard>
+                      } 
+                    />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/service-provider-motivation" element={<ServiceProviderMotivation />} />
