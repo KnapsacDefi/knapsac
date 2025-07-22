@@ -20,6 +20,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
   const [isValidating, setIsValidating] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
+  const [hasInitialDetection, setHasInitialDetection] = useState(false);
   const [retryConfig, setRetryConfig] = useState<RetryConfig>({ 
     attempts: 0, 
     maxAttempts: 2, 
@@ -28,7 +29,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
   const { health, detectChainId, safeWalletAccess, attemptRecovery } = useWalletProviderHealth();
   
-  // Add refs to prevent excessive validation - reduced throttle from 3s to 1.5s
+  // Add refs to prevent excessive validation
   const lastValidationRef = useRef<number>(0);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isValidatingRef = useRef<boolean>(false);
@@ -54,7 +55,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     try {
       const detectionPromise = detectChainId(wallet);
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('Chain detection timeout')), 6000); // Reduced from 8s to 6s
+        setTimeout(() => reject(new Error('Chain detection timeout')), 4000); // Reduced timeout for faster feedback
       });
       
       const chainId = await Promise.race([detectionPromise, timeoutPromise]);
@@ -191,8 +192,9 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
 
     const now = Date.now();
     
-    // Reduced throttle from 3s to 1.5s for better responsiveness
-    if (now - lastValidationRef.current < 1500) {
+    // Reduced throttle for better responsiveness during initial load
+    const throttleDelay = hasInitialDetection ? 1500 : 500;
+    if (now - lastValidationRef.current < throttleDelay) {
       debugLog('NETWORK_MANAGER', 'Validation throttled - too soon since last validation');
       return;
     }
@@ -229,16 +231,27 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       if (!activeWallet) {
         debugLog('NETWORK_MANAGER', 'No active wallet found after retries');
         setIsCorrectNetwork(false);
-        setCurrentChain(null);
+        // Don't set currentChain to null immediately during initial detection
+        if (hasInitialDetection) {
+          setCurrentChain(null);
+        }
         return;
       }
 
       const { chainId: currentChainId, chainName: currentChainName } = await detectCurrentNetwork(activeWallet);
       
+      // Mark that we've attempted initial detection
+      if (!hasInitialDetection) {
+        setHasInitialDetection(true);
+      }
+      
       if (!currentChainId) {
         debugLog('NETWORK_MANAGER', 'Unable to detect current network');
         setIsCorrectNetwork(false);
-        setCurrentChain(null);
+        // Only set to null if we've had successful detection before
+        if (hasInitialDetection) {
+          setCurrentChain(null);
+        }
         
         if (!health.isRecovering && health.lastError?.includes('properties of null')) {
           debugLog('NETWORK_MANAGER', 'Attempting recovery due to serious health issue...');
@@ -265,7 +278,6 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     } catch (error) {
       console.error(`Network validation error:`, error);
       setIsCorrectNetwork(false);
-      setCurrentChain(null);
       
       if (error.message?.includes('properties of null')) {
         setSwitchError("Failed to validate network connection. Please try again.");
@@ -281,7 +293,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       setIsValidating(false);
       isValidatingRef.current = false;
     }
-  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, getActiveWallet, detectCurrentNetwork, performNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery, silent]);
+  }, [wallets, targetChain, shouldSwitch, authenticated, user, retryConfig.attempts, hasInitialDetection, getActiveWallet, detectCurrentNetwork, performNetworkSwitch, safeWalletAccess, health.isRecovering, health.lastError, attemptRecovery, silent]);
 
   // Manual retry function for users
   const retryNetworkSwitch = useCallback(async () => {
@@ -301,17 +313,18 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       clearTimeout(validationTimeoutRef.current);
     }
     
-    // Reduced delay from 1.5s to 1s for better responsiveness
+    // Faster initial detection, slower subsequent checks
+    const delay = hasInitialDetection ? 1000 : 200;
     validationTimeoutRef.current = setTimeout(() => {
       validateAndSwitchNetwork();
-    }, 1000);
+    }, delay);
 
     return () => {
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current);
       }
     };
-  }, [wallets.length, targetChain, shouldSwitch, authenticated]);
+  }, [wallets.length, targetChain, shouldSwitch, authenticated, hasInitialDetection]);
 
   return {
     isCorrectNetwork,

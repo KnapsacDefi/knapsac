@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
@@ -26,9 +26,31 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({
   onRetry,
   showWhenCorrect = false
 }) => {
+  const [gracePeriodActive, setGracePeriodActive] = useState(true);
+
   const formatChainName = (chain: string) => {
     return chain.charAt(0).toUpperCase() + chain.slice(1);
   };
+
+  // Grace period to prevent showing error UI during initial network detection
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGracePeriodActive(false);
+    }, 3000); // 3 second grace period for network detection
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Reset grace period when switching starts
+  useEffect(() => {
+    if (isSwitching || isValidating) {
+      setGracePeriodActive(true);
+      const timer = setTimeout(() => {
+        setGracePeriodActive(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSwitching, isValidating]);
 
   // Show success state only if explicitly requested
   if (isCorrectNetwork && showWhenCorrect) {
@@ -56,9 +78,14 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({
     );
   }
 
-  // Show error state
-  if (!isCorrectNetwork) {
-    const currentDisplay = currentChain ? formatChainName(currentChain) : 'Unknown';
+  // Don't show error state during grace period or if network detection is still in progress
+  if (!isCorrectNetwork && (gracePeriodActive || currentChain === null)) {
+    return null;
+  }
+
+  // Show error state only after grace period and when we have detected a wrong network
+  if (!isCorrectNetwork && currentChain !== null) {
+    const currentDisplay = formatChainName(currentChain);
     const targetDisplay = formatChainName(targetChain);
     
     return (
