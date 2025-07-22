@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Smartphone, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Smartphone, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import DashboardHeader from '@/components/DashboardHeader';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -14,6 +14,7 @@ import NetworkStatus from '@/components/NetworkStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useMobileMoneyWithdrawal } from '@/hooks/useMobileMoneyWithdrawal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleWalletLoading } from '@/hooks/useSimpleWalletLoading';
 
 const CURRENCIES = [
   { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
@@ -40,7 +41,8 @@ const WithdrawMobileMoney = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { ready, authenticated, hasConnectedWallet } = useAuth();
+  const { ready, authenticated } = useAuth();
+  const { hasWallet, isWalletLoading } = useSimpleWalletLoading();
   const amountInputRef = useRef<HTMLInputElement>(null);
   
   const { token, balance } = location.state || {};
@@ -54,7 +56,6 @@ const WithdrawMobileMoney = () => {
   const [mobileNetworks, setMobileNetworks] = useState<MobileNetwork[]>([]);
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   // Reset form function
   const resetForm = () => {
@@ -92,78 +93,29 @@ const WithdrawMobileMoney = () => {
     onSuccess: resetForm
   });
 
-  // Set a timeout for loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!ready || !authenticated || !hasConnectedWallet) {
-        setLoadingTimeout(true);
-      }
-    }, 8000); // 8 second timeout
-
-    return () => clearTimeout(timer);
-  }, [ready, authenticated, hasConnectedWallet]);
-
   // Auto-focus amount input when ready
   useEffect(() => {
-    if (ready && authenticated && hasConnectedWallet && !loadingTimeout) {
+    if (ready && authenticated && hasWallet) {
       setTimeout(() => {
         amountInputRef.current?.focus();
       }, 100);
     }
-  }, [ready, authenticated, hasConnectedWallet, loadingTimeout]);
+  }, [ready, authenticated, hasWallet]);
 
   if (!token) {
     navigate('/withdraw');
     return null;
   }
 
-  // Show loading while auth/wallet is initializing
-  if (!ready || (ready && authenticated && !hasConnectedWallet && !loadingTimeout)) {
+  // Show loading while wallet is loading
+  if (isWalletLoading) {
     return <WithdrawalLoader message="Connecting wallet..." />;
   }
 
-  // Handle timeout or auth failures
-  if (loadingTimeout || !authenticated || (ready && !hasConnectedWallet)) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background pb-20">
-        <DashboardHeader />
-        
-        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full flex items-center justify-center">
-          <Card className="w-full">
-            <CardContent className="pt-6 text-center space-y-4">
-              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-              <h3 className="text-lg font-semibold">Connection Issue</h3>
-              <p className="text-muted-foreground">
-                {!authenticated 
-                  ? "Please log in to access withdrawal features."
-                  : "Unable to connect to your wallet. Please try again."
-                }
-              </p>
-              
-              <div className="space-y-2">
-                <Button 
-                  onClick={() => window.location.reload()}
-                  className="w-full"
-                >
-                  <RefreshCw className="w-4 w-4 mr-2" />
-                  Retry
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
-                  Return to Dashboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-
-        <BottomNavigation />
-      </div>
-    );
+  // Redirect to home if not authenticated or no wallet
+  if (!authenticated || !hasWallet) {
+    navigate('/');
+    return null;
   }
 
   useEffect(() => {
