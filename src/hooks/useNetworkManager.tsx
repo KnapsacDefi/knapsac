@@ -75,14 +75,14 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [detectChainId, safeWalletAccess]);
 
-  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 3): Promise<boolean> => {
+  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 2): Promise<boolean> => {
     debugLog('NETWORK_MANAGER', `Starting network switch verification for chainId: ${targetChainId}`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       debugLog('NETWORK_MANAGER', `Verification attempt ${attempt}/${maxAttempts}`);
       
-      // Reduced delay for faster feedback
-      const delay = 1000 * attempt;
+      // Shorter delay for better UX
+      const delay = 800 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       try {
@@ -109,10 +109,10 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     setSwitchError(null);
     
     try {
-      debugLog('NETWORK_MANAGER', `Attempting to switch from ${currentChainName} (${await detectCurrentNetwork(wallet).then(r => r.chainId)}) to ${targetChain} (${targetChainId})`);
+      debugLog('NETWORK_MANAGER', `Attempting to switch from ${currentChainName} to ${targetChain} (${targetChainId})`);
       
-      const switchChainMethod = safeWalletAccess(wallet, 'switchChain');
-      if (!switchChainMethod || typeof switchChainMethod !== 'function') {
+      // Check if wallet supports switching
+      if (!wallet || !wallet.switchChain) {
         throw new Error('Wallet does not support network switching');
       }
       
@@ -124,12 +124,38 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         });
       }
       
-      await switchChainMethod(targetChainId);
-      debugLog('NETWORK_MANAGER', 'Switch chain command sent, starting verification...');
+      // Use Privy's switchChain method with proper error handling
+      try {
+        await wallet.switchChain(targetChainId);
+        debugLog('NETWORK_MANAGER', 'Switch chain command executed successfully');
+      } catch (switchError) {
+        debugLog('NETWORK_MANAGER', 'Switch chain command failed:', switchError);
+        
+        // Check for specific error types
+        const errorMessage = switchError?.message || switchError?.toString() || '';
+        
+        if (errorMessage.toLowerCase().includes('user rejected') || 
+            errorMessage.toLowerCase().includes('user denied') ||
+            errorMessage.toLowerCase().includes('user cancelled')) {
+          throw new Error('USER_REJECTED');
+        }
+        
+        if (errorMessage.toLowerCase().includes('unrecognized chain id') ||
+            errorMessage.toLowerCase().includes('unsupported chain')) {
+          throw new Error('UNSUPPORTED_CHAIN');
+        }
+        
+        // For other errors, try to be more helpful
+        throw switchError;
+      }
       
-      const switchSuccessful = await verifyNetworkSwitch(wallet, targetChainId);
+      // Give the wallet time to update
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (switchSuccessful) {
+      // Verify the switch was successful
+      const verification = await verifyNetworkSwitch(wallet, targetChainId, 2); // Reduced attempts
+      
+      if (verification) {
         if (!silent) {
           toast({
             title: "Network Switched",
@@ -141,26 +167,36 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         setCurrentChain(targetChain);
         return true;
       } else {
-        throw new Error('Network switch verification failed');
+        // If verification failed, check current network
+        const { chainId } = await detectCurrentNetwork(wallet);
+        if (chainId === targetChainId) {
+          // Actually on correct network despite verification failure
+          setIsCorrectNetwork(true);
+          setCurrentChain(targetChain);
+          return true;
+        }
+        throw new Error('VERIFICATION_FAILED');
       }
-    } catch (switchError) {
-      const errorMessage = switchError?.message || switchError?.toString() || '';
-      debugLog('NETWORK_MANAGER', `Network switch failed:`, switchError);
       
-      const isUserRejection = errorMessage.toLowerCase().includes('user') || 
-                             errorMessage.toLowerCase().includes('rejected') ||
-                             errorMessage.toLowerCase().includes('denied') ||
-                             errorMessage.toLowerCase().includes('cancelled');
+    } catch (error) {
+      const errorMessage = error?.message || error?.toString() || '';
+      debugLog('NETWORK_MANAGER', `Network switch failed:`, error);
       
       let title = "Network Switch Required";
-      let description = `Currently on ${currentChainName || 'Unknown'} network. Please switch to ${targetChain} network in your wallet to continue.`;
+      let description = "";
       
-      if (isUserRejection) {
+      if (errorMessage === 'USER_REJECTED') {
         title = "Network Switch Cancelled";
-        description = `Network switch was cancelled. Please manually switch from ${currentChainName || 'current'} to ${targetChain} network to continue.`;
-      } else if (errorMessage.toLowerCase().includes('unsupported')) {
-        title = "Unsupported Network";
-        description = `Your wallet doesn't support ${targetChain} network. Please add it manually or switch using your wallet.`;
+        description = `Please manually switch to ${targetChain} network in your wallet to continue.`;
+      } else if (errorMessage === 'UNSUPPORTED_CHAIN') {
+        title = "Network Not Supported";
+        description = `Your wallet doesn't support ${targetChain} network. Please add it manually first.`;
+      } else if (errorMessage === 'VERIFICATION_FAILED') {
+        title = "Network Switch Verification Failed";
+        description = `Switch command sent but couldn't verify. Please check if you're on ${targetChain} network.`;
+      } else if (errorMessage.includes('Wallet does not support')) {
+        title = "Manual Switch Required";
+        description = `Please manually switch to ${targetChain} network in your wallet.`;
       } else {
         title = "Network Switch Failed";
         description = `Failed to switch to ${targetChain}. Please try switching manually in your wallet.`;
@@ -182,7 +218,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     } finally {
       setIsSwitching(false);
     }
-  }, [detectCurrentNetwork, verifyNetworkSwitch, safeWalletAccess, silent]);
+  }, [detectCurrentNetwork, verifyNetworkSwitch, silent]);
 
   const validateAndSwitchNetwork = useCallback(async () => {
     if (!shouldSwitch) {
