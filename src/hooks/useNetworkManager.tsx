@@ -82,7 +82,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       debugLog('NETWORK_MANAGER', `Verification attempt ${attempt}/${maxAttempts}`);
       
       // Shorter delay for better UX
-      const delay = 100 * attempt;
+      const delay = 800 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       try {
