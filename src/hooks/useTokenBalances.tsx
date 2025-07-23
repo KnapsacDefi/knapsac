@@ -90,9 +90,41 @@ export const useTokenBalances = ({ walletAddress, enabled = true }: UseTokenBala
               
               if (tokenInfo) {
                 const key = `${tokenInfo.symbol}-${tokenInfo.chain}`;
-                const balance = item.balance ? parseFloat(item.balance).toFixed(2) : '0.00';
                 
-                console.log(`Found token: ${tokenInfo.symbol} on ${tokenInfo.chain} with balance: ${balance}`);
+                // Better balance parsing - prefer denominatedBalance for precision, fallback to balance
+                let balance = '0.00';
+                
+                if (item.denominatedBalance && item.decimals) {
+                  // Convert from denominatedBalance (raw units) to display balance
+                  const rawBalance = parseFloat(item.denominatedBalance);
+                  const decimals = parseInt(item.decimals);
+                  const displayBalance = rawBalance / Math.pow(10, decimals);
+                  
+                  // Format with appropriate precision based on value
+                  if (displayBalance >= 1) {
+                    balance = displayBalance.toFixed(2);
+                  } else if (displayBalance >= 0.01) {
+                    balance = displayBalance.toFixed(4);
+                  } else if (displayBalance > 0) {
+                    balance = displayBalance.toFixed(6);
+                  } else {
+                    balance = '0.00';
+                  }
+                } else if (item.balance) {
+                  // Fallback to the balance field if denominatedBalance is not available
+                  const displayBalance = parseFloat(item.balance);
+                  if (displayBalance >= 1) {
+                    balance = displayBalance.toFixed(2);
+                  } else if (displayBalance >= 0.01) {
+                    balance = displayBalance.toFixed(4);
+                  } else if (displayBalance > 0) {
+                    balance = displayBalance.toFixed(6);
+                  } else {
+                    balance = '0.00';
+                  }
+                }
+                
+                console.log(`Found token: ${tokenInfo.symbol} on ${tokenInfo.chain} with balance: ${balance} (raw: ${item.denominatedBalance}, display: ${item.balance})`);
                 
                 balances[key] = {
                   ...balances[key],
@@ -101,7 +133,7 @@ export const useTokenBalances = ({ walletAddress, enabled = true }: UseTokenBala
                   error: null
                 };
               } else {
-                console.log(`Token not found in our supported list: ${tokenAddress}`);
+                console.log(`Token not found in our supported list: ${tokenAddress} on chain ${chain}`);
               }
             });
           }
