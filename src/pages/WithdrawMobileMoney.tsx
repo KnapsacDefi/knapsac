@@ -53,6 +53,7 @@ const WithdrawMobileMoney = () => {
   const [selectedNetwork, setSelectedNetwork] = useState('');
   const [conversionRate, setConversionRate] = useState<number | null>(null);
   const [localAmount, setLocalAmount] = useState('0.00');
+  const [rateSource, setRateSource] = useState<string>('');
   const [mobileNetworks, setMobileNetworks] = useState<MobileNetwork[]>([]);
   const [loadingRate, setLoadingRate] = useState(false);
   const [loadingNetworks, setLoadingNetworks] = useState(false);
@@ -65,6 +66,7 @@ const WithdrawMobileMoney = () => {
     setSelectedNetwork('');
     setConversionRate(null);
     setLocalAmount('0.00');
+    setRateSource('');
     // Focus amount input after reset
     setTimeout(() => {
       amountInputRef.current?.focus();
@@ -215,6 +217,7 @@ const WithdrawMobileMoney = () => {
       if (!error && data?.rate) {
         setConversionRate(data.rate);
         setLocalAmount((parseFloat(amount) * data.rate).toFixed(2));
+        setRateSource(data.source || '');
       }
     } catch (error) {
       console.error('Error fetching conversion rate:', error);
@@ -365,6 +368,13 @@ const WithdrawMobileMoney = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Rate: 1 {token.symbol} = {conversionRate.toFixed(4)} {selectedCurrency}
+                  {rateSource && (
+                    <span className="block mt-1">
+                      {rateSource === 'coingecko+tatum' && 'Rate from CoinGecko + Tatum'}
+                      {rateSource === 'tatum' && 'Rate from Tatum'}
+                      {rateSource === 'fallback' && 'Using fallback rate'}
+                    </span>
+                  )}
                 </p>
               </CardContent>
             </Card>
