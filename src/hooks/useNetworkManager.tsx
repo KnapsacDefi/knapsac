@@ -150,7 +150,7 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       }
       
       // Give the wallet time to update
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
       
       // Verify the switch was successful
       const verification = await verifyNetworkSwitch(wallet, targetChainId, 4); // Reduced attempts
