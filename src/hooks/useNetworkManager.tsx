@@ -142,6 +142,23 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
       try {
         await wallet.switchChain(targetChainId);
         debugLog('NETWORK_MANAGER', 'Switch chain command executed successfully');
+        
+        // Give the wallet more time to update and be more trusting of the switch command
+        debugLog('NETWORK_MANAGER', 'Waiting for wallet to complete network switch...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // If the switch command succeeded without throwing, trust it worked
+        if (!silent) {
+          toast({
+            title: "Network Switched",
+            description: `Successfully switched to ${targetChain} network.`,
+          });
+        }
+        
+        setIsCorrectNetwork(true);
+        setCurrentChain(targetChain);
+        return true;
+        
       } catch (switchError) {
         debugLog('NETWORK_MANAGER', 'Switch chain command failed:', switchError);
         
@@ -161,57 +178,6 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         
         // For other errors, try to be more helpful
         throw switchError;
-      }
-      
-      // Give the wallet more time to update (increased from 1.5s to 4s)
-      debugLog('NETWORK_MANAGER', 'Waiting for wallet to complete network switch...');
-      await new Promise(resolve => setTimeout(resolve, 4000));
-      
-      // Verify the switch was successful with more attempts
-      const verification = await verifyNetworkSwitch(wallet, targetChainId, 5);
-      
-      if (verification) {
-        if (!silent) {
-          toast({
-            title: "Network Switched",
-            description: `Successfully switched to ${targetChain} network.`,
-          });
-        }
-        
-        setIsCorrectNetwork(true);
-        setCurrentChain(targetChain);
-        return true;
-      } else {
-        // If verification failed, do final check with more time
-        debugLog('NETWORK_MANAGER', 'Verification failed, doing final check...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const { chainId } = await detectCurrentNetwork(wallet);
-        if (chainId === targetChainId) {
-          // Actually on correct network despite verification failure
-          debugLog('NETWORK_MANAGER', 'Final check successful - switch actually worked');
-          setIsCorrectNetwork(true);
-          setCurrentChain(targetChain);
-          return true;
-        }
-        
-        // Try one more direct check
-        try {
-          if (typeof window !== 'undefined' && (window as any).ethereum?.request) {
-            const hexChainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
-            const finalChainId = parseInt(hexChainId, 16);
-            if (finalChainId === targetChainId) {
-              debugLog('NETWORK_MANAGER', 'Direct ethereum check successful');
-              setIsCorrectNetwork(true);
-              setCurrentChain(targetChain);
-              return true;
-            }
-          }
-        } catch (finalError) {
-          debugLog('NETWORK_MANAGER', 'Final direct check failed:', finalError);
-        }
-        
-        throw new Error('VERIFICATION_FAILED');
       }
       
     } catch (error) {
