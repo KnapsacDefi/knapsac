@@ -182,14 +182,35 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         setCurrentChain(targetChain);
         return true;
       } else {
-        // If verification failed, check current network
+        // If verification failed, do final check with more time
+        debugLog('NETWORK_MANAGER', 'Verification failed, doing final check...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         const { chainId } = await detectCurrentNetwork(wallet);
         if (chainId === targetChainId) {
           // Actually on correct network despite verification failure
+          debugLog('NETWORK_MANAGER', 'Final check successful - switch actually worked');
           setIsCorrectNetwork(true);
           setCurrentChain(targetChain);
           return true;
         }
+        
+        // Try one more direct check
+        try {
+          if (typeof window !== 'undefined' && (window as any).ethereum?.request) {
+            const hexChainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
+            const finalChainId = parseInt(hexChainId, 16);
+            if (finalChainId === targetChainId) {
+              debugLog('NETWORK_MANAGER', 'Direct ethereum check successful');
+              setIsCorrectNetwork(true);
+              setCurrentChain(targetChain);
+              return true;
+            }
+          }
+        } catch (finalError) {
+          debugLog('NETWORK_MANAGER', 'Final direct check failed:', finalError);
+        }
+        
         throw new Error('VERIFICATION_FAILED');
       }
       
