@@ -75,25 +75,39 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
     }
   }, [detectChainId, safeWalletAccess]);
 
-  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 2): Promise<boolean> => {
+  const verifyNetworkSwitch = useCallback(async (wallet: any, targetChainId: number, maxAttempts: number = 5): Promise<boolean> => {
     debugLog('NETWORK_MANAGER', `Starting network switch verification for chainId: ${targetChainId}`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       debugLog('NETWORK_MANAGER', `Verification attempt ${attempt}/${maxAttempts}`);
       
-      // Shorter delay for better UX
-      const delay = 800 * attempt;
+      // Progressive delays: 1s, 2s, 3s, 4s, 5s
+      const delay = 1000 * attempt;
       await new Promise(resolve => setTimeout(resolve, delay));
       
       try {
+        // Try multiple detection methods for better reliability
         const { chainId } = await detectCurrentNetwork(wallet);
         
-        if (chainId === targetChainId) {
+        // Also try direct ethereum provider check as fallback
+        let fallbackChainId = null;
+        try {
+          if (typeof window !== 'undefined' && (window as any).ethereum?.request) {
+            const hexChainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
+            fallbackChainId = parseInt(hexChainId, 16);
+          }
+        } catch (ethError) {
+          debugLog('NETWORK_MANAGER', 'Fallback chain detection failed:', ethError);
+        }
+        
+        const detectedChainId = chainId || fallbackChainId;
+        
+        if (detectedChainId === targetChainId) {
           debugLog('NETWORK_MANAGER', `Network switch verified successfully on attempt ${attempt}`);
           return true;
         }
         
-        debugLog('NETWORK_MANAGER', `Verification attempt ${attempt} failed. Current: ${chainId}, Target: ${targetChainId}`);
+        debugLog('NETWORK_MANAGER', `Verification attempt ${attempt} failed. Current: ${detectedChainId}, Target: ${targetChainId}`);
         
       } catch (error) {
         debugLog('NETWORK_MANAGER', `Verification attempt ${attempt} error:`, error);
@@ -149,11 +163,12 @@ export const useNetworkManager = (targetChain: SupportedChain, shouldSwitch: boo
         throw switchError;
       }
       
-      // Give the wallet time to update
-      await new Promise(resolve => setTimeout(resolve,1500));
+      // Give the wallet more time to update (increased from 1.5s to 4s)
+      debugLog('NETWORK_MANAGER', 'Waiting for wallet to complete network switch...');
+      await new Promise(resolve => setTimeout(resolve, 4000));
       
-      // Verify the switch was successful
-      const verification = await verifyNetworkSwitch(wallet, targetChainId,2); // Reduced attempts
+      // Verify the switch was successful with more attempts
+      const verification = await verifyNetworkSwitch(wallet, targetChainId, 5);
       
       if (verification) {
         if (!silent) {
