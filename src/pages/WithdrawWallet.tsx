@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { InputWithPaste } from '@/components/ui/input-with-paste';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Wallet2, AlertCircle, RefreshCw } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
@@ -242,7 +243,7 @@ const WithdrawWallet = () => {
 
           <div className="space-y-2">
             <Label htmlFor="recipient">Recipient Address</Label>
-            <Input
+            <InputWithPaste
               id="recipient"
               placeholder="0x..."
               value={recipientAddress}
