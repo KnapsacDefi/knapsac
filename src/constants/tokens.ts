@@ -7,7 +7,8 @@ export const SUPPORTED_TOKENS = {
   celo: [
     { symbol: 'USDC', address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C', decimals: 6 },
     { symbol: 'USDT', address: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e', decimals: 6 },
-    { symbol: 'G$', address: '0x62b8b11039fcfe5ab0c56e502b1c372a3d2a9c7a', decimals: 18 }
+    { symbol: 'G$', address: '0x62b8b11039fcfe5ab0c56e502b1c372a3d2a9c7a', decimals: 18 },
+    { symbol: 'CUSD', address: '0x765de816845861e75a25fca122bb6898b8b1282a', decimals: 18 }
   ],
   base: [
     { symbol: 'USDC', address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
