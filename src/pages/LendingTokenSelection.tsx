@@ -27,7 +27,7 @@ const LendingTokenSelection = () => {
   const location = useLocation();
   const { user, wallets, authenticated, ready, walletsLoading } = useAuth();
   
-  const { pool, selectedPeriod } = location.state || {};
+  const { pool, selectedPeriod, lendAmount } = location.state || {};
 
   const walletAddress = getWalletAddress(wallets, user);
   const { tokenBalances, isLoading: balancesLoading, getTokenBalance, refreshBalances, lastUpdated } = useTokenBalances({
@@ -68,7 +68,7 @@ const LendingTokenSelection = () => {
           ...token,
           chain: token.chain
         },
-        amount: balance, // Will be updated by user in confirmation
+        amount: lendAmount || balance, // Use the lendAmount from previous page
         lendingPeriod: selectedPeriod, // Use the period selected by user
         balance
       } 
