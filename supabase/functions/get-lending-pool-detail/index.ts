@@ -12,8 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const poolId = url.searchParams.get('id');
+    const { id: poolId } = await req.json();
 
     if (!poolId) {
       return new Response(
