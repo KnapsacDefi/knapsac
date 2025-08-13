@@ -10,6 +10,7 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
 import LenderComingSoonBanner from "@/components/LenderComingSoonBanner";
+import LendingPoolsSection from "@/components/LendingPoolsSection";
 import { useWalletData } from "@/hooks/useWalletData";
 import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton";
 import { useMountingGuard } from "@/hooks/useMountingGuard";
@@ -149,6 +150,8 @@ const Wallet = () => {
           user={user}
           wallets={wallets}
         />
+        
+        <LendingPoolsSection userProfile={data.userProfile} />
         
         {/* Show credit score for startups only */}
         {data.userProfile?.profile_type === 'Startup' && <CreditScore />}
