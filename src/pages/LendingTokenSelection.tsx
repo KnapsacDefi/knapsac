@@ -30,7 +30,7 @@ const LendingTokenSelection = () => {
   const { pool, selectedPeriod } = location.state || {};
 
   const walletAddress = getWalletAddress(wallets, user);
-  const { tokenBalances, isLoading: balancesLoading, getTokenBalance, refreshBalances } = useTokenBalances({
+  const { tokenBalances, isLoading: balancesLoading, getTokenBalance, refreshBalances, lastUpdated } = useTokenBalances({
     walletAddress,
     enabled: authenticated && ready && !!walletAddress && !walletsLoading
   });
@@ -138,14 +138,21 @@ const LendingTokenSelection = () => {
                 <Wallet className="h-5 w-5" />
                 Available Tokens
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refreshBalances}
-                disabled={balancesLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${balancesLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              <div className="flex items-center gap-2">
+                {lastUpdated && (
+                  <span className="text-xs text-muted-foreground">
+                    Updated {new Date(lastUpdated).toLocaleTimeString()}
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshBalances}
+                  disabled={balancesLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${balancesLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
