@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      lending_pool: {
+        Row: {
+          closing_date: string
+          created_at: string
+          id: string
+          max_lend_period: number
+          min_lend_period: number
+          monthly_interest: number
+          recipient_address: string
+          startup_id: string | null
+          status: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closing_date: string
+          created_at?: string
+          id?: string
+          max_lend_period: number
+          min_lend_period: number
+          monthly_interest: number
+          recipient_address: string
+          startup_id?: string | null
+          status?: string
+          target_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closing_date?: string
+          created_at?: string
+          id?: string
+          max_lend_period?: number
+          min_lend_period?: number
+          monthly_interest?: number
+          recipient_address?: string
+          startup_id?: string | null
+          status?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lending_pool_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio: {
+        Row: {
+          chain: string
+          claim_amount: number | null
+          claim_currency: string | null
+          claim_date: string | null
+          claim_transaction_hash: string | null
+          created_at: string
+          id: string
+          lend_amount: number
+          lend_period: number
+          lend_token: string
+          lend_transaction_hash: string | null
+          lending_pool_id: string
+          payment_status: string
+          payment_token: string | null
+          recipient_address: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chain: string
+          claim_amount?: number | null
+          claim_currency?: string | null
+          claim_date?: string | null
+          claim_transaction_hash?: string | null
+          created_at?: string
+          id?: string
+          lend_amount: number
+          lend_period: number
+          lend_token: string
+          lend_transaction_hash?: string | null
+          lending_pool_id: string
+          payment_status?: string
+          payment_token?: string | null
+          recipient_address: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chain?: string
+          claim_amount?: number | null
+          claim_currency?: string | null
+          claim_date?: string | null
+          claim_transaction_hash?: string | null
+          created_at?: string
+          id?: string
+          lend_amount?: number
+          lend_period?: number
+          lend_token?: string
+          lend_transaction_hash?: string | null
+          lending_pool_id?: string
+          payment_status?: string
+          payment_token?: string | null
+          recipient_address?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_lending_pool_id_fkey"
+            columns: ["lending_pool_id"]
+            isOneToOne: false
+            referencedRelation: "lending_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
