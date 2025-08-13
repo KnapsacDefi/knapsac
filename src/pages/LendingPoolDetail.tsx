@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Target, TrendingUp, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Target, TrendingUp, Users, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useLendingPools } from '@/hooks/useLendingPools';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -18,6 +20,7 @@ const LendingPoolDetail = () => {
   const { authenticated } = useAuth();
   const { lendingPools, isLoading } = useLendingPools();
   const [lendingPeriod, setLendingPeriod] = useState<number[]>([30]);
+  const [lendAmount, setLendAmount] = useState<string>('');
 
   const pool = lendingPools.find(p => p.id === id);
 
@@ -88,7 +91,8 @@ const LendingPoolDetail = () => {
     navigate(`/lending/${pool.id}/tokens`, { 
       state: { 
         pool,
-        selectedPeriod 
+        selectedPeriod,
+        lendAmount 
       } 
     });
   };
@@ -114,6 +118,34 @@ const LendingPoolDetail = () => {
           </Alert>
         )}
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Lend Amount
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="lend-amount" className="font-bold">
+                Amount to Lend
+              </Label>
+              <Input
+                id="lend-amount"
+                type="number"
+                placeholder="Enter amount (e.g., 100)"
+                value={lendAmount}
+                onChange={(e) => setLendAmount(e.target.value)}
+                min="0"
+                step="0.01"
+                className="text-lg"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the amount you want to lend to this pool
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
