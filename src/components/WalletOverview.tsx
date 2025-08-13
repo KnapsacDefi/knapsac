@@ -107,6 +107,29 @@ const WalletOverview = ({
   const isServiceProvider = userProfile?.profile_type === 'Service Provider';
   const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
+  // Calculate visible buttons for dynamic grid layout
+  const buttons = [];
+  
+  // Deposit button - for all user types
+  buttons.push('deposit');
+  
+  // Withdraw button - for Startups and Service Providers
+  if (isStartup || isServiceProvider) {
+    buttons.push('withdraw');
+  }
+  
+  // Claim button - for Lenders only
+  if (isLender) {
+    buttons.push('claim');
+  }
+  
+  // Credit button - for Startups with signed terms
+  if (isStartup && hasSignedTerms) {
+    buttons.push('credit');
+  }
+
+  const gridCols = buttons.length === 3 ? 'grid-cols-3' : buttons.length === 2 ? 'grid-cols-2' : 'grid-cols-1';
+
   return (
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
@@ -145,21 +168,39 @@ const WalletOverview = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid ${gridCols} gap-2`}>
+        {/* Deposit button - for all user types */}
         <Button 
           className="h-12 flex flex-col gap-1 bg-primary text-white"
-          disabled={isServiceProvider || !hasWallet}
+          disabled={!hasWallet}
           onClick={handleDeposit}
         >
           <span className="text-xs">Deposit</span>
         </Button>
-        <Button 
-          variant="outline" 
-          className="h-12 flex flex-col gap-1"
-          onClick={() => navigate('/withdraw')}
-        >
-          <span className="text-xs">{isLender ? 'Claim' : 'Withdraw'}</span>
-        </Button>
+        
+        {/* Withdraw button - for Startups and Service Providers */}
+        {(isStartup || isServiceProvider) && (
+          <Button 
+            variant="outline" 
+            className="h-12 flex flex-col gap-1"
+            onClick={() => navigate('/withdraw')}
+          >
+            <span className="text-xs">Withdraw</span>
+          </Button>
+        )}
+        
+        {/* Claim button - for Lenders only */}
+        {isLender && (
+          <Button 
+            variant="outline" 
+            className="h-12 flex flex-col gap-1"
+            onClick={() => navigate('/withdraw')}
+          >
+            <span className="text-xs">Claim</span>
+          </Button>
+        )}
+        
+        {/* Credit button - for Startups with signed terms */}
         {isStartup && hasSignedTerms && (
           <Button 
             variant="outline" 
