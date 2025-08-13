@@ -36,10 +36,10 @@ export const usePortfolio = () => {
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { authenticated, walletAddress } = useAuth();
+  const { authenticated, user } = useAuth();
 
   const fetchPortfolio = useCallback(async () => {
-    if (!authenticated) {
+    if (!authenticated || !user?.id) {
       setPortfolio([]);
       setIsLoading(false);
       return;
@@ -50,7 +50,7 @@ export const usePortfolio = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase.functions.invoke('get-portfolio', {
-        body: { walletAddress }
+        body: { userId: user.id }
       });
 
       if (fetchError) {
@@ -64,7 +64,7 @@ export const usePortfolio = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [authenticated, walletAddress]);
+  }, [authenticated, user?.id]);
 
   useEffect(() => {
     fetchPortfolio();

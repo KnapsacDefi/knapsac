@@ -12,11 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { walletAddress } = await req.json()
+    const { userId } = await req.json()
     
-    if (!walletAddress) {
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'Wallet address required' }),
+        JSON.stringify({ error: 'User ID required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -41,7 +41,7 @@ serve(async (req) => {
           max_lend_period
         )
       `)
-      .eq('recipient_address', walletAddress)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) {
