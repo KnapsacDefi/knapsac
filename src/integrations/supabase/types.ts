@@ -348,6 +348,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_pool_funding_progress: {
+        Args: { pool_id: string }
+        Returns: {
+          total_lent: number
+          funding_progress: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
