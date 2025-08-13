@@ -29,14 +29,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
+    // First get basic pool info
     const { data: lendingPool, error } = await supabaseClient
       .from('lending_pool')
-      .select(`
-        *,
-        portfolio!lending_pool_id (
-          lend_amount
-        )
-      `)
+      .select('*')
       .eq('id', poolId)
       .eq('status', 'published')
       .maybeSingle()
@@ -62,14 +58,32 @@ serve(async (req) => {
       )
     }
 
+    // Use database function for efficient funding calculation
+    const { data: fundingData, error: fundingError } = await supabaseClient
+      .rpc('get_pool_funding_progress', { pool_id: poolId })
+
+    if (fundingError) {
+      console.error('Error fetching funding progress:', fundingError)
+      // Return pool without funding data if calculation fails
+      return new Response(
+        JSON.stringify({ pool: lendingPool }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=300'
+          } 
+        }
+      )
+    }
+
     // Calculate funding progress for the pool
-    const totalLent = lendingPool.portfolio?.reduce((sum: number, p: any) => sum + parseFloat(p.lend_amount || '0'), 0) || 0
-    const progress = (totalLent / parseFloat(lendingPool.target_amount)) * 100
+    const fundingProgress = fundingData && fundingData.length > 0 ? fundingData[0] : { total_lent: 0, funding_progress: 0 }
     
     const poolWithProgress = {
       ...lendingPool,
-      total_lent: totalLent,
-      funding_progress: Math.min(progress, 100)
+      total_lent: parseFloat(fundingProgress.total_lent || '0'),
+      funding_progress: parseFloat(fundingProgress.funding_progress || '0')
     }
 
     return new Response(
