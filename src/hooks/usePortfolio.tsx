@@ -36,7 +36,7 @@ export const usePortfolio = () => {
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { authenticated } = useAuth();
+  const { authenticated, walletAddress } = useAuth();
 
   const fetchPortfolio = useCallback(async () => {
     if (!authenticated) {
@@ -49,7 +49,9 @@ export const usePortfolio = () => {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase.functions.invoke('get-portfolio');
+      const { data, error: fetchError } = await supabase.functions.invoke('get-portfolio', {
+        body: { walletAddress }
+      });
 
       if (fetchError) {
         throw fetchError;
@@ -62,7 +64,7 @@ export const usePortfolio = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [authenticated]);
+  }, [authenticated, walletAddress]);
 
   useEffect(() => {
     fetchPortfolio();

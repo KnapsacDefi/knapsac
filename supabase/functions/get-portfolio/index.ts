@@ -12,12 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const { walletAddress } = await req.json()
+    
+    if (!walletAddress) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
+        JSON.stringify({ error: 'Wallet address required' }),
         { 
-          status: 401, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -25,26 +26,8 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-    
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
 
     const { data: portfolio, error } = await supabaseClient
       .from('portfolio')
@@ -58,7 +41,7 @@ serve(async (req) => {
           max_lend_period
         )
       `)
-      .eq('user_id', user.id)
+      .eq('recipient_address', walletAddress)
       .order('created_at', { ascending: false })
 
     if (error) {
