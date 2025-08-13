@@ -113,59 +113,6 @@ const LendingPoolDetail = () => {
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Pool Overview</CardTitle>
-              <Badge variant="secondary">
-                {pool.funding_progress.toFixed(0)}% Funded
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Target className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Target</span>
-                </div>
-                <div className="text-lg font-semibold">${pool.target_amount.toLocaleString()}</div>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-muted-foreground">Monthly Interest</span>
-                </div>
-                <div className="text-lg font-semibold text-green-600">{pool.monthly_interest}%</div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Funding Progress</span>
-                <span className="text-sm font-medium">${pool.total_lent.toLocaleString()} raised</span>
-              </div>
-              <Progress value={pool.funding_progress} className="h-2" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Closes:</span>
-                <span className="font-medium">
-                  {new Date(pool.closing_date).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Min-Max Period:</span>
-                <span className="font-medium">
-                  {pool.min_lend_period}-{pool.max_lend_period} days
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>
