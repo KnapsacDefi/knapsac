@@ -45,7 +45,7 @@ const LendingPoolDetail = () => {
   const getButtonState = () => {
     if (!ready) return { disabled: true, text: 'Loading authentication...', loading: true };
     if (!authenticated) return { disabled: true, text: 'Please log in', loading: false };
-    if (walletsLoading) return { disabled: true, text: 'Loading wallet...', loading: true };
+    if (walletsLoading) return { disabled: true, text: 'Connecting Wallet...', loading: true };
     if (!hasConnectedWallet) return { disabled: true, text: 'Please connect wallet', loading: false };
     if (!isStable) return { disabled: true, text: 'Initializing...', loading: true };
     if (isLoading) return { disabled: true, text: 'Loading pool data...', loading: true };
