@@ -195,6 +195,12 @@ const LendingPoolDetail = () => {
                   <span className="text-sm font-semibold">Estimated Total Interest:</span>
                   <span className="font-bold">{estimatedInterest.toFixed(2)}%</span>
                 </div>
+                <div className="flex justify-between text-primary">
+                  <span className="text-sm font-semibold">Estimated Total Return:</span>
+                  <span className="font-bold">
+                    {lendAmount ? ((estimatedInterest / 100) * parseFloat(lendAmount)).toFixed(4) : '0'} tokens
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 * Interest is calculated based on the actual lending period and may vary
