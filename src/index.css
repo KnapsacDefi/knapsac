@@ -36,6 +36,17 @@
 
     --radius: 0.5rem;
 
+    /* Portfolio specific colors */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --success-muted: 142.1 76.2% 96.3%;
+    --success-muted-foreground: 142.1 76.2% 26.3%;
+
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --warning-muted: 47.9 95.8% 93.1%;
+    --warning-muted-foreground: 47.9 95.8% 33.1%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -81,6 +92,17 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* Portfolio specific colors - dark mode */
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --success-muted: 142.1 30.2% 15.3%;
+    --success-muted-foreground: 142.1 70.6% 75.3%;
+
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --warning-muted: 47.9 40.8% 15.1%;
+    --warning-muted-foreground: 47.9 95.8% 73.1%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
