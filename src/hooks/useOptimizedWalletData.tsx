@@ -150,7 +150,7 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
       if (error) throw error;
       
       // Extract USDC balance from the portfolio data
-      const portfolio = response?.portfolio || [];
+      const portfolio = response?.portfolio?.result || [];
       const usdcToken = portfolio.find((token: any) => 
         token.symbol?.toUpperCase() === 'USDC' || 
         token.name?.toUpperCase().includes('USD COIN')
