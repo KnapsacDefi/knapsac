@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LendingPool {
@@ -19,16 +20,29 @@ interface LendingPool {
 }
 
 export const useLendingPools = () => {
+  const location = useLocation();
   const [lendingPools, setLendingPools] = useState<LendingPool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Check if we're on a route that should force fresh data
+  const shouldForceRefresh = location.pathname.includes('/lending-pool') || 
+                            location.pathname.includes('/lending/') ||
+                            location.pathname.includes('/lending-confirmation');
 
-  const fetchLendingPools = useCallback(async () => {
+  const fetchLendingPools = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase.functions.invoke('get-lending-pools');
+      // Add timestamp to force fresh data when needed
+      const url = forceRefresh || shouldForceRefresh ? 
+        'get-lending-pools' : 
+        'get-lending-pools';
+
+      const { data, error: fetchError } = await supabase.functions.invoke(url, {
+        body: shouldForceRefresh ? { timestamp: Date.now() } : undefined
+      });
 
       if (fetchError) {
         throw fetchError;
@@ -41,14 +55,14 @@ export const useLendingPools = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [shouldForceRefresh]);
 
   useEffect(() => {
-    fetchLendingPools();
-  }, [fetchLendingPools]);
+    fetchLendingPools(shouldForceRefresh);
+  }, [fetchLendingPools, shouldForceRefresh]);
 
   const refreshPools = useCallback(() => {
-    fetchLendingPools();
+    fetchLendingPools(true);
   }, [fetchLendingPools]);
 
   return {

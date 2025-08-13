@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLendingTransaction } from '@/hooks/useLendingTransaction';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const LendingConfirmation = () => {
   const navigate = useNavigate();
@@ -69,6 +69,18 @@ const LendingConfirmation = () => {
 
   const projectedReturn = parseFloat(amount) * (1 + (pool.monthly_interest / 100) * (lendingPeriod / 30));
   const interestEarned = projectedReturn - parseFloat(amount);
+
+  // Clear any caches on mount to ensure fresh data
+  useEffect(() => {
+    // Force refresh network status and any cached balance data
+    if (typeof window !== 'undefined') {
+      // Clear any relevant localStorage caches
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.includes('portfolio') || key.includes('wallet') || key.includes('balance')
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20">
