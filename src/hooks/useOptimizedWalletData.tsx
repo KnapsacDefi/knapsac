@@ -144,12 +144,19 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
       updateErrorState('usdc', null);
       
       const { data: response, error } = await supabase.functions.invoke('get-token-balance', {
-        body: { walletAddress: address, tokenSymbol: 'USDC' }
+        body: { walletAddress: address, chain: 'ethereum' }
       });
 
       if (error) throw error;
       
-      const balance = response?.balance || 0;
+      // Extract USDC balance from the portfolio data
+      const portfolio = response?.portfolio || [];
+      const usdcToken = portfolio.find((token: any) => 
+        token.symbol?.toUpperCase() === 'USDC' || 
+        token.name?.toUpperCase().includes('USD COIN')
+      );
+      
+      const balance = usdcToken ? parseFloat(usdcToken.balance || '0') : 0;
       updateDataField('balance', balance);
       walletCache.setPartial(address, 'usdcBalance', balance);
     } catch (error: any) {
