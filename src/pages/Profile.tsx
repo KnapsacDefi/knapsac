@@ -107,13 +107,7 @@ const Profile = () => {
     checkExistingProfile();
   }, [walletAddress]);
 
-  // Redirect users with complete profiles immediately
-  useEffect(() => {
-    if (existingProfile && existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '') {
-      const redirectTo = searchParams.get('redirect') || '/wallet';
-      navigate(redirectTo, { replace: true });
-    }
-  }, [existingProfile, navigate, searchParams]);
+  // No longer redirect users with complete profiles - they'll see inspiration message
 
   const handleSubmit = async () => {
     if (!selectedProfile) {
@@ -162,10 +156,8 @@ const Profile = () => {
     );
   }
 
-  // Users with complete profiles are redirected via useEffect above
-
-  // Show inspiration message if profile exists but no signed terms
-  if (existingProfile && (!existingProfile.signed_terms_hash || existingProfile.signed_terms_hash.trim() === '')) {
+  // Show inspiration message for users with existing profiles
+  if (existingProfile) {
     const quote = inspirationalQuotes[existingProfile.profile_type as keyof typeof inspirationalQuotes];
     
     return (
@@ -175,7 +167,11 @@ const Profile = () => {
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Sparkles className="w-8 h-8 text-primary" />
-                <CardTitle className="text-2xl">Complete Your Setup</CardTitle>
+                <CardTitle className="text-2xl">
+                  {existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '' 
+                    ? 'Welcome Back!' 
+                    : 'Complete Your Setup'}
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="text-center space-y-6">
@@ -195,18 +191,28 @@ const Profile = () => {
                 </p>
               </div>
 
-              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                <p className="text-sm text-orange-700">
-                  ⚠️ Please complete the terms and conditions to access all features.
-                </p>
-              </div>
+              {(!existingProfile.signed_terms_hash || existingProfile.signed_terms_hash.trim() === '') && (
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-700">
+                    ⚠️ Please complete the terms and conditions to access all features.
+                  </p>
+                </div>
+              )}
 
               <Button
-                onClick={() => navigate(`/terms?type=${encodeURIComponent(existingProfile.profile_type)}`)}
+                onClick={() => {
+                  if (existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '') {
+                    navigate('/wallet');
+                  } else {
+                    navigate(`/terms?type=${encodeURIComponent(existingProfile.profile_type)}`);
+                  }
+                }}
                 className="w-full"
                 size="lg"
               >
-                Continue to Terms & Conditions
+                {existingProfile.signed_terms_hash && existingProfile.signed_terms_hash.trim() !== '' 
+                  ? 'Continue to Wallet' 
+                  : 'Continue to Terms & Conditions'}
               </Button>
             </CardContent>
           </Card>
