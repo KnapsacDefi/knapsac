@@ -169,7 +169,6 @@ const Wallet = () => {
             userProfile={data.userProfile}
             hasSubscription={data.hasSubscription}
             balance={data.balance.toString()}
-            gooddollarBalance={data.gooddollarBalance.toString()}
             loading={data.loading}
             user={user}
             wallets={wallets}

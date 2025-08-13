@@ -12,12 +12,10 @@ interface WalletOverviewProps {
   userProfile?: any;
   hasSubscription?: boolean;
   balance?: string;
-  gooddollarBalance?: string;
   loading?: {
     profile?: boolean;
     subscription?: boolean;
     usdc?: boolean;
-    gooddollar?: boolean;
   };
   user?: any;
   wallets?: any[];
@@ -27,7 +25,6 @@ const WalletOverview = ({
   userProfile,
   hasSubscription,
   balance = "0.00",
-  gooddollarBalance = "0.00",
   loading = {},
   user,
   wallets = []
@@ -88,15 +85,14 @@ const WalletOverview = ({
   }, [hasWallet, wallets, user, fundWalletHook]);
 
   // NOW check for loading state AFTER all hooks are called
-  const isLoading = loading.usdc || loading.gooddollar;
+  const isLoading = loading.usdc;
 
   // Show skeleton while essential data is loading - but AFTER all hooks are called
-  if (loading.profile || loading.usdc || loading.gooddollar) {
+  if (loading.profile || loading.usdc) {
     return <WalletOverviewSkeleton />;
   }
 
   const displayBalance = isLoading ? "Loading..." : `$${balance}`;
-  const displayGooddollarBalance = isLoading ? "Loading..." : `${gooddollarBalance} G$`;
 
   const isStartup = userProfile?.profile_type === 'Startup';
   const isLender = userProfile?.profile_type === 'Lender';
@@ -128,7 +124,7 @@ const WalletOverview = ({
     <section className="bg-card p-6 rounded-2xl shadow-lg border">
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="text-sm text-muted-foreground">Wallet Balances</span>
+          <span className="text-sm text-muted-foreground">Wallet Balance</span>
           <Button
             variant="ghost"
             size="icon"
@@ -139,25 +135,13 @@ const WalletOverview = ({
           </Button>
         </div>
         
-        <div className="space-y-3">
-          <div className="flex items-center justify-center">
-            <Banknote className="w-6 h-6 mr-2 text-blue-500" />
-            <div className="text-center">
-              <div className="text-2xl font-bold">
-                {showBalance ? displayBalance : "••••••"}
-              </div>
-              <div className="text-xs text-muted-foreground">USDC</div>
+        <div className="flex items-center justify-center">
+          <Banknote className="w-6 h-6 mr-2 text-blue-500" />
+          <div className="text-center">
+            <div className="text-2xl font-bold">
+              {showBalance ? displayBalance : "••••••"}
             </div>
-          </div>
-          
-          <div className="flex items-center justify-center">
-            <Banknote className="w-6 h-6 mr-2 text-green-500" />
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {showBalance ? displayGooddollarBalance : "••••••"}
-              </div>
-              <div className="text-xs text-muted-foreground">GoodDollar</div>
-            </div>
+            <div className="text-xs text-muted-foreground">USDC</div>
           </div>
         </div>
       </div>

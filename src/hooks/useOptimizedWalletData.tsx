@@ -8,18 +8,15 @@ interface OptimizedWalletData {
   userProfile: any | null;
   hasSubscription: boolean;
   balance: number;
-  gooddollarBalance: number;
   loading: {
     profile: boolean;
     subscription: boolean;
     usdc: boolean;
-    gooddollar: boolean;
   };
   error: {
     profile: string | null;
     subscription: string | null;
     usdc: string | null;
-    gooddollar: string | null;
   };
   lastUpdated: string | null;
   refresh: () => void;
@@ -41,18 +38,15 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     userProfile: null,
     hasSubscription: false,
     balance: 0,
-    gooddollarBalance: 0,
     loading: {
       profile: false,
       subscription: false,
-      usdc: false,
-      gooddollar: false
+      usdc: false
     },
     error: {
       profile: null,
       subscription: null,
-      usdc: null,
-      gooddollar: null
+      usdc: null
     },
     lastUpdated: null,
     refresh: () => {}
@@ -90,7 +84,6 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
         userProfile: cached.profile,
         hasSubscription: !!cached.subscription,
         balance: cached.usdcBalance,
-        gooddollarBalance: cached.gooddollarBalance,
         lastUpdated: walletCache.getLastUpdated(walletAddress)
       }));
     }
@@ -167,28 +160,6 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     }
   }, [updateLoadingState, updateErrorState, updateDataField]);
 
-  // Fetch GoodDollar balance
-  const fetchGoodDollarBalance = useCallback(async (address: string) => {
-    try {
-      updateLoadingState('gooddollar', true);
-      updateErrorState('gooddollar', null);
-      
-      const { data: response, error } = await supabase.functions.invoke('get-gooddollar-balance', {
-        body: { walletAddress: address }
-      });
-
-      if (error) throw error;
-      
-      const balance = response?.balance || 0;
-      updateDataField('gooddollarBalance', balance);
-      walletCache.setPartial(address, 'gooddollarBalance', balance);
-    } catch (error: any) {
-      console.error('GoodDollar balance fetch error:', error);
-      updateErrorState('gooddollar', error.message || 'Failed to load GoodDollar balance');
-    } finally {
-      updateLoadingState('gooddollar', false);
-    }
-  }, [updateLoadingState, updateErrorState, updateDataField]);
 
   // Refresh function
   const refresh = useCallback(() => {
@@ -201,10 +172,9 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     Promise.all([
       fetchProfile(walletAddress, false),
       fetchSubscription(walletAddress),
-      fetchUSDCBalance(walletAddress),
-      fetchGoodDollarBalance(walletAddress)
+      fetchUSDCBalance(walletAddress)
     ]);
-  }, [walletAddress, fetchProfile, fetchSubscription, fetchUSDCBalance, fetchGoodDollarBalance]);
+  }, [walletAddress, fetchProfile, fetchSubscription, fetchUSDCBalance]);
 
   // Update refresh function in state
   useEffect(() => {
@@ -228,17 +198,13 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
         // Then fetch other data in parallel
         Promise.all([
           fetchSubscription(walletAddress),
-          fetchUSDCBalance(walletAddress),
-          fetchGoodDollarBalance(walletAddress)
+          fetchUSDCBalance(walletAddress)
         ]);
       });
     } else {
       // Background refresh of non-critical data
       setTimeout(() => {
-        Promise.all([
-          fetchUSDCBalance(walletAddress),
-          fetchGoodDollarBalance(walletAddress)
-        ]);
+        fetchUSDCBalance(walletAddress);
       }, 100);
     }
   }, [
@@ -249,8 +215,7 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     loadCachedData,
     fetchProfile,
     fetchSubscription,
-    fetchUSDCBalance,
-    fetchGoodDollarBalance
+    fetchUSDCBalance
   ]);
 
   // Update last updated time
@@ -259,7 +224,7 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
       const lastUpdated = walletCache.getLastUpdated(walletAddress);
       updateDataField('lastUpdated', lastUpdated);
     }
-  }, [walletAddress, updateDataField, data.userProfile, data.balance, data.gooddollarBalance]);
+  }, [walletAddress, updateDataField, data.userProfile, data.balance]);
 
   return data;
 };
