@@ -11,12 +11,13 @@ import AddProfileBanner from "@/components/AddProfileBanner";
 import CreditScore from "@/components/CreditScore";
 import LenderComingSoonBanner from "@/components/LenderComingSoonBanner";
 import LendingPoolsSection from "@/components/LendingPoolsSection";
-import { useWalletData } from "@/hooks/useWalletData";
+import { useOptimizedWalletData } from "@/hooks/useOptimizedWalletData";
 import ProfileBannerSkeleton from "@/components/skeletons/ProfileBannerSkeleton";
+import AddressDisplaySkeleton from "@/components/skeletons/AddressDisplaySkeleton";
+import WalletOverviewSkeleton from "@/components/skeletons/WalletOverviewSkeleton";
 import { useMountingGuard } from "@/hooks/useMountingGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { getWalletAddress } from "@/utils/walletUtils";
-import { useNetworkManager } from "@/hooks/useNetworkManager";
 
 const Wallet = () => {
   // ALWAYS call hooks in the same order at the top
@@ -26,13 +27,10 @@ const Wallet = () => {
   
   // Get auth data from context
   const { ready, authenticated, user, wallets, isStable, walletsLoading, isLoggingOut } = useAuth();
-  const data = useWalletData({ ready, authenticated, user, wallets, isStable, walletsLoading });
+  const data = useOptimizedWalletData({ ready, authenticated, user, wallets, isStable, walletsLoading });
 
   // Get unified wallet address
   const walletAddress = getWalletAddress(wallets, user);
-
-  // Add network management to default to Ethereum - with silent: true
-  const { isCorrectNetwork, currentChain, isValidating } = useNetworkManager('ethereum', true, true);
 
   // Handle logout immediately
   useEffect(() => {
@@ -81,14 +79,17 @@ const Wallet = () => {
     );
   }
 
-  // Show loading state during initialization
-  if (!ready || !isStable || !mountingStable || isValidating) {
+  // Show initial loading only briefly
+  if (!ready || !isStable || !mountingStable) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading wallet...</p>
-        </div>
+      <div className="min-h-screen flex flex-col bg-background pb-20">
+        <DashboardHeader />
+        <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
+          <ProfileBannerSkeleton />
+          <AddressDisplaySkeleton />
+          <WalletOverviewSkeleton />
+        </main>
+        <BottomNavigation />
       </div>
     );
   }
@@ -121,9 +122,24 @@ const Wallet = () => {
   const shouldShowAddProfileBanner = !data.loading.profile && !hasValidHash;
   const shouldShowSubscriptionBanner = hasValidHash && !data.hasSubscription && data.userProfile?.profile_type === 'Startup';
 
+  // Show refresh indicator
+  const showRefreshIndicator = Object.values(data.loading).some(loading => loading);
+
   return (
     <div className="min-h-screen flex flex-col bg-background pb-20">
       <DashboardHeader />
+      
+      {/* Pull-to-refresh indicator */}
+      {showRefreshIndicator && (
+        <div className="px-4 py-2 bg-muted/50 text-center">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="animate-spin rounded-full h-3 w-3 border border-primary border-t-transparent"></div>
+            Updating wallet data...
+            {data.lastUpdated && <span>• Last updated {data.lastUpdated}</span>}
+          </div>
+        </div>
+      )}
+      
       <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
         {/* Progressive banner loading */}
         {data.loading.profile ? (
@@ -135,26 +151,47 @@ const Wallet = () => {
           </>
         )}
         
-        {/* Use unified wallet address for display */}
-        <UserAddressDisplay 
-          walletAddress={walletAddress}
-          isLoading={data.loading.profile}
-        />
+        {/* Address display with loading state */}
+        {!walletAddress ? (
+          <AddressDisplaySkeleton />
+        ) : (
+          <UserAddressDisplay 
+            walletAddress={walletAddress}
+            isLoading={data.loading.profile}
+          />
+        )}
         
-        <WalletOverview 
-          userProfile={data.userProfile}
-          hasSubscription={data.hasSubscription}
-          balance={data.balance}
-          gooddollarBalance={data.gooddollarBalance}
-          loading={data.loading}
-          user={user}
-          wallets={wallets}
-        />
+        {/* Wallet overview with progressive loading */}
+        {(!data.userProfile && data.loading.profile) ? (
+          <WalletOverviewSkeleton />
+        ) : (
+          <WalletOverview 
+            userProfile={data.userProfile}
+            hasSubscription={data.hasSubscription}
+            balance={data.balance.toString()}
+            gooddollarBalance={data.gooddollarBalance.toString()}
+            loading={data.loading}
+            user={user}
+            wallets={wallets}
+          />
+        )}
         
-        <LendingPoolsSection userProfile={data.userProfile} />
+        {/* Show lending pools section only after profile loads */}
+        {data.userProfile && <LendingPoolsSection userProfile={data.userProfile} />}
         
         {/* Show credit score for startups only */}
         {data.userProfile?.profile_type === 'Startup' && <CreditScore />}
+        
+        {/* Manual refresh button */}
+        <div className="text-center pt-4">
+          <button 
+            onClick={data.refresh}
+            disabled={showRefreshIndicator}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            {showRefreshIndicator ? 'Refreshing...' : 'Tap to refresh'}
+          </button>
+        </div>
       </main>
       <BottomNavigation />
     </div>
