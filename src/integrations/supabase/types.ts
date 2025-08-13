@@ -75,6 +75,7 @@ export type Database = {
           claim_date: string | null
           claim_transaction_hash: string | null
           created_at: string
+          expected_claim_date: string
           id: string
           lend_amount: number
           lend_period: number
@@ -94,6 +95,7 @@ export type Database = {
           claim_date?: string | null
           claim_transaction_hash?: string | null
           created_at?: string
+          expected_claim_date: string
           id?: string
           lend_amount: number
           lend_period: number
@@ -113,6 +115,7 @@ export type Database = {
           claim_date?: string | null
           claim_transaction_hash?: string | null
           created_at?: string
+          expected_claim_date?: string
           id?: string
           lend_amount?: number
           lend_period?: number

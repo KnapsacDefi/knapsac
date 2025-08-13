@@ -7,7 +7,6 @@ interface CachedPortfolio {
 interface CalculatedFields {
   is_eligible: boolean;
   claimable_amount: number;
-  eligible_date: string;
 }
 
 class PortfolioCache {
@@ -58,25 +57,27 @@ class PortfolioCache {
 
   // Calculate client-side fields for progressive loading
   calculateFields(entry: any): CalculatedFields {
-    const lendingPool = entry.lending_pool;
-    const currentDate = new Date();
-    const closingDate = new Date(lendingPool.closing_date);
-    const eligibleDate = new Date(closingDate.getTime() + (lendingPool.min_lend_period * 24 * 60 * 60 * 1000));
-    
-    const isEligible = currentDate > eligibleDate;
-    
-    let claimableAmount = 0;
-    if (isEligible) {
-      const eligibleDays = Math.floor((currentDate.getTime() - closingDate.getTime()) / (24 * 60 * 60 * 1000));
-      const eligibleMonths = eligibleDays / 30;
-      const interestMultiplier = 1 + (eligibleMonths * (parseFloat(lendingPool.monthly_interest) / 100));
-      claimableAmount = parseFloat(entry.lend_amount) * interestMultiplier;
+    if (!entry.lending_pool || !entry.lend_period) {
+      return {
+        is_eligible: false,
+        claimable_amount: 0
+      };
     }
+
+    // Check eligibility based on expected_claim_date from database
+    const now = new Date();
+    const expectedClaimDate = new Date(entry.expected_claim_date);
+    const isEligible = now >= expectedClaimDate && entry.payment_status !== 'completed';
+    
+    // Calculate claimable amount based on interest
+    const principal = parseFloat(entry.lend_amount) || 0;
+    const monthlyInterest = parseFloat(entry.lending_pool.monthly_interest) || 0;
+    const periods = entry.lend_period / 30; // Convert days to months
+    const interest = principal * (monthlyInterest / 100) * periods;
     
     return {
       is_eligible: isEligible,
-      claimable_amount: claimableAmount,
-      eligible_date: eligibleDate.toISOString()
+      claimable_amount: principal + interest
     };
   }
 

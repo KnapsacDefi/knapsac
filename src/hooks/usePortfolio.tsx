@@ -55,7 +55,11 @@ export const usePortfolio = () => {
         // Apply client-side calculations to cached data
         const portfolioWithCalculations = cachedData.map(entry => {
           const calculations = portfolioCache.calculateFields(entry);
-          return { ...entry, ...calculations };
+          return { 
+            ...entry, 
+            ...calculations,
+            eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+          };
         });
         setPortfolio(portfolioWithCalculations);
         setLastUpdated(portfolioCache.getLastUpdated());
@@ -89,7 +93,11 @@ export const usePortfolio = () => {
       // Apply client-side calculations
       const portfolioWithCalculations = rawPortfolio.map(entry => {
         const calculations = portfolioCache.calculateFields(entry);
-        return { ...entry, ...calculations };
+        return { 
+          ...entry, 
+          ...calculations,
+          eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+        };
       });
 
       setPortfolio(portfolioWithCalculations);
@@ -110,7 +118,11 @@ export const usePortfolio = () => {
         if (cachedData) {
           const portfolioWithCalculations = cachedData.map(entry => {
             const calculations = portfolioCache.calculateFields(entry);
-            return { ...entry, ...calculations };
+            return { 
+              ...entry, 
+              ...calculations,
+              eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+            };
           });
           setPortfolio(portfolioWithCalculations);
         }

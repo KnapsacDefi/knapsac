@@ -96,6 +96,10 @@ serve(async (req) => {
       )
     }
 
+    // Calculate expected claim date
+    const expectedClaimDate = new Date(lendingPool.closing_date);
+    expectedClaimDate.setDate(expectedClaimDate.getDate() + lend_period);
+
     // Create portfolio entry
     const portfolioData = {
       lending_pool_id,
@@ -106,7 +110,8 @@ serve(async (req) => {
       lend_period,
       lend_transaction_hash,
       recipient_address,
-      payment_status: 'pending'
+      payment_status: 'pending',
+      expected_claim_date: expectedClaimDate.toISOString()
     }
 
     const { data: portfolio, error } = await supabaseClient
