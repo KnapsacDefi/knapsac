@@ -1,18 +1,18 @@
-import { ArrowLeft, Calendar, Clock, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, TrendingUp, Wallet, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNavigation from '@/components/BottomNavigation';
+import PortfolioEntrySkeleton from '@/components/skeletons/PortfolioEntrySkeleton';
 
 const Portfolio = () => {
   const navigate = useNavigate();
   const { authenticated } = useAuth();
-  const { portfolio, isLoading, error } = usePortfolio();
+  const { portfolio, isLoading, isRefreshing, error, lastUpdated, refreshPortfolio } = usePortfolio();
 
   if (!authenticated) {
     return (
@@ -44,15 +44,32 @@ const Portfolio = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 z-10 bg-background border-b">
-        <div className="flex items-center gap-4 p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/wallet')}>
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/wallet')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">My Portfolio</h1>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={refreshPortfolio}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <h1 className="text-xl font-semibold">My Portfolio</h1>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
+        {lastUpdated && !isLoading && (
+          <div className="text-xs text-muted-foreground text-center">
+            Last updated: {lastUpdated}
+            {isRefreshing && " • Refreshing..."}
+          </div>
+        )}
+        
         {error && (
           <Alert>
             <AlertDescription>
@@ -64,18 +81,7 @@ const Portfolio = () => {
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </CardContent>
-              </Card>
+              <PortfolioEntrySkeleton key={i} />
             ))}
           </div>
         ) : portfolio.length === 0 ? (

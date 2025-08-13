@@ -30,6 +30,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Fetch basic portfolio data without heavy calculations
     const { data: portfolio, error } = await supabaseClient
       .from('portfolio')
       .select(`
@@ -56,33 +57,9 @@ serve(async (req) => {
       )
     }
 
-    // Calculate claimable amounts and eligibility
-    const portfolioWithClaims = portfolio?.map(entry => {
-      const lendingPool = entry.lending_pool
-      const currentDate = new Date()
-      const closingDate = new Date(lendingPool.closing_date)
-      const eligibleDate = new Date(closingDate.getTime() + (lendingPool.min_lend_period * 24 * 60 * 60 * 1000))
-      
-      const isEligible = currentDate > eligibleDate
-      
-      let claimableAmount = 0
-      if (isEligible) {
-        const eligibleDays = Math.floor((currentDate.getTime() - closingDate.getTime()) / (24 * 60 * 60 * 1000))
-        const eligibleMonths = eligibleDays / 30
-        const interestMultiplier = 1 + (eligibleMonths * (parseFloat(lendingPool.monthly_interest) / 100))
-        claimableAmount = parseFloat(entry.lend_amount) * interestMultiplier
-      }
-      
-      return {
-        ...entry,
-        is_eligible: isEligible,
-        claimable_amount: claimableAmount,
-        eligible_date: eligibleDate.toISOString()
-      }
-    }) || []
-
+    // Return raw data without calculations - calculations will be done client-side
     return new Response(
-      JSON.stringify({ portfolio: portfolioWithClaims }),
+      JSON.stringify({ portfolio: portfolio || [] }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
