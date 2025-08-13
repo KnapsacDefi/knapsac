@@ -26,7 +26,8 @@ serve(async (req) => {
         )
       `)
       .eq('status', 'published')
-      .order('created_at', { ascending: false })
+      .gt('closing_date', new Date().toISOString())
+      .order('closing_date', { ascending: true })
 
     if (error) {
       console.error('Error fetching lending pools:', error)
