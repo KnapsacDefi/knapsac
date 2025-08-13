@@ -156,11 +156,7 @@ function App() {
                       />
                       <Route 
                         path="/lending-pool/:id" 
-                        element={
-                          <WalletConnectionGuard requireWallet={true}>
-                            <LendingPoolDetail />
-                          </WalletConnectionGuard>
-                        } 
+                        element={<LendingPoolDetail />} 
                       />
                        <Route 
                         path="/lending/:poolId/tokens" 
