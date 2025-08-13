@@ -181,12 +181,29 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     setData(prev => ({ ...prev, refresh }));
   }, [refresh]);
 
-  // Main effect for data fetching
+  // Main effect for data fetching with timeout protection
   useEffect(() => {
     if (!ready || !authenticated || !isStable || !walletAddress) return;
 
+    console.log('🔄 useOptimizedWalletData: Starting data fetch for', walletAddress);
+
     // Load cached data immediately
     loadCachedData();
+
+    // Add timeout to prevent hanging
+    const fetchTimeout = setTimeout(() => {
+      console.log('⚠️ useOptimizedWalletData: Fetch timeout reached, forcing completion');
+      
+      // Force complete any pending loading states
+      setData(prev => ({
+        ...prev,
+        loading: {
+          profile: false,
+          subscription: false,
+          usdc: false
+        }
+      }));
+    }, 10000); // 10 second timeout
 
     // Check if we need to fetch fresh data
     const cached = walletCache.get(walletAddress);
@@ -195,18 +212,34 @@ export const useOptimizedWalletData = (params: UseOptimizedWalletDataParams): Op
     if (shouldFetchFresh) {
       // Fetch critical data first (profile)
       fetchProfile(walletAddress, true).then(() => {
-        // Then fetch other data in parallel
-        Promise.all([
-          fetchSubscription(walletAddress),
-          fetchUSDCBalance(walletAddress)
-        ]);
+        // Then fetch other data with timeout protection
+        Promise.race([
+          Promise.all([
+            fetchSubscription(walletAddress),
+            fetchUSDCBalance(walletAddress)
+          ]),
+          new Promise(resolve => setTimeout(resolve, 5000)) // 5 second race
+        ]).finally(() => {
+          console.log('✅ useOptimizedWalletData: Fetch completed');
+          clearTimeout(fetchTimeout);
+        });
+      }).catch(error => {
+        console.error('❌ useOptimizedWalletData: Profile fetch failed:', error);
+        clearTimeout(fetchTimeout);
       });
     } else {
-      // Background refresh of non-critical data
-      setTimeout(() => {
-        fetchUSDCBalance(walletAddress);
-      }, 100);
+      // Background refresh with timeout
+      Promise.race([
+        fetchUSDCBalance(walletAddress),
+        new Promise(resolve => setTimeout(resolve, 2000))
+      ]).finally(() => {
+        clearTimeout(fetchTimeout);
+      });
     }
+
+    return () => {
+      clearTimeout(fetchTimeout);
+    };
   }, [
     ready, 
     authenticated, 

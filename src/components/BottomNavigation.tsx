@@ -83,7 +83,7 @@ const BottomNavigation = () => {
       {
         icon: Home,
         label: "Wallet", 
-        path: "/",
+        path: "/wallet",
       },
       {
         icon: User,
@@ -108,7 +108,7 @@ const BottomNavigation = () => {
     {
       icon: Home,
       label: "Wallet",
-      path: "/",
+      path: "/wallet",
     },
     {
       icon: null, // Skeleton placeholder for potential portfolio
@@ -133,7 +133,7 @@ const BottomNavigation = () => {
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || 
-                          (item.path === "/" && location.pathname === "/wallet");
+                          (item.path === "/wallet" && location.pathname === "/");
           
           // Handle skeleton items
           if (item.skeleton) {

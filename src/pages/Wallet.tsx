@@ -40,31 +40,38 @@ const Wallet = () => {
     }
   }, [isLoggingOut, navigate]);
 
-  // Handle authentication redirects
+  // Handle authentication redirects with timeout
   useEffect(() => {
     if (!isStable || !mountingStable || hasNavigated || isLoggingOut) return;
 
-    // Redirect if not authenticated and we're stable
-    if (ready && !authenticated) {
-      console.log('Wallet: User not authenticated, redirecting to home');
-      setHasNavigated(true);
-      navigate('/');
-      return;
-    }
+    // Add timeout to prevent infinite loading
+    const authTimeout = setTimeout(() => {
+      if (ready && !authenticated) {
+        console.log('Wallet: User not authenticated, redirecting to home');
+        setHasNavigated(true);
+        navigate('/');
+      }
+    }, 100);
+
+    return () => clearTimeout(authTimeout);
   }, [ready, authenticated, isStable, mountingStable, hasNavigated, isLoggingOut, navigate]);
 
-  // Handle Service Provider redirection
+  // Handle Service Provider redirection with timeout
   useEffect(() => {
     if (!isStable || !mountingStable || hasNavigated || !authenticated || isLoggingOut) return;
 
-    if (
-      data.userProfile?.profile_type === 'Service Provider' && 
-      !data.loading.profile
-    ) {
-      console.log('Wallet: Service Provider detected, redirecting to motivation page');
-      setHasNavigated(true);
-      navigate('/service-provider-motivation');
-    }
+    const redirectTimeout = setTimeout(() => {
+      if (
+        data.userProfile?.profile_type === 'Service Provider' && 
+        !data.loading.profile
+      ) {
+        console.log('Wallet: Service Provider detected, redirecting to motivation page');
+        setHasNavigated(true);
+        navigate('/service-provider-motivation');
+      }
+    }, 100);
+
+    return () => clearTimeout(redirectTimeout);
   }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, authenticated, isLoggingOut, navigate]);
 
   // Show logout state immediately
