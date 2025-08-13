@@ -196,7 +196,7 @@ const LendingPoolDetail = () => {
                 <div className="flex justify-between text-primary">
                   <span className="text-sm font-semibold">Estimated Total Return:</span>
                   <span className="font-bold">
-                    ${lendAmount ? ((estimatedInterest) * parseFloat(lendAmount)).toFixed(4) : '0'}
+                    ${lendAmount ? ((estimatedInterest / 100) * parseFloat(lendAmount)).toFixed(4) : '0'}
                   </span>
                 </div>
               </div>
