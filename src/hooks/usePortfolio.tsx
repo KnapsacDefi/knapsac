@@ -151,9 +151,16 @@ export const usePortfolio = () => {
     lend_transaction_hash?: string;
     recipient_address: string;
   }) => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('create-portfolio-entry', {
-        body: entryData
+        body: {
+          ...entryData,
+          user_id: user.id
+        }
       });
 
       if (error) {
