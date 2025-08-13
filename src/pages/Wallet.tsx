@@ -131,7 +131,6 @@ const Wallet = () => {
           <>
             {shouldShowAddProfileBanner && <AddProfileBanner />}
             {shouldShowSubscriptionBanner && <SubscriptionBanner />}
-            {data.userProfile?.profile_type === 'Lender' && <LenderComingSoonBanner />}
           </>
         )}
         
