@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.get-portfolio]
 verify_jwt = false
+
+[functions.get-lending-pools]
+verify_jwt = false
+
+[functions.get-lending-pool-detail]
+verify_jwt = false

@@ -47,12 +47,6 @@ export const useLendingPoolDetail = (poolId: string | undefined) => {
       setIsLoading(true);
       setIsFundingLoading(true);
 
-      // Ensure user is authenticated before making the request
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Authentication required to view lending pool details');
-      }
-
       // Fetch full pool detail directly without caching
       const { data, error: fetchError } = await supabase.functions.invoke('get-lending-pool-detail', {
         body: { id: poolId }

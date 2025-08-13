@@ -12,32 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    // Get the authorization header to forward the JWT
-    const authHeader = req.headers.get('authorization')
-    
-    // Create authenticated client using anon key + JWT
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: authHeader ? { authorization: authHeader } : {}
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // Only select safe, non-sensitive data for public viewing
     const { data: lendingPools, error } = await supabaseClient
       .from('lending_pool')
       .select(`
-        id,
-        target_amount,
-        monthly_interest,
-        closing_date,
-        min_lend_period,
-        max_lend_period,
-        status,
-        created_at,
+        *,
         portfolio!lending_pool_id (
           lend_amount
         )

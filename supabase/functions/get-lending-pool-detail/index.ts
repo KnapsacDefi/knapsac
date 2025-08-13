@@ -24,39 +24,15 @@ serve(async (req) => {
       )
     }
 
-    // Get the authorization header to forward the JWT
-    const authHeader = req.headers.get('authorization')
-    
-    // Create authenticated client using anon key + JWT
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: authHeader ? { authorization: authHeader } : {}
-        }
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
-
-    // Get authenticated user
-    const { data: { user } } = await supabaseClient.auth.getUser()
 
     // First get basic pool info
     const { data: lendingPool, error } = await supabaseClient
       .from('lending_pool')
-      .select(`
-        id,
-        target_amount,
-        monthly_interest,
-        closing_date,
-        min_lend_period,
-        max_lend_period,
-        status,
-        created_at,
-        updated_at,
-        ${user ? 'user_id, recipient_address,' : ''}
-        startup_id
-      `)
+      .select('*')
       .eq('id', poolId)
       .eq('status', 'published')
       .maybeSingle()
