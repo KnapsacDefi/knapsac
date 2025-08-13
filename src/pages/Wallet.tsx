@@ -134,6 +134,12 @@ const Wallet = () => {
           </>
         )}
         
+        {/* Use unified wallet address for display */}
+        <UserAddressDisplay 
+          walletAddress={walletAddress}
+          isLoading={data.loading.profile}
+        />
+        
         <WalletOverview 
           userProfile={data.userProfile}
           hasSubscription={data.hasSubscription}
@@ -142,12 +148,6 @@ const Wallet = () => {
           loading={data.loading}
           user={user}
           wallets={wallets}
-        />
-        
-        {/* Use unified wallet address for display */}
-        <UserAddressDisplay 
-          walletAddress={walletAddress}
-          isLoading={data.loading.profile}
         />
         
         {/* Show credit score for startups only */}
