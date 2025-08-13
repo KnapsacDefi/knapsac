@@ -2,48 +2,44 @@
 import { Home, User, Briefcase } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfileData } from "@/hooks/useProfileData";
+import { useState } from "react";
 
 const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, authenticated } = usePrivy();
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const { authenticated, user, wallets } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!authenticated) return;
-      
-      // Get wallet address from user or connected wallets
-      const walletAddress = user?.wallet?.address;
-      if (!walletAddress) return;
+  // Get wallet address - try multiple sources
+  const walletAddress = wallets?.[0]?.address || user?.wallet?.address || null;
+  
+  // Use the profile data hook for consistent profile fetching
+  const { profile: userProfile, isLoading: profileLoading } = useProfileData({
+    walletAddress,
+    enabled: authenticated && !!walletAddress
+  });
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('crypto_address', walletAddress)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-        } else {
-          setUserProfile(data);
-        }
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-      }
-    };
-
-    fetchUserProfile();
-  }, [user?.wallet?.address, authenticated]);
+  // Debug logging to track profile loading
+  console.log('🔍 BottomNavigation Debug:', {
+    authenticated,
+    walletAddress,
+    userProfile,
+    profileLoading,
+    walletsCount: wallets?.length
+  });
 
   const getNavItems = () => {
     const isServiceProvider = userProfile?.profile_type === 'Service Provider';
     const isLender = userProfile?.profile_type === 'Lender';
-    const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
+    
+    console.log('🔍 Navigation Items Debug:', {
+      isServiceProvider,
+      isLender,
+      profileType: userProfile?.profile_type,
+      authenticated
+    });
     
     if (isServiceProvider) {
       return [
@@ -63,8 +59,8 @@ const BottomNavigation = () => {
     const baseNavItems = [
       {
         icon: Home,
-        label: "Wallet",
-        path: "/wallet",
+        label: "Wallet", 
+        path: "/",
       },
       {
         icon: User,
@@ -73,8 +69,8 @@ const BottomNavigation = () => {
       },
     ];
 
-    // Add Portfolio tab for lenders with signed terms
-    if (isLender && hasSignedTerms) {
+    // Add Portfolio tab for all lenders (removed signed terms requirement)
+    if (isLender) {
       baseNavItems.splice(1, 0, {
         icon: Briefcase,
         label: "Portfolio",
@@ -92,7 +88,8 @@ const BottomNavigation = () => {
       <div className="flex items-center justify-around px-4 py-2 max-w-md mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path || 
+                          (item.path === "/" && location.pathname === "/wallet");
           
           return (
             <button

@@ -160,15 +160,6 @@ const WalletOverview = ({
         >
           <span className="text-xs">{isLender ? 'Claim' : 'Withdraw'}</span>
         </Button>
-        {isLender && hasSignedTerms && (
-          <Button 
-            variant="outline" 
-            className="h-12 flex flex-col gap-1"
-            onClick={() => navigate('/portfolio')}
-          >
-            <span className="text-xs">Portfolio</span>
-          </Button>
-        )}
         {isStartup && hasSignedTerms && (
           <Button 
             variant="outline" 
