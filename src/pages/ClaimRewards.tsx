@@ -241,18 +241,29 @@ const ClaimRewards = () => {
               </AlertDescription>
             </Alert>
           ) : portfolioEntry.is_eligible ? (
-            <Button
-              onClick={claimRewards}
-              disabled={isProcessing}
-              className="w-full"
-              size="lg"
-            >
-              {isProcessing ? (
-                step === 'confirming' ? "Confirming Transaction..." : "Processing Claim..."
-              ) : (
-                `Claim ${portfolioEntry.claimable_amount.toFixed(4)} ${portfolioEntry.lend_token}`
-              )}
-            </Button>
+            <>
+              <Button
+                onClick={() => navigate(`/claim/${portfolioEntry.id}/withdraw`)}
+                disabled={isProcessing}
+                className="w-full"
+                size="lg"
+              >
+                Withdraw to Mobile Money
+              </Button>
+              <Button
+                variant="outline"
+                onClick={claimRewards}
+                disabled={isProcessing}
+                className="w-full"
+                size="lg"
+              >
+                {isProcessing ? (
+                  step === 'confirming' ? "Confirming Transaction..." : "Processing Claim..."
+                ) : (
+                  `Direct Claim ${portfolioEntry.claimable_amount.toFixed(4)} ${portfolioEntry.lend_token}`
+                )}
+              </Button>
+            </>
           ) : (
             <Alert>
               <Clock className="h-4 w-4" />

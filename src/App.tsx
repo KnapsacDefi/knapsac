@@ -23,6 +23,7 @@ import LendingTokenSelection from '@/pages/LendingTokenSelection';
 import LendingConfirmation from '@/pages/LendingConfirmation';
 import Portfolio from '@/pages/Portfolio';
 import ClaimRewards from '@/pages/ClaimRewards';
+import ClaimWithdrawal from '@/pages/ClaimWithdrawal';
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
 import { supabase } from '@/integrations/supabase/client';
@@ -190,6 +191,14 @@ function App() {
                         element={
                           <WalletConnectionGuard requireWallet={true}>
                             <ClaimRewards />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/claim/:id/withdraw" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <ClaimWithdrawal />
                           </WalletConnectionGuard>
                         } 
                       />
