@@ -29,20 +29,29 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
+    // Fast query for basic pool info only - no joins
     const { data: lendingPool, error } = await supabaseClient
       .from('lending_pool')
       .select(`
-        *,
-        portfolio!lending_pool_id (
-          lend_amount
-        )
+        id,
+        target_amount,
+        monthly_interest,
+        closing_date,
+        min_lend_period,
+        max_lend_period,
+        recipient_address,
+        status,
+        created_at,
+        updated_at,
+        user_id,
+        startup_id
       `)
       .eq('id', poolId)
       .eq('status', 'published')
       .maybeSingle()
 
     if (error) {
-      console.error('Error fetching lending pool:', error)
+      console.error('Error fetching basic lending pool:', error)
       return new Response(
         JSON.stringify({ error: error.message }),
         { 
@@ -62,23 +71,13 @@ serve(async (req) => {
       )
     }
 
-    // Calculate funding progress for the pool
-    const totalLent = lendingPool.portfolio?.reduce((sum: number, p: any) => sum + parseFloat(p.lend_amount || '0'), 0) || 0
-    const progress = (totalLent / parseFloat(lendingPool.target_amount)) * 100
-    
-    const poolWithProgress = {
-      ...lendingPool,
-      total_lent: totalLent,
-      funding_progress: Math.min(progress, 100)
-    }
-
     return new Response(
-      JSON.stringify({ pool: poolWithProgress }),
+      JSON.stringify({ pool: lendingPool }),
       { 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+          'Cache-Control': 'public, max-age=600' // Cache for 10 minutes
         } 
       }
     )

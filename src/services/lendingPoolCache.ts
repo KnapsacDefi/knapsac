@@ -10,11 +10,13 @@ interface CachedLendingPools {
 
 class LendingPoolCache {
   private readonly CACHE_KEY = 'lending_pool_cache';
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+  private readonly BASIC_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for basic info
   private readonly CACHE_VERSION = '1.0';
 
-  private isExpired(timestamp: number): boolean {
-    return Date.now() - timestamp > this.CACHE_DURATION;
+  private isExpired(timestamp: number, isBasic = false): boolean {
+    const duration = isBasic ? this.BASIC_CACHE_DURATION : this.CACHE_DURATION;
+    return Date.now() - timestamp > duration;
   }
 
   private getCache(): CachedLendingPools {
@@ -44,7 +46,10 @@ class LendingPoolCache {
       
       if (!cachedPool) return null;
       
-      if (cachedPool.version !== this.CACHE_VERSION || this.isExpired(cachedPool.timestamp)) {
+      // Check if it's basic info (no funding data) for longer cache
+      const isBasic = !cachedPool.data.total_lent && !cachedPool.data.funding_progress;
+      
+      if (cachedPool.version !== this.CACHE_VERSION || this.isExpired(cachedPool.timestamp, isBasic)) {
         this.invalidate(poolId);
         return null;
       }

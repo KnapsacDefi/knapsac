@@ -13,20 +13,22 @@ import { Label } from '@/components/ui/label';
 import { useLendingPoolDetail } from '@/hooks/useLendingPoolDetail';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNavigation from '@/components/BottomNavigation';
+import LendingPoolDetailSkeleton from '@/components/skeletons/LendingPoolDetailSkeleton';
 
 const LendingPoolDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { authenticated } = useAuth();
-  const { lendingPool: pool, isLoading } = useLendingPoolDetail(id);
+  const { lendingPool: pool, basicPool, isLoading, isFundingLoading } = useLendingPoolDetail(id);
   const [lendingPeriod, setLendingPeriod] = useState<number[]>([30]);
   const [lendAmount, setLendAmount] = useState<string>('');
 
   useEffect(() => {
-    if (pool) {
-      setLendingPeriod([pool.min_lend_period]);
+    const activePool = pool || basicPool;
+    if (activePool) {
+      setLendingPeriod([activePool.min_lend_period]);
     }
-  }, [pool]);
+  }, [pool, basicPool]);
 
 
   if (!authenticated) {
@@ -41,22 +43,12 @@ const LendingPoolDetail = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="flex items-center gap-4 p-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/wallet')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-semibold">Loading...</h1>
-          </div>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
+    return <LendingPoolDetailSkeleton />;
   }
 
-  if (!pool) {
+  const activePool = pool || basicPool;
+  
+  if (!activePool) {
     return (
       <div className="min-h-screen bg-background pb-20">
         <div className="sticky top-0 z-10 bg-background border-b">
@@ -80,10 +72,10 @@ const LendingPoolDetail = () => {
   }
 
   const selectedPeriod = lendingPeriod[0];
-  const monthlyInterest = pool.monthly_interest;
+  const monthlyInterest = activePool.monthly_interest;
   const periodsInMonths = selectedPeriod / 30;
   const estimatedInterest = monthlyInterest * periodsInMonths;
-  const isClosingSoon = new Date(pool.closing_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const isClosingSoon = new Date(activePool.closing_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const handleProceed = () => {
     console.log('Proceeding with lendAmount:', lendAmount);
@@ -93,9 +85,9 @@ const LendingPoolDetail = () => {
       return;
     }
     
-    navigate(`/lending/${pool.id}/tokens`, { 
+    navigate(`/lending/${activePool.id}/tokens`, { 
       state: { 
-        pool,
+        pool: pool || activePool,
         selectedPeriod,
         lendAmount: parseFloat(lendAmount) // Convert to number
       } 
@@ -122,6 +114,50 @@ const LendingPoolDetail = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Pool Info Card - Shows basic info immediately */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Pool Overview</CardTitle>
+              <Badge variant="secondary">{activePool.status}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Target Amount</p>
+                <p className="text-xl font-semibold">${activePool.target_amount.toLocaleString()}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Monthly Interest</p>
+                <p className="text-xl font-semibold text-green-600">{activePool.monthly_interest}%</p>
+              </div>
+            </div>
+            
+            {pool && !isFundingLoading ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Funding Progress</span>
+                  <span>{pool.funding_progress.toFixed(1)}%</span>
+                </div>
+                <Progress value={pool.funding_progress} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  ${pool.total_lent?.toLocaleString() || '0'} of ${activePool.target_amount.toLocaleString()} raised
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Funding Progress</span>
+                  <span className="text-muted-foreground">Loading...</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full animate-pulse" />
+                <p className="text-xs text-muted-foreground">Loading funding details...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -165,14 +201,14 @@ const LendingPoolDetail = () => {
               <Slider
                 value={lendingPeriod}
                 onValueChange={setLendingPeriod}
-                min={pool.min_lend_period}
-                max={pool.max_lend_period}
+                min={activePool.min_lend_period}
+                max={activePool.max_lend_period}
                 step={1}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>{pool.min_lend_period} days</span>
-                <span>{pool.max_lend_period} days</span>
+                <span>{activePool.min_lend_period} days</span>
+                <span>{activePool.max_lend_period} days</span>
               </div>
             </div>
 

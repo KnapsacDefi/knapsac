@@ -19,12 +19,24 @@ interface LendingPool {
   funding_progress: number;
 }
 
+interface BasicLendingPool {
+  id: string;
+  target_amount: number;
+  monthly_interest: number;
+  closing_date: string;
+  min_lend_period: number;
+  max_lend_period: number;
+  status: string;
+}
+
 export const useLendingPoolDetail = (poolId: string | undefined) => {
   const [lendingPool, setLendingPool] = useState<LendingPool | null>(null);
+  const [basicPool, setBasicPool] = useState<BasicLendingPool | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFundingLoading, setIsFundingLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const fetchLendingPoolDetail = useCallback(async (useCache = true, isBackgroundRefresh = false) => {
+  const fetchBasicPoolInfo = useCallback(async () => {
     if (!poolId) {
       setError('Pool ID is required');
       setIsLoading(false);
@@ -32,81 +44,87 @@ export const useLendingPoolDetail = (poolId: string | undefined) => {
     }
 
     try {
-      if (!isBackgroundRefresh) {
-        setIsLoading(true);
-      }
       setError(null);
 
-      // Try to get from cache first
-      if (useCache) {
-        const cachedPool = lendingPoolCache.get(poolId);
-        if (cachedPool) {
-          setLendingPool(cachedPool);
-          if (!isBackgroundRefresh) {
-            setIsLoading(false);
-          }
-          
-          // Still fetch fresh data in background
-          if (!isBackgroundRefresh) {
-            setTimeout(() => fetchLendingPoolDetail(false, true), 100);
-          }
-          return;
-        }
+      // Try cache first for immediate display
+      const cachedPool = lendingPoolCache.get(poolId);
+      if (cachedPool) {
+        setBasicPool(cachedPool);
+        setLendingPool(cachedPool);
+        setIsLoading(false);
+        setIsFundingLoading(false);
+        return;
       }
 
-      const { data, error: fetchError } = await supabase.functions.invoke('get-lending-pool-detail', {
-        body: { 
-          id: poolId,
-          timestamp: useCache ? undefined : Date.now() 
-        }
+      // Fetch basic info quickly without complex joins
+      const { data: basicData, error: basicError } = await supabase.functions.invoke('get-lending-pool-basic', {
+        body: { id: poolId }
       });
 
-      if (fetchError) {
-        throw fetchError;
-      }
+      if (basicError) throw basicError;
+      if (!basicData.pool) throw new Error('Lending pool not found');
 
-      if (!data.pool) {
-        throw new Error('Lending pool not found');
-      }
+      setBasicPool(basicData.pool);
+      setIsLoading(false);
 
-      const poolData = data.pool;
-      setLendingPool(poolData);
-      
-      // Cache the result
-      lendingPoolCache.set(poolId, poolData);
+      // Now fetch full data with funding info in parallel
+      fetchFullPoolDetail(basicData.pool);
       
     } catch (err: any) {
-      console.error('Error fetching lending pool detail:', err);
-      const errorMessage = err.message || 'Failed to fetch lending pool details';
-      setError(errorMessage);
-      
-      // If it's a background refresh and we have cached data, don't clear it
-      if (!isBackgroundRefresh) {
-        setLendingPool(null);
-      }
-    } finally {
-      if (!isBackgroundRefresh) {
-        setIsLoading(false);
-      }
+      console.error('Error fetching basic pool info:', err);
+      setError(err.message || 'Failed to fetch pool details');
+      setIsLoading(false);
     }
   }, [poolId]);
 
+  const fetchFullPoolDetail = useCallback(async (basicPoolData?: BasicLendingPool) => {
+    if (!poolId) return;
+
+    try {
+      const { data, error: fetchError } = await supabase.functions.invoke('get-lending-pool-detail', {
+        body: { id: poolId }
+      });
+
+      if (fetchError) throw fetchError;
+      if (!data.pool) throw new Error('Lending pool not found');
+
+      const fullPoolData = data.pool;
+      setLendingPool(fullPoolData);
+      
+      // Cache the full result
+      lendingPoolCache.set(poolId, fullPoolData);
+      
+    } catch (err: any) {
+      console.error('Error fetching full pool detail:', err);
+      // Don't overwrite basic info if we have it
+      if (!basicPoolData && !basicPool) {
+        setError(err.message || 'Failed to fetch funding details');
+      }
+    } finally {
+      setIsFundingLoading(false);
+    }
+  }, [poolId, basicPool]);
+
   useEffect(() => {
     if (poolId) {
-      fetchLendingPoolDetail();
+      fetchBasicPoolInfo();
     }
-  }, [fetchLendingPoolDetail, poolId]);
+  }, [fetchBasicPoolInfo, poolId]);
 
   const refreshPool = useCallback(() => {
     if (poolId) {
       lendingPoolCache.invalidate(poolId);
-      fetchLendingPoolDetail(false);
+      setIsLoading(true);
+      setIsFundingLoading(true);
+      fetchBasicPoolInfo();
     }
-  }, [poolId, fetchLendingPoolDetail]);
+  }, [poolId, fetchBasicPoolInfo]);
 
   return {
     lendingPool,
+    basicPool,
     isLoading,
+    isFundingLoading,
     error,
     refreshPool
   };
