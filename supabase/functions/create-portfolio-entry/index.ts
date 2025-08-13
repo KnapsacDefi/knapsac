@@ -19,15 +19,16 @@ serve(async (req) => {
       chain,
       lend_period,
       lend_transaction_hash,
-      recipient_address
+      recipient_address,
+      user_id
     } = await req.json()
 
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    // Validate required fields including user_id
+    if (!user_id) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
+        JSON.stringify({ error: 'User ID required' }),
         { 
-          status: 401, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -35,26 +36,8 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
-    // Get user from token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-    
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
 
     // Validate required fields
     if (!lending_pool_id || !lend_amount || !lend_token || !chain || !lend_period || !recipient_address) {
@@ -103,7 +86,7 @@ serve(async (req) => {
     // Create portfolio entry
     const portfolioData = {
       lending_pool_id,
-      user_id: user.id,
+      user_id,
       lend_amount: parseFloat(lend_amount),
       lend_token,
       chain,

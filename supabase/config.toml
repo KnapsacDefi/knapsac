@@ -1,5 +1,8 @@
 project_id = "jxfqfrfpaiijyvciclrw"
 
+[functions.create-portfolio-entry]
+verify_jwt = false
+
 [functions.get-secret]
 verify_jwt = false
 
