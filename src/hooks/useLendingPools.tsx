@@ -35,6 +35,12 @@ export const useLendingPools = () => {
       setIsLoading(true);
       setError(null);
 
+      // Ensure user is authenticated before making the request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required to view lending pools');
+      }
+
       // Add timestamp to force fresh data when needed
       const url = forceRefresh || shouldForceRefresh ? 
         'get-lending-pools' : 

@@ -11,13 +11,23 @@ interface LendingPoolsSectionProps {
 
 const LendingPoolsSection = ({ userProfile }: LendingPoolsSectionProps) => {
   const navigate = useNavigate();
-  const { lendingPools, isLoading: poolsLoading } = useLendingPools();
+  const { lendingPools, isLoading: poolsLoading, error } = useLendingPools();
 
   const isLender = userProfile?.profile_type === 'Lender';
   const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
 
   // Only render for Lenders with signed terms who have available pools
-  if (!isLender || !hasSignedTerms || poolsLoading || lendingPools.length === 0) {
+  if (!isLender || !hasSignedTerms || poolsLoading) {
+    return null;
+  }
+
+  // Show error if authentication failed
+  if (error && error.includes('Authentication required')) {
+    return null; // Let the auth system handle redirects
+  }
+
+  // Don't render if no pools available
+  if (lendingPools.length === 0) {
     return null;
   }
 
