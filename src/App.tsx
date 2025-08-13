@@ -168,11 +168,7 @@ function App() {
                       />
                       <Route 
                         path="/lending-confirmation" 
-                        element={
-                          <WalletConnectionGuard requireWallet={true}>
-                            <LendingConfirmation />
-                          </WalletConnectionGuard>
-                        } 
+                        element={<LendingConfirmation />} 
                       />
                       <Route 
                         path="/portfolio" 
