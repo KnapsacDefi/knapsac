@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Target, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Target, TrendingUp, Users, DollarSign, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -18,7 +18,13 @@ import LendingPoolDetailSkeleton from '@/components/skeletons/LendingPoolDetailS
 const LendingPoolDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { authenticated } = useAuth();
+  const { 
+    ready, 
+    authenticated, 
+    walletsLoading, 
+    hasConnectedWallet, 
+    isStable 
+  } = useAuth();
   const { lendingPool: pool, basicPool, isLoading, isFundingLoading } = useLendingPoolDetail(id);
   const [lendingPeriod, setLendingPeriod] = useState<number[]>([30]);
   const [lendAmount, setLendAmount] = useState<string>('');
@@ -30,17 +36,24 @@ const LendingPoolDetail = () => {
     }
   }, [pool, basicPool]);
 
+  // Calculate system readiness
+  const systemReady = ready && authenticated && !walletsLoading && hasConnectedWallet && isStable;
+  const hasValidAmount = lendAmount && parseFloat(lendAmount) > 0;
+  const canProceed = systemReady && hasValidAmount && (pool || basicPool);
 
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <div className="p-4 text-center">
-          <p className="text-muted-foreground">Please log in to view lending details</p>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
-  }
+  // Determine button state and message
+  const getButtonState = () => {
+    if (!ready) return { disabled: true, text: 'Loading authentication...', loading: true };
+    if (!authenticated) return { disabled: true, text: 'Please log in', loading: false };
+    if (walletsLoading) return { disabled: true, text: 'Loading wallet...', loading: true };
+    if (!hasConnectedWallet) return { disabled: true, text: 'Please connect wallet', loading: false };
+    if (!isStable) return { disabled: true, text: 'Initializing...', loading: true };
+    if (isLoading) return { disabled: true, text: 'Loading pool data...', loading: true };
+    if (!hasValidAmount) return { disabled: true, text: 'Enter amount to proceed', loading: false };
+    return { disabled: false, text: 'Proceed to Token Selection', loading: false };
+  };
+
+  const buttonState = getButtonState();
 
   if (isLoading) {
     return <LendingPoolDetailSkeleton />;
@@ -247,8 +260,10 @@ const LendingPoolDetail = () => {
           onClick={handleProceed}
           className="w-full h-12"
           size="lg"
+          disabled={buttonState.disabled}
         >
-          Proceed to Token Selection
+          {buttonState.loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {buttonState.text}
         </Button>
       </div>
 
