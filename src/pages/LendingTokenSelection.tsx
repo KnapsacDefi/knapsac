@@ -61,6 +61,9 @@ const LendingTokenSelection = () => {
     const tokenBalance = getTokenBalance(token.symbol, token.chain);
     const balance = tokenBalance?.balance || '0.00';
 
+    console.log('Token selection - lendAmount from state:', lendAmount);
+    console.log('Using amount:', lendAmount || balance);
+
     navigate('/lending-confirmation', { 
       state: { 
         pool,

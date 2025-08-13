@@ -88,11 +88,18 @@ const LendingPoolDetail = () => {
   const isClosingSoon = new Date(pool.closing_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const handleProceed = () => {
+    console.log('Proceeding with lendAmount:', lendAmount);
+    
+    if (!lendAmount || parseFloat(lendAmount) <= 0) {
+      alert('Please enter a valid lending amount');
+      return;
+    }
+    
     navigate(`/lending/${pool.id}/tokens`, { 
       state: { 
         pool,
         selectedPeriod,
-        lendAmount 
+        lendAmount: parseFloat(lendAmount) // Convert to number
       } 
     });
   };

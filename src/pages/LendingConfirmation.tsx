@@ -15,6 +15,8 @@ const LendingConfirmation = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   
   const { pool, token, amount, lendingPeriod, balance } = location.state || {};
+  
+  console.log('Lending confirmation - received amount:', amount);
 
   const {
     handleLend,
