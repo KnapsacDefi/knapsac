@@ -156,13 +156,18 @@ export const useTokenBalances = ({ walletAddress, enabled = true }: UseTokenBala
       
       return new Promise<void>(async (resolve) => {
         try {
-          console.log(`Fetching token balances for ${chain}`);
+          console.log(`Fetching token balances for ${chain} with wallet: ${walletAddress}`);
+          console.log('Request payload:', { walletAddress, chain });
+          
           const { data, error } = await supabase.functions.invoke('get-token-balance', {
             body: { walletAddress, chain }
           });
+          
+          console.log(`Response for ${chain}:`, { data, error });
 
           if (error) {
             console.error(`Error fetching ${chain} balances:`, error);
+            console.error('Full error object:', JSON.stringify(error, null, 2));
             // Update tokens for this chain with error state
             Object.keys(balances).forEach(key => {
               if (balances[key].chain === chain) {

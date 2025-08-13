@@ -12,11 +12,22 @@ serve(async (req) => {
   }
 
   try {
-    const { walletAddress, chain } = await req.json();
+    const requestBody = await req.json();
+    console.log('Received request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { walletAddress, chain } = requestBody;
 
+    console.log('Validating parameters:', { walletAddress, chain });
+    
     if (!walletAddress || !chain) {
+      console.log('Parameter validation failed:', { 
+        walletAddress: !!walletAddress, 
+        chain: !!chain,
+        walletAddressValue: walletAddress,
+        chainValue: chain
+      });
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ error: 'Missing required parameters', received: { walletAddress: !!walletAddress, chain: !!chain } }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -32,9 +43,16 @@ serve(async (req) => {
     };
 
     const tatumChain = chainMapping[chain];
+    console.log('Chain mapping result:', { 
+      originalChain: chain, 
+      mappedChain: tatumChain, 
+      availableChains: Object.keys(chainMapping) 
+    });
+    
     if (!tatumChain) {
+      console.log('Unsupported chain error:', { chain, availableChains: Object.keys(chainMapping) });
       return new Response(
-        JSON.stringify({ error: 'Unsupported chain' }),
+        JSON.stringify({ error: 'Unsupported chain', received: chain, supported: Object.keys(chainMapping) }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -45,7 +63,13 @@ serve(async (req) => {
     console.log(`Fetching portfolio for ${walletAddress} on ${tatumChain}`);
 
     const tatumApiKey = Deno.env.get('TATUM_API_KEY');
+    console.log('TATUM_API_KEY status:', { 
+      isConfigured: !!tatumApiKey,
+      keyLength: tatumApiKey ? tatumApiKey.length : 0
+    });
+    
     if (!tatumApiKey) {
+      console.log('TATUM_API_KEY configuration error');
       throw new Error('TATUM_API_KEY not configured');
     }
 
