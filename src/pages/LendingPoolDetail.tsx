@@ -16,7 +16,7 @@ const LendingPoolDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { authenticated } = useAuth();
-  const { lendingPools, isLoading, refreshPools } = useLendingPools();
+  const { lendingPools, isLoading } = useLendingPools();
   const [lendingPeriod, setLendingPeriod] = useState<number[]>([30]);
 
   const pool = lendingPools.find(p => p.id === id);
@@ -27,10 +27,6 @@ const LendingPoolDetail = () => {
     }
   }, [pool]);
 
-  // Force refresh on mount to ensure fresh data
-  useEffect(() => {
-    refreshPools();
-  }, [refreshPools]);
 
   if (!authenticated) {
     return (

@@ -25,9 +25,8 @@ export const useLendingPools = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Check if we're on a route that should force fresh data
-  const shouldForceRefresh = location.pathname.includes('/lending-pool') || 
-                            location.pathname.includes('/lending/') ||
+  // Check if we're on a route that should force fresh data (only confirmation and token selection)
+  const shouldForceRefresh = location.pathname.includes('/lending/') ||
                             location.pathname.includes('/lending-confirmation');
 
   const fetchLendingPools = useCallback(async (forceRefresh = false) => {
