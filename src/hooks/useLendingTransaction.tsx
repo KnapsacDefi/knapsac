@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNetworkManager } from './useNetworkManager';
 import { validateAddress, checksumAddress, validateTokenForChain } from '@/utils/withdrawalValidation';
 import { usePortfolio } from './usePortfolio';
+import { lendingPoolCache } from '@/services/lendingPoolCache';
 
 const erc20Abi = [
   {
@@ -31,6 +32,7 @@ interface UseLendingTransactionProps {
   lendingPeriod: number;
   balance?: string;
   onSuccess?: () => void;
+  onRefreshPools?: () => void;
 }
 
 export const useLendingTransaction = ({
@@ -39,7 +41,8 @@ export const useLendingTransaction = ({
   amount,
   lendingPeriod,
   balance,
-  onSuccess
+  onSuccess,
+  onRefreshPools
 }: UseLendingTransactionProps) => {
   const { wallets } = useWallets();
   const { toast } = useToast();
@@ -99,6 +102,10 @@ export const useLendingTransaction = ({
           title: "Success",
           description: "Lending completed successfully! Portfolio entry created."
         });
+
+        // Invalidate lending pool cache and refresh pools data
+        lendingPoolCache.invalidateAll();
+        onRefreshPools?.();
 
         resetForm();
         

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { lendingPoolCache } from '@/services/lendingPoolCache';
 
 interface LendingPool {
   id: string;
@@ -64,10 +65,16 @@ export const useLendingPools = () => {
     fetchLendingPools(true);
   }, [fetchLendingPools]);
 
+  const refreshPoolsAndClearCache = useCallback(() => {
+    lendingPoolCache.invalidateAll();
+    fetchLendingPools(true);
+  }, [fetchLendingPools]);
+
   return {
     lendingPools,
     isLoading,
     error,
-    refreshPools
+    refreshPools,
+    refreshPoolsAndClearCache
   };
 };

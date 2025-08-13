@@ -90,6 +90,11 @@ class LendingPoolCache {
     localStorage.removeItem(this.CACHE_KEY);
   }
 
+  // Invalidate all cache entries (useful after portfolio changes)
+  invalidateAll(): void {
+    this.clear();
+  }
+
   // Warm cache with multiple pools (used when browsing pool lists)
   warmCache(pools: any[]): void {
     if (!pools || !Array.isArray(pools)) return;

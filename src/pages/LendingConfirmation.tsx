@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLendingTransaction } from '@/hooks/useLendingTransaction';
+import { useLendingPools } from '@/hooks/useLendingPools';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 
@@ -13,6 +14,7 @@ const LendingConfirmation = () => {
   const location = useLocation();
   const { toast } = useToast();
   const [isAgreed, setIsAgreed] = useState(false);
+  const { refreshPoolsAndClearCache } = useLendingPools();
   
   const { pool, token, amount, lendingPeriod, balance } = location.state || {};
   
@@ -40,7 +42,8 @@ const LendingConfirmation = () => {
         description: "Your lending transaction has been completed successfully!"
       });
       navigate('/portfolio');
-    }
+    },
+    onRefreshPools: refreshPoolsAndClearCache
   });
 
   if (!pool || !token || !amount || !lendingPeriod) {
