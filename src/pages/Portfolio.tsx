@@ -155,7 +155,7 @@ const Portfolio = () => {
                   variant={entry.is_eligible ? "default" : "outline"}
                   className="w-full"
                 >
-                  {entry.is_eligible ? "Claim Rewards" : "Not Yet Eligible"}
+                  {entry.is_eligible ? "Claim Rewards" : "Not yet eligible to claim"}
                 </Button>
 
                 {entry.payment_status === 'completed' && (
