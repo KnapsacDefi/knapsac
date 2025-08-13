@@ -18,6 +18,9 @@ import Terms from '@/pages/Terms';
 import ServiceProviderMotivation from '@/pages/ServiceProviderMotivation';
 import Subscription from '@/pages/Subscription';
 import NotFound from '@/pages/NotFound';
+import LendingPoolDetail from '@/pages/LendingPoolDetail';
+import LendingTokenSelection from '@/pages/LendingTokenSelection';
+import Portfolio from '@/pages/Portfolio';
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
 import { supabase } from '@/integrations/supabase/client';
@@ -145,6 +148,30 @@ function App() {
                         element={
                           <WalletConnectionGuard requireWallet={true}>
                             <WithdrawMobileMoney />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/lending-pool/:id" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <LendingPoolDetail />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/lending/:poolId/tokens" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <LendingTokenSelection />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/portfolio" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <Portfolio />
                           </WalletConnectionGuard>
                         } 
                       />

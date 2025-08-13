@@ -1,5 +1,5 @@
 
-import { Home, User } from "lucide-react";
+import { Home, User, Briefcase } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { usePrivy } from "@privy-io/react-auth";
@@ -42,6 +42,8 @@ const BottomNavigation = () => {
 
   const getNavItems = () => {
     const isServiceProvider = userProfile?.profile_type === 'Service Provider';
+    const isLender = userProfile?.profile_type === 'Lender';
+    const hasSignedTerms = userProfile?.signed_terms_hash && userProfile.signed_terms_hash.trim() !== '';
     
     if (isServiceProvider) {
       return [
@@ -58,7 +60,7 @@ const BottomNavigation = () => {
       ];
     }
 
-    return [
+    const baseNavItems = [
       {
         icon: Home,
         label: "Wallet",
@@ -70,6 +72,17 @@ const BottomNavigation = () => {
         path: "/profile",
       },
     ];
+
+    // Add Portfolio tab for lenders with signed terms
+    if (isLender && hasSignedTerms) {
+      baseNavItems.splice(1, 0, {
+        icon: Briefcase,
+        label: "Portfolio",
+        path: "/portfolio",
+      });
+    }
+
+    return baseNavItems;
   };
 
   const navItems = getNavItems();
