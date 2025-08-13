@@ -113,10 +113,8 @@ const WalletOverview = ({
   // Deposit button - for all user types
   buttons.push('deposit');
   
-  // Withdraw button - for Startups and Service Providers
-  if (isStartup || isServiceProvider) {
-    buttons.push('withdraw');
-  }
+  // Withdraw button - for all user types
+  buttons.push('withdraw');
   
   // Claim button - for Lenders only
   if (isLender) {
@@ -178,23 +176,21 @@ const WalletOverview = ({
           <span className="text-xs">Deposit</span>
         </Button>
         
-        {/* Withdraw button - for Startups and Service Providers */}
-        {(isStartup || isServiceProvider) && (
-          <Button 
-            variant="outline" 
-            className="h-12 flex flex-col gap-1"
-            onClick={() => navigate('/withdraw')}
-          >
-            <span className="text-xs">Withdraw</span>
-          </Button>
-        )}
+        {/* Withdraw button - for all user types */}
+        <Button 
+          variant="outline" 
+          className="h-12 flex flex-col gap-1"
+          onClick={() => navigate('/withdraw')}
+        >
+          <span className="text-xs">Withdraw</span>
+        </Button>
         
         {/* Claim button - for Lenders only */}
         {isLender && (
           <Button 
             variant="outline" 
             className="h-12 flex flex-col gap-1"
-            onClick={() => navigate('/withdraw')}
+            onClick={() => navigate('/portfolio')}
           >
             <span className="text-xs">Claim</span>
           </Button>
