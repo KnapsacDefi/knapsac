@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useLendingPools } from '@/hooks/useLendingPools';
+import { useLendingPoolDetail } from '@/hooks/useLendingPoolDetail';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNavigation from '@/components/BottomNavigation';
 
@@ -18,11 +18,9 @@ const LendingPoolDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { authenticated } = useAuth();
-  const { lendingPools, isLoading } = useLendingPools();
+  const { lendingPool: pool, isLoading } = useLendingPoolDetail(id);
   const [lendingPeriod, setLendingPeriod] = useState<number[]>([30]);
   const [lendAmount, setLendAmount] = useState<string>('');
-
-  const pool = lendingPools.find(p => p.id === id);
 
   useEffect(() => {
     if (pool) {
