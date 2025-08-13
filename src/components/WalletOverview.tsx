@@ -1,7 +1,8 @@
 
-import { Banknote, Eye, EyeOff } from "lucide-react";
+import { Banknote, Eye, EyeOff, Coins } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useFundWallet } from "@privy-io/react-auth";
 import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -143,6 +144,18 @@ const WalletOverview = ({
             </div>
             <div className="text-xs text-muted-foreground">USDC</div>
           </div>
+        </div>
+        
+        {/* All Tokens Badge */}
+        <div className="flex justify-center mt-2 mb-4">
+          <Badge 
+            variant="outline" 
+            className="cursor-pointer hover:bg-muted transition-colors flex items-center gap-1"
+            onClick={() => navigate('/withdraw')}
+          >
+            <Coins className="w-3 h-3" />
+            All Tokens
+          </Badge>
         </div>
       </div>
 
