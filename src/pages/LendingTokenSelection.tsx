@@ -69,7 +69,7 @@ const LendingTokenSelection = () => {
           chain: token.chain
         },
         amount: balance, // Will be updated by user in confirmation
-        lendingPeriod: 30, // Default 30 days, will be updated by user
+        lendingPeriod: selectedPeriod, // Use the period selected by user
         balance
       } 
     });
