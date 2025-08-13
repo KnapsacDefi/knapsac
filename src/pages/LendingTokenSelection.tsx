@@ -61,14 +61,15 @@ const LendingTokenSelection = () => {
     const tokenBalance = getTokenBalance(token.symbol, token.chain);
     const balance = tokenBalance?.balance || '0.00';
 
-    navigate(`/lending/${poolId}/confirm`, { 
+    navigate('/lending-confirmation', { 
       state: { 
         pool,
-        selectedPeriod,
         token: {
           ...token,
           chain: token.chain
         },
+        amount: balance, // Will be updated by user in confirmation
+        lendingPeriod: 30, // Default 30 days, will be updated by user
         balance
       } 
     });

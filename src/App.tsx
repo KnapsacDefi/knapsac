@@ -20,7 +20,9 @@ import Subscription from '@/pages/Subscription';
 import NotFound from '@/pages/NotFound';
 import LendingPoolDetail from '@/pages/LendingPoolDetail';
 import LendingTokenSelection from '@/pages/LendingTokenSelection';
+import LendingConfirmation from '@/pages/LendingConfirmation';
 import Portfolio from '@/pages/Portfolio';
+import ClaimRewards from '@/pages/ClaimRewards';
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
 import { supabase } from '@/integrations/supabase/client';
@@ -159,7 +161,7 @@ function App() {
                           </WalletConnectionGuard>
                         } 
                       />
-                      <Route 
+                       <Route 
                         path="/lending/:poolId/tokens" 
                         element={
                           <WalletConnectionGuard requireWallet={true}>
@@ -168,10 +170,26 @@ function App() {
                         } 
                       />
                       <Route 
+                        path="/lending-confirmation" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <LendingConfirmation />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
                         path="/portfolio" 
                         element={
                           <WalletConnectionGuard requireWallet={true}>
                             <Portfolio />
+                          </WalletConnectionGuard>
+                        } 
+                      />
+                      <Route 
+                        path="/claim/:id" 
+                        element={
+                          <WalletConnectionGuard requireWallet={true}>
+                            <ClaimRewards />
                           </WalletConnectionGuard>
                         } 
                       />
