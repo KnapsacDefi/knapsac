@@ -102,7 +102,7 @@ const LendingPoolDetail = () => {
       state: { 
         pool: pool || activePool,
         selectedPeriod,
-        lendAmount: parseFloat(lendAmount) // Convert to number
+        lendAmount: lendAmount // Keep as string
       } 
     });
   };

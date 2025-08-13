@@ -318,7 +318,9 @@ export const useLendingTransaction = ({
         throw new Error(`Invalid amount: ${amount}`);
       }
       
-      amountInWei = parseUnits(amount, token.decimals);
+      // Convert amount to string if it's a number
+      const amountStr = String(amount);
+      amountInWei = parseUnits(amountStr, token.decimals);
       console.log('✅ Amount parsed successfully:', {
         originalAmount: amount,
         decimals: token.decimals,
