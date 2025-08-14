@@ -154,7 +154,7 @@ const Portfolio = () => {
                       </span>
                     </div>
                     <span className="font-medium">
-                      {new Date(entry.eligible_date).toLocaleDateString()}
+                      {entry.eligible_date ? new Date(entry.eligible_date).toLocaleDateString() : 'N/A'}
                     </span>
                   </div>
                   

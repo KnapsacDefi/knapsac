@@ -55,10 +55,13 @@ export const usePortfolio = () => {
         // Apply client-side calculations to cached data
         const portfolioWithCalculations = cachedData.map(entry => {
           const calculations = portfolioCache.calculateFields(entry);
+          // Calculate eligible date as closing_date + min_lend_period
+          const closingDate = new Date(entry.lending_pool.closing_date);
+          const eligibleDate = new Date(closingDate.getTime() + (entry.lending_pool.min_lend_period * 24 * 60 * 60 * 1000));
           return { 
             ...entry, 
             ...calculations,
-            eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+            eligible_date: eligibleDate.toISOString()
           };
         });
         setPortfolio(portfolioWithCalculations);
@@ -93,10 +96,13 @@ export const usePortfolio = () => {
       // Apply client-side calculations
       const portfolioWithCalculations = rawPortfolio.map(entry => {
         const calculations = portfolioCache.calculateFields(entry);
+        // Calculate eligible date as closing_date + min_lend_period
+        const closingDate = new Date(entry.lending_pool.closing_date);
+        const eligibleDate = new Date(closingDate.getTime() + (entry.lending_pool.min_lend_period * 24 * 60 * 60 * 1000));
         return { 
           ...entry, 
           ...calculations,
-          eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+          eligible_date: eligibleDate.toISOString()
         };
       });
 
@@ -118,10 +124,13 @@ export const usePortfolio = () => {
         if (cachedData) {
           const portfolioWithCalculations = cachedData.map(entry => {
             const calculations = portfolioCache.calculateFields(entry);
+            // Calculate eligible date as closing_date + min_lend_period
+            const closingDate = new Date(entry.lending_pool.closing_date);
+            const eligibleDate = new Date(closingDate.getTime() + (entry.lending_pool.min_lend_period * 24 * 60 * 60 * 1000));
             return { 
               ...entry, 
               ...calculations,
-              eligible_date: new Date(entry.expected_claim_date).toLocaleDateString()
+              eligible_date: eligibleDate.toISOString()
             };
           });
           setPortfolio(portfolioWithCalculations);
