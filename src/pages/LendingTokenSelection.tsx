@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Wallet, RefreshCw } from "lucide-react";
-import { LENDING_TOKENS, CHAIN_CONFIG, type SupportedChain } from "@/constants/tokens";
+import { SUPPORTED_TOKENS, CHAIN_CONFIG, type SupportedChain } from "@/constants/tokens";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getWalletAddress } from "@/utils/walletUtils";
@@ -16,6 +16,7 @@ interface EnhancedToken {
   symbol: string;
   address: string;
   decimals: number;
+  can_lend: boolean;
   chain: SupportedChain;
   chainDisplayName: string;
   name: string;
@@ -38,18 +39,20 @@ const LendingTokenSelection = () => {
   const createEnhancedTokens = (): EnhancedToken[] => {
     const enhancedTokens: EnhancedToken[] = [];
 
-    Object.entries(LENDING_TOKENS).forEach(([chainKey, tokens]) => {
+    Object.entries(SUPPORTED_TOKENS).forEach(([chainKey, tokens]) => {
       const chain = chainKey as SupportedChain;
       const chainConfig = CHAIN_CONFIG[chain];
 
-      tokens.forEach(token => {
-        enhancedTokens.push({
-          ...token,
-          chain,
-          chainDisplayName: chainConfig.displayName,
-          name: token.symbol,
+      tokens
+        .filter(token => token.can_lend) // Only include tokens that can be lent
+        .forEach((token) => {
+          enhancedTokens.push({
+            ...token,
+            chain,
+            chainDisplayName: chainConfig.displayName,
+            name: token.symbol === 'G$' ? 'GoodDollar' : token.symbol,
+          });
         });
-      });
     });
 
     return enhancedTokens;
