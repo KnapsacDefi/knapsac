@@ -86,9 +86,9 @@ serve(async (req) => {
     console.log('API Response data:', data)
 
     // Extract the score from the response
-    const score = data.score || data.zscore || data.creditScore || null
+    let rawScore = data.score || data.zscore || data.creditScore || null
     
-    if (score === null || score === undefined) {
+    if (rawScore === null || rawScore === undefined) {
       console.error('No score found in API response:', data)
       return new Response(
         JSON.stringify({ 
@@ -102,10 +102,25 @@ serve(async (req) => {
       )
     }
 
-    console.log('Returning credit score:', score)
+    console.log('Raw score from API:', rawScore)
+    
+    // Convert string to number and handle large numbers (possibly in wei format)
+    let processedScore = parseFloat(String(rawScore).trim())
+    
+    // If score is very large (like wei format), convert it
+    if (processedScore > 1000) {
+      // Likely in wei format (18 decimals), convert to normal score
+      processedScore = processedScore / Math.pow(10, 18)
+    }
+    
+    // Round and ensure it's within valid range
+    processedScore = Math.round(processedScore)
+    processedScore = Math.max(1, Math.min(1000, processedScore))
+    
+    console.log('Processed credit score:', processedScore)
     return new Response(
       JSON.stringify({ 
-        score: parseInt(score),
+        score: processedScore,
         wallet_address,
         last_updated: new Date().toISOString()
       }),
