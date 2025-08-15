@@ -16,7 +16,7 @@ interface UseCreditScoreResult {
 }
 
 const CACHE_KEY_PREFIX = 'credit_score_';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useCreditScore = (walletAddress?: string): UseCreditScoreResult => {
   const [score, setScore] = useState<number | null>(null);

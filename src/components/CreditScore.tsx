@@ -2,6 +2,7 @@ import { Brain, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreditScore } from "@/hooks/useCreditScore";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreditScoreProps {
   walletAddress?: string;
@@ -9,6 +10,17 @@ interface CreditScoreProps {
 
 const CreditScore = ({ walletAddress }: CreditScoreProps) => {
   const { score, loading, error, refresh, lastUpdated } = useCreditScore(walletAddress);
+  const { toast } = useToast();
+  
+  const handleScoreClick = () => {
+    if (displayScore < 500) {
+      toast({
+        title: "Credit Score Too Low",
+        description: "You need a credit score of 500 or above for this feature.",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Display score (1-1000 range)
   const displayScore = score || 1;
@@ -69,7 +81,7 @@ const CreditScore = ({ walletAddress }: CreditScoreProps) => {
         )}
 
         {/* Circular Progress */}
-        <div className="relative w-48 h-48 mx-auto mb-4">
+        <div className="relative w-48 h-48 mx-auto mb-4 cursor-pointer" onClick={handleScoreClick}>
           <svg
             className="w-full h-full transform -rotate-90"
             viewBox="0 0 200 200"
