@@ -13,12 +13,16 @@ const CreditScore = ({ walletAddress }: CreditScoreProps) => {
   const { toast } = useToast();
   
   const handleScoreClick = () => {
+    console.log("Credit score clicked! Score:", displayScore);
     if (displayScore < 500) {
+      console.log("Score is below 500, showing toast");
       toast({
         title: "Credit Score Too Low",
         description: "You need a credit score of 500 or above for this feature.",
         variant: "destructive"
       });
+    } else {
+      console.log("Score is 500 or above, no toast needed");
     }
   };
   
