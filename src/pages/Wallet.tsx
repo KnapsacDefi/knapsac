@@ -185,8 +185,35 @@ const Wallet = () => {
         {/* Show lending pools section only after profile loads */}
         {data.userProfile && <LendingPoolsSection userProfile={data.userProfile} />}
         
+        {/* Debug info */}
+        {data.userProfile && (
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <p className="text-sm">Profile Type: <strong>{data.userProfile.profile_type}</strong></p>
+            <p className="text-xs text-muted-foreground">
+              {data.userProfile.profile_type === 'Startup' ? 'Credit Score component visible' : 'Credit Score component hidden (only for Startup profiles)'}
+            </p>
+          </div>
+        )}
+
         {/* Show credit score for startups only */}
         {data.userProfile?.profile_type === 'Startup' && <CreditScore walletAddress={walletAddress} />}
+        
+        {/* Test Toast Button */}
+        <div className="text-center">
+          <button 
+            onClick={() => {
+              const { toast } = require("@/hooks/use-toast");
+              toast({
+                title: "Test Toast",
+                description: "If you see this, the toast system is working!",
+                variant: "default"
+              });
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
+          >
+            Test Toast System
+          </button>
+        </div>
         
         {/* Manual refresh button */}
         <div className="text-center pt-4">
