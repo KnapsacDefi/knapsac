@@ -7,7 +7,8 @@ import { useFundWallet } from "@privy-io/react-auth";
 import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import WalletOverviewSkeleton from "./skeletons/WalletOverviewSkeleton";
-import { isWalletConnected } from "@/utils/walletUtils";
+import { isWalletConnected, getWalletAddress } from "@/utils/walletUtils";
+import { useCreditScore } from "@/hooks/useCreditScore";
 
 interface WalletOverviewProps {
   userProfile?: any;
@@ -36,6 +37,10 @@ const WalletOverview = ({
 
   // Use unified wallet connection check
   const hasWallet = isWalletConnected(wallets, user);
+  
+  // Get wallet address for credit score
+  const walletAddress = getWalletAddress(wallets, user);
+  const { score } = useCreditScore(walletAddress || undefined);
   
   // ALWAYS call useFundWallet hook to maintain consistent hook order
   const fundWalletHook = useFundWallet({
@@ -84,6 +89,28 @@ const WalletOverview = ({
       }
     }
   }, [hasWallet, wallets, user, fundWalletHook]);
+
+  const handleCreditClick = useCallback(() => {
+    if (score !== null && score < 500) {
+      toast({
+        title: "Credit Score Below Threshold",
+        description: `Your current credit score is ${score}. A score of 500 or higher is required for credit features.`,
+        variant: "default"
+      });
+    } else if (score !== null) {
+      toast({
+        title: "Credit Score Verified", 
+        description: `Your credit score of ${score} qualifies you for credit features.`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Credit Score Loading",
+        description: "Please wait while we fetch your credit score...",
+        variant: "default"
+      });
+    }
+  }, [score]);
 
   // NOW check for loading state AFTER all hooks are called
   const isLoading = loading.usdc;
@@ -194,6 +221,7 @@ const WalletOverview = ({
           <Button 
             variant="outline" 
             className="h-12 flex flex-col gap-1"
+            onClick={handleCreditClick}
           >
             <span className="text-xs">Credit</span>
           </Button>
