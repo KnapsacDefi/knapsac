@@ -186,7 +186,7 @@ const Wallet = () => {
         {data.userProfile && <LendingPoolsSection userProfile={data.userProfile} />}
         
         {/* Show credit score for startups only */}
-        {data.userProfile?.profile_type === 'Startup' && <CreditScore />}
+        {data.userProfile?.profile_type === 'Startup' && <CreditScore walletAddress={walletAddress} />}
         
         {/* Manual refresh button */}
         <div className="text-center pt-4">
