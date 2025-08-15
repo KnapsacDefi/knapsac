@@ -133,7 +133,7 @@ const CreditScore = ({ walletAddress }: CreditScoreProps) => {
         {/* Title and Description */}
         <h4 className="text-xl font-semibold text-foreground mb-2">Credit Risk Index</h4>
         <p className="text-sm text-muted-foreground mb-2 max-w-xs mx-auto">
-          Credit score based on financial history, payment behavior, and risk assessment.
+          Increase your onchain activities to improve your score
         </p>
         
         {/* Last updated info */}
