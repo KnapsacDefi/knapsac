@@ -1,5 +1,5 @@
 
-import { Banknote, Eye, EyeOff, Coins } from "lucide-react";
+import { Eye, EyeOff, Coins } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -163,14 +163,11 @@ const WalletOverview = ({
           </Button>
         </div>
         
-        <div className="flex items-center justify-center">
-          <Banknote className="w-6 h-6 mr-2 text-blue-500" />
-          <div className="text-center">
-            <div className="text-2xl font-bold">
-              {showBalance ? displayBalance : "••••••"}
-            </div>
-            <div className="text-xs text-muted-foreground">USDC</div>
+        <div className="text-center">
+          <div className="text-2xl font-bold">
+            {showBalance ? displayBalance : "••••••"}
           </div>
+          <div className="text-xs text-muted-foreground">USDC</div>
         </div>
         
         {/* All Tokens Badge */}
