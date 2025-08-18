@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { subscriptionService } from "@/services/subscriptionService";
 import { useSubscriptionCreation } from "@/hooks/useSubscriptionCreation";
 import { CheckCircle, Clock, ArrowLeft } from "lucide-react";
+import { useOptimizedWalletData } from "@/hooks/useOptimizedWalletData";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 const subscriptionPlans = [
@@ -51,6 +53,10 @@ const Subscription = () => {
   const [hasSubscription, setHasSubscription] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Get auth data from context for profile checking
+  const { ready: authReady, authenticated: authAuthenticated, user: authUser, wallets, isStable, walletsLoading } = useAuth();
+  const profileData = useOptimizedWalletData({ ready: authReady, authenticated: authAuthenticated, user: authUser, wallets, isStable, walletsLoading });
+
   const userEmail = user?.email?.address;
   const hasWallet = !!user?.wallet?.address;
   const walletAddress = user?.wallet?.address;
@@ -69,6 +75,14 @@ const Subscription = () => {
       return;
     }
   }, [ready, authenticated, navigate]);
+
+  // Redirect Lender profiles to their portfolio
+  useEffect(() => {
+    if (profileData.userProfile?.profile_type === 'Lender' && !profileData.loading.profile) {
+      navigate('/portfolio');
+      return;
+    }
+  }, [profileData.userProfile?.profile_type, profileData.loading.profile, navigate]);
 
 
   // Check subscription using secure edge function

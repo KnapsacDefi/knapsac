@@ -127,7 +127,7 @@ const Wallet = () => {
 
   const hasValidHash = data.userProfile?.signed_terms_hash && data.userProfile.signed_terms_hash.trim() !== '';
   const shouldShowAddProfileBanner = !data.loading.profile && !hasValidHash;
-  const shouldShowSubscriptionBanner = hasValidHash && !data.hasSubscription && (data.userProfile?.profile_type === 'Startup' || data.userProfile?.profile_type === 'Creator' || data.userProfile?.profile_type === 'Gig Rider/Driver');
+  const shouldShowSubscriptionBanner = hasValidHash && !data.hasSubscription && data.userProfile?.profile_type !== 'Lender';
 
   // Show refresh indicator
   const showRefreshIndicator = Object.values(data.loading).some(loading => loading);
@@ -185,8 +185,8 @@ const Wallet = () => {
         {/* Show lending pools section only after profile loads */}
         {data.userProfile && <LendingPoolsSection userProfile={data.userProfile} />}
 
-        {/* Show credit score for startups, creators, and gig riders */}
-        {(data.userProfile?.profile_type === 'Startup' || data.userProfile?.profile_type === 'Creator' || data.userProfile?.profile_type === 'Gig Rider/Driver') && <CreditScore walletAddress={walletAddress} />}
+        {/* Show credit score for startups, institutions, creators, and gig riders */}
+        {(data.userProfile?.profile_type === 'Startup' || data.userProfile?.profile_type === 'Institution' || data.userProfile?.profile_type === 'Creator' || data.userProfile?.profile_type === 'Gig Rider/Driver') && <CreditScore walletAddress={walletAddress} />}
         
         {/* Manual refresh button */}
         <div className="text-center pt-4">
