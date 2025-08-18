@@ -6,6 +6,15 @@ interface TermsContentProps {
 }
 
 export const TermsContent = ({ profileType }: TermsContentProps) => {
+  const getFeeText = () => {
+    const profileMap = {
+      "Startup": "Startups",
+      "Creator": "Creators", 
+      "Gig Rider/Driver": "Gig Riders/Drivers"
+    };
+    return profileMap[profileType] || profileType;
+  };
+
   const getTermsContent = () => {
     const commonTerms = `# KNAPSAC TERMS AND CONDITIONS
 
@@ -13,7 +22,7 @@ export const TermsContent = ({ profileType }: TermsContentProps) => {
 
 ## 1. PLATFORM NATURE
 
-Knapsac operates as a digital marketplace connecting startups, lenders, and service providers. We are not a financial institution, investment advisor, or guarantor of any transactions.
+Knapsac operates as a digital marketplace connecting entrepreneurs, creators, gig workers, lenders, and service providers. We are not a financial institution, investment advisor, or guarantor of any transactions.
 
 ## 2. NO GUARANTEES
 
@@ -40,7 +49,7 @@ Knapsac's liability is limited to the maximum extent permitted by law. We are no
 
 ## 5. PLATFORM FEES
 
-${(profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Startups may pay back Lender monthly interest payments** between 3-7% for 5-10 months (based on credit score)\n" : ""}
+${(profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? `- **${getFeeText()} pay 5% of secured credit** to Knapsac\n- **${getFeeText()} may pay back Lender monthly interest payments** between 3-7% for 5-10 months (based on credit score)\n` : ""}
 
 ## 6. DISPUTE RESOLUTION
 
