@@ -16,8 +16,8 @@ const subscriptionPlans = [
   {
     id: "early_bird",
     name: "Early Bird",
-    originalPrice: 60,
-    discountedPrice: 30,
+    originalPrice: 24,
+    discountedPrice: 12,
     discount: "50% OFF",
     billing: "Annual (One-time offer)",
     features: [
@@ -30,8 +30,8 @@ const subscriptionPlans = [
   {
     id: "standard",
     name: "Standard",
-    originalPrice: 5,
-    discountedPrice:5,
+    originalPrice: 1,
+    discountedPrice: 1,
     discount: null,
     billing: "Monthly",
     features: [
