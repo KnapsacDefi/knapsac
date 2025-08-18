@@ -11,7 +11,7 @@ const Terms = () => {
   const { authenticated } = usePrivy();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const profileType = searchParams.get('type') as "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver" || "Startup";
+  const profileType = searchParams.get('type') as "Startup" | "Institution" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver" || "Startup";
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {
@@ -56,7 +56,7 @@ Knapsac's liability is limited to the maximum extent permitted by law. We are no
 
 ## 5. PLATFORM FEES
 
-${(profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Interest payments** of 3-7% monthly (based on credit score) plus 20% of credit installment for 5 months\n" : ""}
+${(profileType === "Startup" || profileType === "Institution" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Interest payments** of 3-10% monthly (based on credit score) plus 20% of credit installment for 5 months\n" : ""}
 
 ## 6. DISPUTE RESOLUTION
 

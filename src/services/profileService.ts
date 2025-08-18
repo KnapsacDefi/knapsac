@@ -4,7 +4,7 @@ import { profileCache } from "./profileCache";
 export interface ProfileCreationData {
   userEmail?: string;
   walletAddress: string;
-  profileType: "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
+  profileType: "Startup" | "Institution" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
   signedTermsHash: string;
 }
 

@@ -2,13 +2,14 @@
 import ReactMarkdown from 'react-markdown';
 
 interface TermsContentProps {
-  profileType: "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
+  profileType: "Startup" | "Institution" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
 }
 
 export const TermsContent = ({ profileType }: TermsContentProps) => {
   const getFeeText = () => {
     const profileMap = {
       "Startup": "Startups",
+      "Institution": "Institutions",
       "Creator": "Creators", 
       "Gig Rider/Driver": "Gig Riders/Drivers"
     };
@@ -49,7 +50,7 @@ Knapsac's liability is limited to the maximum extent permitted by law. We are no
 
 ## 5. PLATFORM FEES
 
-${(profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? `- **${getFeeText()} pay 5% of secured credit** to Knapsac\n- **${getFeeText()} may pay back Lender monthly interest payments** between 3-10% for 1 to 10 months (based on credit score)\n` : ""}
+${(profileType === "Startup" || profileType === "Institution" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? `- **${getFeeText()} pay 5% of secured credit** to Knapsac\n- **${getFeeText()} may pay back Lender monthly interest payments** between 3-10% for 1 to 10 months (based on credit score)\n` : ""}
 
 ## 6. DISPUTE RESOLUTION
 
@@ -75,6 +76,30 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
 
 - All business information must be accurate and current
 - Financial statements must be truthful
+- Misrepresentation may result in immediate termination
+
+### 10. SUBSCRIPTION REQUIREMENTS
+
+- Active subscription required for platform access
+- Automatic renewal unless cancelled
+- No refunds for partial subscription periods`,
+
+      "Institution": `
+
+## INSTITUTION-SPECIFIC TERMS
+
+### 8. CREDIT OBLIGATIONS
+
+- Repayment terms are legally binding
+- Default may result in collection actions
+- Credit scoring affects future borrowing capacity
+- Corporate guarantees may be required
+
+### 9. INSTITUTIONAL REPRESENTATIONS
+
+- All institutional information must be accurate and current
+- Financial statements must be audited and truthful
+- Growth metrics and projections must be realistic
 - Misrepresentation may result in immediate termination
 
 ### 10. SUBSCRIPTION REQUIREMENTS

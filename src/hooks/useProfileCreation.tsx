@@ -5,7 +5,7 @@ import { profileService } from "@/services/profileService";
 import { useRef } from "react";
 
 interface UseProfileCreationProps {
-  profileType: "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
+  profileType: "Startup" | "Institution" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
   termsContent: string;
   walletAddress: string;
 }
@@ -63,7 +63,7 @@ export const useProfileCreation = ({ profileType, termsContent, walletAddress }:
         // Navigate based on profile type
         if (profileType === "Service Provider") {
           navigate('/service-provider-motivation');
-        } else if (profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") {
+        } else if (profileType === "Startup" || profileType === "Institution" || profileType === "Creator" || profileType === "Gig Rider/Driver") {
           navigate('/subscription');
         } else {
           navigate('/wallet');

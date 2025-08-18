@@ -1,4 +1,4 @@
 export interface UseTermsAcceptanceProps {
-  profileType: "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
+  profileType: "Startup" | "Institution" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver";
   termsContent: string;
 }
