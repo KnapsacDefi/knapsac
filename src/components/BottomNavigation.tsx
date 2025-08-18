@@ -69,7 +69,7 @@ const BottomNavigation = () => {
         {
           icon: Home,
           label: "Home",
-          path: "/service-provider-motivation",
+          path: "/wallet",
         },
         {
           icon: User,

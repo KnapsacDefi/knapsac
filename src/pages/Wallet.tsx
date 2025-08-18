@@ -56,23 +56,6 @@ const Wallet = () => {
     return () => clearTimeout(authTimeout);
   }, [ready, authenticated, isStable, mountingStable, hasNavigated, isLoggingOut, navigate]);
 
-  // Handle Service Provider redirection with timeout
-  useEffect(() => {
-    if (!isStable || !mountingStable || hasNavigated || !authenticated || isLoggingOut) return;
-
-    const redirectTimeout = setTimeout(() => {
-      if (
-        data.userProfile?.profile_type === 'Service Provider' && 
-        !data.loading.profile
-      ) {
-        console.log('Wallet: Service Provider detected, redirecting to motivation page');
-        setHasNavigated(true);
-        navigate('/service-provider-motivation');
-      }
-    }, 100);
-
-    return () => clearTimeout(redirectTimeout);
-  }, [data.userProfile?.profile_type, data.loading.profile, isStable, mountingStable, hasNavigated, authenticated, isLoggingOut, navigate]);
 
   // Show logout state immediately
   if (isLoggingOut) {
@@ -113,17 +96,6 @@ const Wallet = () => {
     );
   }
 
-  // Don't render content if we're redirecting Service Providers
-  if (data.userProfile?.profile_type === 'Service Provider') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
 
   const hasValidHash = data.userProfile?.signed_terms_hash && data.userProfile.signed_terms_hash.trim() !== '';
   const shouldShowAddProfileBanner = !data.loading.profile && !hasValidHash;
