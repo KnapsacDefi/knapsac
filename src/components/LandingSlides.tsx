@@ -12,7 +12,7 @@ interface LandingSlidesProps {
 const slides = [
   {
     title: "Welcome to Knapsac !",
-    description: "Easy Startup Lending",
+    description: "Easy Startup/ Growth Stage, Creator and Gig Worker Lending",
   },
   {
     title: "Get Credit to bootstrap your vision",
