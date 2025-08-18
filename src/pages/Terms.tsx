@@ -11,7 +11,7 @@ const Terms = () => {
   const { authenticated } = usePrivy();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const profileType = searchParams.get('type') as "Startup" | "Lender" | "Service Provider" || "Startup";
+  const profileType = searchParams.get('type') as "Startup" | "Lender" | "Service Provider" | "Creator" | "Gig Rider/Driver" || "Startup";
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {
@@ -56,7 +56,7 @@ Knapsac's liability is limited to the maximum extent permitted by law. We are no
 
 ## 5. PLATFORM FEES
 
-${profileType === "Startup" ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Interest payments** of 3-7% monthly (based on credit score) plus 20% of credit installment for 5 months\n" : ""}
+${(profileType === "Startup" || profileType === "Creator" || profileType === "Gig Rider/Driver") ? "- **Startups pay 5% of secured credit** to Knapsac\n- **Interest payments** of 3-7% monthly (based on credit score) plus 20% of credit installment for 5 months\n" : ""}
 
 ## 6. DISPUTE RESOLUTION
 
@@ -133,7 +133,55 @@ Knapsac reserves the right to modify terms with 30 days notice to users.`;
 
 - Service providers maintain professional insurance
 - Liability for service quality and outcomes
-- Compliance with professional regulations required`
+- Compliance with professional regulations required`,
+
+      "Creator": `
+
+## CREATOR-SPECIFIC TERMS
+
+### 8. CREDIT OBLIGATIONS
+
+- Repayment terms are legally binding
+- Default may result in collection actions
+- Credit scoring affects future borrowing capacity
+- Personal guarantees may be required
+
+### 9. CREATIVE WORK & INTELLECTUAL PROPERTY
+
+- All creative work information must be accurate and current
+- Intellectual property rights must be clearly defined
+- Content delivery must meet agreed specifications
+- Misrepresentation may result in immediate termination
+
+### 10. SUBSCRIPTION REQUIREMENTS
+
+- Active subscription required for platform access
+- Automatic renewal unless cancelled
+- No refunds for partial subscription periods`,
+
+      "Gig Rider/Driver": `
+
+## GIG RIDER/DRIVER-SPECIFIC TERMS
+
+### 8. CREDIT OBLIGATIONS
+
+- Repayment terms are legally binding
+- Default may result in collection actions
+- Credit scoring affects future borrowing capacity
+- Personal guarantees may be required
+
+### 9. VEHICLE & SERVICE REQUIREMENTS
+
+- All vehicle and service information must be accurate and current
+- Vehicle insurance and licensing must be maintained
+- Safety standards and regulations must be followed
+- Misrepresentation may result in immediate termination
+
+### 10. SUBSCRIPTION REQUIREMENTS
+
+- Active subscription required for platform access
+- Automatic renewal unless cancelled
+- No refunds for partial subscription periods`
     };
 
     return commonTerms + specificTerms[profileType];

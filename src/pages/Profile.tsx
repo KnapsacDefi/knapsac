@@ -26,13 +26,25 @@ const profileOptions = [
     value: "Service Provider",
     label: "Service Provider",
     description: "Supporting startup success"
+  },
+  {
+    value: "Creator",
+    label: "Creator",
+    description: "Turning creativity into business success"
+  },
+  {
+    value: "Gig Rider/Driver",
+    label: "Gig Rider/Driver",
+    description: "Building your independent business on the road"
   }
 ];
 
 const inspirationalQuotes = {
   Startup: "Every great startup begins with a bold vision. Your journey to transform ideas into reality starts now!",
   Lender: "Smart investments fuel innovation. Your capital powers the dreams of tomorrow's entrepreneurs!",
-  "Service Provider": "Behind every successful startup is a network of great service providers. You're the backbone of innovation!"
+  "Service Provider": "Behind every successful startup is a network of great service providers. You're the backbone of innovation!",
+  Creator: "Your creativity is your superpower. Turn your passion into profit and build the creative empire you deserve!",
+  "Gig Rider/Driver": "The road to independence starts with a single trip. Build your business, set your own rules, and drive your success!"
 };
 
 const Profile = () => {
