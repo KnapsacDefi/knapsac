@@ -79,7 +79,7 @@ const ServiceProviderMotivation = () => {
             </div>
 
             <div className="text-center">
-              <Button onClick={() => navigate('/')} size="lg" className="w-full">
+              <Button onClick={() => navigate('/wallet')} size="lg" className="w-full">
                 Explore the Platform
               </Button>
             </div>
