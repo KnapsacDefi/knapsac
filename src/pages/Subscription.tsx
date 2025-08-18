@@ -258,7 +258,7 @@ const Subscription = () => {
             className="w-full"
             size="lg"
           >
-            {!hasWallet ? "Waiting for wallet..." : "Subscribe with USDC"}
+            {!hasWallet ? "Waiting for wallet..." : "Subscribe"}
           </Button>
           
           <div className="text-center text-xs text-muted-foreground">
